@@ -1,0 +1,61 @@
+.editor {
+  width: min(700px, 78vw);
+}
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.actions label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+.wide {
+  width: 100% !important;
+  max-width: none !important;
+  box-sizing: border-box;
+  text-align: left !important;
+}
+.model {
+  border: var(--border-in-light);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 10px 0;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.row input {
+  min-width: 0;
+  width: 45%;
+}
+.model details {
+  margin-top: 8px;
+  font-size: 12px;
+}
+.editor p {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.error {
+  color: #d33;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 600px) {
+  .editor {
+    width: 100%;
+  }
+  .row {
+    flex-wrap: wrap;
+  }
+  .row input {
+    width: 100%;
+  }
+}

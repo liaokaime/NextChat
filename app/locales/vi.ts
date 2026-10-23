@@ -1,7 +1,6 @@
 import { SubmitKey } from "../store/config";
 import type { PartialLocaleType } from "./index";
 import { getClientConfig } from "../config/client";
-import { SAAS_CHAT_UTM_URL } from "@/app/constant";
 const isApp = !!getClientConfig()?.isApp;
 
 const vi: PartialLocaleType = {
@@ -9,12 +8,10 @@ const vi: PartialLocaleType = {
   Error: {
     Unauthorized: isApp
       ? `😆 Cuộc trò chuyện gặp một số vấn đề, đừng lo lắng:
-    \\ 1️⃣ Nếu bạn muốn bắt đầu mà không cần cấu hình, [nhấp vào đây để bắt đầu trò chuyện ngay lập tức 🚀](${SAAS_CHAT_UTM_URL})
-    \\ 2️⃣ Nếu bạn muốn sử dụng tài nguyên OpenAI của riêng mình, hãy nhấp [vào đây](/#/settings) để thay đổi cài đặt ⚙️`
+    \\ 1️⃣ Nếu bạn muốn sử dụng tài nguyên OpenAI của riêng mình, hãy nhấp [vào đây](/#/settings) để thay đổi cài đặt ⚙️`
       : `😆 Cuộc trò chuyện gặp một số vấn đề, đừng lo lắng:
-    \ 1️⃣ Nếu bạn muốn bắt đầu mà không cần cấu hình, [nhấp vào đây để bắt đầu trò chuyện ngay lập tức 🚀](${SAAS_CHAT_UTM_URL})
-    \ 2️⃣ Nếu bạn đang sử dụng phiên bản triển khai riêng, hãy nhấp [vào đây](/#/auth) để nhập khóa truy cập 🔑
-    \ 3️⃣ Nếu bạn muốn sử dụng tài nguyên OpenAI của riêng mình, hãy nhấp [vào đây](/#/settings) để thay đổi cài đặt ⚙️
+    \ 1️⃣ Nếu bạn đang sử dụng phiên bản triển khai riêng, hãy nhấp [vào đây](/#/auth) để nhập khóa truy cập 🔑
+    \ 2️⃣ Nếu bạn muốn sử dụng tài nguyên OpenAI của riêng mình, hãy nhấp [vào đây](/#/settings) để thay đổi cài đặt ⚙️
  `,
   },
   Auth: {
@@ -25,9 +22,6 @@ const vi: PartialLocaleType = {
     Confirm: "Xác nhận",
     Later: "Để sau",
     Return: "Trở lại",
-    SaasTips: "Cấu hình quá phức tạp, tôi muốn sử dụng ngay lập tức",
-    TopTips:
-      "🥳 Ưu đãi ra mắt NextChat AI, mở khóa các mô hình lớn mới nhất ngay bây giờ",
   },
   ChatItem: {
     ChatItemCount: (count: number) => `${count} cuộc trò chuyện`,
@@ -293,14 +287,6 @@ const vi: PartialLocaleType = {
     },
 
     Access: {
-      SaasStart: {
-        Title: "Sử dụng NextChat AI",
-        Label: "(Giải pháp tiết kiệm chi phí nhất)",
-        SubTitle:
-          "Được NextChat chính thức duy trì, sẵn sàng sử dụng mà không cần cấu hình, hỗ trợ các mô hình lớn mới nhất",
-        ChatNow: "Chat ngay",
-      },
-
       AccessCode: {
         Title: "Mật khẩu truy cập",
         SubTitle: "Quản trị viên đã bật truy cập mã hóa",
@@ -495,26 +481,8 @@ const vi: PartialLocaleType = {
     Clear: "Ngữ cảnh đã được xóa",
     Revert: "Khôi phục ngữ cảnh",
   },
-  Plugin: {
-    Name: "Plugin",
-  },
   FineTuned: {
     Sysmessage: "Bạn là một trợ lý",
-  },
-  SearchChat: {
-    Name: "Tìm kiếm",
-    Page: {
-      Title: "Tìm kiếm lịch sử trò chuyện",
-      Search: "Nhập từ khóa tìm kiếm",
-      NoResult: "Không tìm thấy kết quả",
-      NoData: "Không có dữ liệu",
-      Loading: "Đang tải",
-
-      SubTitle: (count: number) => `Tìm thấy ${count} kết quả`,
-    },
-    Item: {
-      View: "Xem",
-    },
   },
   Mask: {
     Name: "Mặt nạ",

@@ -8,6 +8,10 @@ import { useMaskStore } from "../store/mask";
 import { usePromptStore } from "../store/prompt";
 import { StoreKey } from "../constant";
 import { merge } from "./merge";
+import {
+  migrateLegacyProviders,
+  normalizeProviders,
+} from "../client/providers";
 
 type NonFunctionKeys<T> = {
   [K in keyof T]: T[K] extends (...args: any[]) => any ? never : K;
@@ -129,17 +133,23 @@ export function getLocalAppState() {
 }
 
 export function setLocalAppState(appState: AppState) {
+  normalizeAppState(appState);
   Object.entries(LocalStateSetters).forEach(([key, setter]) => {
     setter(appState[key as keyof AppState]);
   });
 }
 
 export function mergeAppState(localState: AppState, remoteState: AppState) {
+  normalizeAppState(localState);
+  normalizeAppState(remoteState);
   Object.keys(localState).forEach(<T extends keyof AppState>(k: string) => {
     const key = k as T;
     const localStoreState = localState[key];
     const remoteStoreState = remoteState[key];
-    MergeStates[key](localStoreState, remoteStoreState);
+    Object.assign(
+      localStoreState,
+      MergeStates[key](localStoreState, remoteStoreState),
+    );
   });
 
   return localState;
@@ -153,13 +163,28 @@ export function mergeWithUpdate<T extends { lastUpdateTime?: number }>(
   remoteState: T,
 ) {
   const localUpdateTime = localState.lastUpdateTime ?? 0;
-  const remoteUpdateTime = localState.lastUpdateTime ?? 1;
+  const remoteUpdateTime = remoteState.lastUpdateTime ?? 1;
 
-  if (localUpdateTime < remoteUpdateTime) {
-    merge(remoteState, localState);
-    return { ...remoteState };
-  } else {
-    merge(localState, remoteState);
-    return { ...localState };
-  }
+  const [older, newer] =
+    localUpdateTime < remoteUpdateTime
+      ? [localState, remoteState]
+      : [remoteState, localState];
+  const result = JSON.parse(JSON.stringify(older)) as T;
+  merge(result, newer);
+  return result;
+}
+
+export function normalizeAppState(appState: AppState) {
+  const access = appState[StoreKey.Access];
+  const config = appState[StoreKey.Config];
+  if (!access || !config) throw new Error("备份缺少服务商或应用配置。");
+  access.providers = Array.isArray(access.providers)
+    ? normalizeProviders(access.providers)
+    : migrateLegacyProviders(
+        access,
+        config.models || [],
+        [config.customModels, access.customModels].filter(Boolean).join(","),
+      );
+  access.providerInstancesInitialized = true;
+  return appState;
 }

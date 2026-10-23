@@ -11,7 +11,6 @@ import {
   ALIBABA_BASE_URL,
   TENCENT_BASE_URL,
   MOONSHOT_BASE_URL,
-  STABILITY_BASE_URL,
   IFLYTEK_BASE_URL,
   DEEPSEEK_BASE_URL,
   XAI_BASE_URL,
@@ -25,6 +24,12 @@ import { createPersistStore } from "../utils/store";
 import { ensure } from "../utils/clone";
 import { DEFAULT_CONFIG } from "./config";
 import { getModelProvider } from "../utils/model";
+import {
+  migrateLegacyProviders,
+  normalizeProviders,
+  type ProviderInstance,
+} from "../client/providers";
+import type { LLMModel } from "../client/api";
 
 let fetchState = 0; // 0 not fetch, 1 fetching, 2 done
 
@@ -46,8 +51,6 @@ const DEFAULT_TENCENT_URL = isApp ? TENCENT_BASE_URL : ApiPath.Tencent;
 
 const DEFAULT_MOONSHOT_URL = isApp ? MOONSHOT_BASE_URL : ApiPath.Moonshot;
 
-const DEFAULT_STABILITY_URL = isApp ? STABILITY_BASE_URL : ApiPath.Stability;
-
 const DEFAULT_IFLYTEK_URL = isApp ? IFLYTEK_BASE_URL : ApiPath.Iflytek;
 
 const DEFAULT_DEEPSEEK_URL = isApp ? DEEPSEEK_BASE_URL : ApiPath.DeepSeek;
@@ -63,6 +66,8 @@ const DEFAULT_SILICONFLOW_URL = isApp
 const DEFAULT_AI302_URL = isApp ? AI302_BASE_URL : ApiPath["302.AI"];
 
 const DEFAULT_ACCESS_STATE = {
+  providers: [] as ProviderInstance[],
+  providerInstancesInitialized: false,
   accessCode: "",
   useCustomConfig: false,
 
@@ -104,10 +109,6 @@ const DEFAULT_ACCESS_STATE = {
   // moonshot
   moonshotUrl: DEFAULT_MOONSHOT_URL,
   moonshotApiKey: "",
-
-  //stability
-  stabilityUrl: DEFAULT_STABILITY_URL,
-  stabilityApiKey: "",
 
   // tencent
   tencentUrl: DEFAULT_TENCENT_URL,
@@ -157,6 +158,15 @@ export const useAccessStore = createPersistStore(
   { ...DEFAULT_ACCESS_STATE },
 
   (set, get) => ({
+    initializeProviders(models: readonly LLMModel[], customModels: string) {
+      if (get().providerInstancesInitialized) return;
+      const providers = migrateLegacyProviders(
+        { ...get(), providers: undefined },
+        models,
+        customModels,
+      );
+      set({ providers, providerInstancesInitialized: true });
+    },
     enabledAccessControl() {
       this.fetch();
 
@@ -231,6 +241,10 @@ export const useAccessStore = createPersistStore(
 
       // has token or has code or disabled access control
       return (
+        (isApp &&
+          get().providers.some(
+            (p) => p.enabled && p.models.some((m) => m.enabled),
+          )) ||
         this.isValidOpenAI() ||
         this.isValidAzure() ||
         this.isValidGoogle() ||
@@ -284,7 +298,17 @@ export const useAccessStore = createPersistStore(
   }),
   {
     name: StoreKey.Access,
-    version: 2,
+    version: 3,
+    merge(persistedState, currentState) {
+      const state = persistedState as
+        | Partial<typeof DEFAULT_ACCESS_STATE>
+        | undefined;
+      return {
+        ...currentState,
+        ...state,
+        providers: normalizeProviders(state?.providers),
+      };
+    },
     migrate(persistedState, version) {
       if (version < 2) {
         const state = persistedState as {

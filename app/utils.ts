@@ -5,13 +5,11 @@ import { RequestMessage } from "./client/api";
 import {
   REQUEST_TIMEOUT_MS,
   REQUEST_TIMEOUT_MS_FOR_THINKING,
-  ServiceProvider,
 } from "./constant";
-// import { fetch as tauriFetch, ResponseType } from "@tauri-apps/api/http";
-import { fetch as tauriStreamFetch } from "./utils/stream";
 import { VISION_MODEL_REGEXES, EXCLUDE_VISION_MODEL_REGEXES } from "./constant";
 import { useAccessStore } from "./store";
 import { ModelSize } from "./typing";
+import { getClientConfig } from "./config/client";
 
 export function trimTopic(topic: string) {
   // Fix an issue where double quotes still show in the Indonesian language
@@ -332,48 +330,6 @@ export function supportsCustomSize(model: string): boolean {
   return getModelSizes(model).length > 0;
 }
 
-export function showPlugins(provider: ServiceProvider, model: string) {
-  if (
-    provider == ServiceProvider.OpenAI ||
-    provider == ServiceProvider.Azure ||
-    provider == ServiceProvider.Moonshot ||
-    provider == ServiceProvider.ChatGLM
-  ) {
-    return true;
-  }
-  if (provider == ServiceProvider.Anthropic && !model.includes("claude-2")) {
-    return true;
-  }
-  if (provider == ServiceProvider.Google && !model.includes("vision")) {
-    return true;
-  }
-  return false;
-}
-
-export function fetch(
-  url: string,
-  options?: Record<string, unknown>,
-): Promise<any> {
-  if (window.__TAURI__) {
-    return tauriStreamFetch(url, options);
-  }
-  return window.fetch(url, options);
-}
-
-export function adapter(config: Record<string, unknown>) {
-  const { baseURL, url, params, data: body, ...rest } = config;
-  const path = baseURL ? `${baseURL}${url}` : url;
-  const fetchUrl = params
-    ? `${path}?${new URLSearchParams(params as any).toString()}`
-    : path;
-  return fetch(fetchUrl as string, { ...rest, body }).then((res) => {
-    const { status, headers, statusText } = res;
-    return res
-      .text()
-      .then((data: string) => ({ status, statusText, headers, data }));
-  });
-}
-
 export function safeLocalStorage(): {
   getItem: (key: string) => string | null;
   setItem: (key: string, value: string) => void;
@@ -434,19 +390,11 @@ export function safeLocalStorage(): {
   };
 }
 
-export function getOperationId(operation: {
-  operationId?: string;
-  method: string;
-  path: string;
-}) {
-  // pattern '^[a-zA-Z0-9_-]+$'
-  return (
-    operation?.operationId ||
-    `${operation.method.toUpperCase()}${operation.path.replaceAll("/", "_")}`
-  );
-}
-
 export function clientUpdate() {
+  if (!getClientConfig()?.desktopUpdatesEnabled) {
+    showToast("自定义客户端已关闭上游自动更新。");
+    return;
+  }
   // this a wild for updating client app
   return window.__TAURI__?.updater
     .checkUpdate()

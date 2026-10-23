@@ -1,12 +1,6 @@
 "use client";
 import { ApiPath, CHATGLM_BASE_URL, ChatGLM } from "@/app/constant";
-import {
-  useAccessStore,
-  useAppConfig,
-  useChatStore,
-  ChatMessageTool,
-  usePluginStore,
-} from "@/app/store";
+import { useAccessStore, useAppConfig, useChatStore } from "@/app/store";
 import { stream } from "@/app/utils/chat";
 import {
   ChatOptions,
@@ -21,7 +15,6 @@ import {
   isVisionModel,
   getTimeoutMSByModel,
 } from "@/app/utils";
-import { RequestPayload } from "./openai";
 import { fetch } from "@/app/utils/stream";
 import { preProcessImageContent } from "@/app/utils/chat";
 
@@ -206,62 +199,20 @@ export class ChatGLMApi implements LLMApi {
 
       const shouldStream = !!options.config.stream;
       if (shouldStream) {
-        const [tools, funcs] = usePluginStore
-          .getState()
-          .getAsTools(
-            useChatStore.getState().currentSession().mask?.plugin || [],
-          );
         return stream(
           path,
           requestPayload,
           getHeaders(),
-          tools as any,
-          funcs,
           controller,
-          // parseSSE
-          (text: string, runTools: ChatMessageTool[]) => {
+          (text: string) => {
             const json = JSON.parse(text);
             const choices = json.choices as Array<{
               delta: {
                 content: string;
-                tool_calls: ChatMessageTool[];
               };
             }>;
-            const tool_calls = choices[0]?.delta?.tool_calls;
-            if (tool_calls?.length > 0) {
-              const index = tool_calls[0]?.index;
-              const id = tool_calls[0]?.id;
-              const args = tool_calls[0]?.function?.arguments;
-              if (id) {
-                runTools.push({
-                  id,
-                  type: tool_calls[0]?.type,
-                  function: {
-                    name: tool_calls[0]?.function?.name as string,
-                    arguments: args,
-                  },
-                });
-              } else {
-                // @ts-ignore
-                runTools[index]["function"]["arguments"] += args;
-              }
-            }
+
             return choices[0]?.delta?.content;
-          },
-          // processToolMessage
-          (
-            requestPayload: RequestPayload,
-            toolCallMessage: any,
-            toolCallResult: any[],
-          ) => {
-            // @ts-ignore
-            requestPayload?.messages?.splice(
-              // @ts-ignore
-              requestPayload?.messages?.length,
-              0,
-              toolCallMessage,
-              ...toolCallResult,
-            );
           },
           options,
         );

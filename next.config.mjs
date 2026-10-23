@@ -1,4 +1,5 @@
 import webpack from "webpack";
+import { fileURLToPath } from "node:url";
 
 const mode = process.env.BUILD_MODE ?? "standalone";
 console.log("[Next] build mode", mode);
@@ -9,6 +10,16 @@ console.log("[Next] build with chunk: ", !disableChunk);
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   webpack(config) {
+    if (mode === "export") {
+      config.plugins.push(
+        new webpack.NormalModuleReplacementPlugin(
+          /(?:^|[\\/])mcp[\\/]actions(?:\.ts)?$/,
+          fileURLToPath(
+            new URL("./app/mcp/desktop-actions.ts", import.meta.url),
+          ),
+        ),
+      );
+    }
     config.module.rules.push({
       test: /\.svg$/,
       use: ["@svgr/webpack"],

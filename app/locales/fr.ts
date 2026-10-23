@@ -1,7 +1,6 @@
 import { SubmitKey } from "../store/config";
 import type { PartialLocaleType } from "./index";
 import { getClientConfig } from "../config/client";
-import { SAAS_CHAT_UTM_URL } from "@/app/constant";
 const isApp = !!getClientConfig()?.isApp;
 
 const fr: PartialLocaleType = {
@@ -9,12 +8,10 @@ const fr: PartialLocaleType = {
   Error: {
     Unauthorized: isApp
       ? `😆 La conversation a rencontré quelques problèmes, pas de panique :
-    \\ 1️⃣ Si vous souhaitez commencer sans configuration, [cliquez ici pour démarrer la conversation immédiatement 🚀](${SAAS_CHAT_UTM_URL})
-    \\ 2️⃣ Si vous souhaitez utiliser vos propres ressources OpenAI, cliquez [ici](/#/settings) pour modifier les paramètres ⚙️`
+    \\ 1️⃣ Si vous souhaitez utiliser vos propres ressources OpenAI, cliquez [ici](/#/settings) pour modifier les paramètres ⚙️`
       : `😆 La conversation a rencontré quelques problèmes, pas de panique :
-    \ 1️⃣ Si vous souhaitez commencer sans configuration, [cliquez ici pour démarrer la conversation immédiatement 🚀](${SAAS_CHAT_UTM_URL})
-    \ 2️⃣ Si vous utilisez une version déployée privée, cliquez [ici](/#/auth) pour entrer la clé d'accès 🔑
-    \ 3️⃣ Si vous souhaitez utiliser vos propres ressources OpenAI, cliquez [ici](/#/settings) pour modifier les paramètres ⚙️
+    \ 1️⃣ Si vous utilisez une version déployée privée, cliquez [ici](/#/auth) pour entrer la clé d'accès 🔑
+    \ 2️⃣ Si vous souhaitez utiliser vos propres ressources OpenAI, cliquez [ici](/#/settings) pour modifier les paramètres ⚙️
  `,
   },
   Auth: {
@@ -25,10 +22,6 @@ const fr: PartialLocaleType = {
     Confirm: "Confirmer",
     Later: "Plus tard",
     Return: "Retour",
-    SaasTips:
-      "La configuration est trop compliquée, je veux l'utiliser immédiatement",
-    TopTips:
-      "🥳 Offre de lancement NextChat AI, débloquez les derniers grands modèles",
   },
   ChatItem: {
     ChatItemCount: (count: number) => `${count} conversations`,
@@ -305,14 +298,6 @@ const fr: PartialLocaleType = {
     },
 
     Access: {
-      SaasStart: {
-        Title: "Utiliser NextChat AI",
-        Label: "(La solution la plus rentable)",
-        SubTitle:
-          "Officiellement maintenu par NextChat, prêt à l'emploi sans configuration, prend en charge les derniers grands modèles",
-        ChatNow: "Discuter maintenant",
-      },
-
       AccessCode: {
         Title: "Mot de passe d'accès",
         SubTitle: "L'administrateur a activé l'accès sécurisé",
@@ -510,26 +495,8 @@ const fr: PartialLocaleType = {
     Clear: "Contexte effacé",
     Revert: "Restaurer le contexte",
   },
-  Plugin: {
-    Name: "Plugin",
-  },
   FineTuned: {
     Sysmessage: "Vous êtes un assistant",
-  },
-  SearchChat: {
-    Name: "Recherche",
-    Page: {
-      Title: "Rechercher dans l'historique des discussions",
-      Search: "Entrez le mot-clé de recherche",
-      NoResult: "Aucun résultat trouvé",
-      NoData: "Aucune donnée",
-      Loading: "Chargement",
-
-      SubTitle: (count: number) => `${count} résultats trouvés`,
-    },
-    Item: {
-      View: "Voir",
-    },
   },
   Mask: {
     Name: "Masque",

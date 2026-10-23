@@ -1,6 +1,5 @@
 import { getClientConfig } from "../config/client";
 import { SubmitKey } from "../store/config";
-import { SAAS_CHAT_UTM_URL } from "@/app/constant";
 import { PartialLocaleType } from "./index";
 
 const isApp = !!getClientConfig()?.isApp;
@@ -9,12 +8,10 @@ const da: PartialLocaleType = {
   Error: {
     Unauthorized: isApp
       ? `Hov, der skete en fejl. Sådan kan du komme videre:
-       \\ 1️⃣ Er du ny her? [Tryk for at starte nu 🚀](${SAAS_CHAT_UTM_URL})
-       \\ 2️⃣ Vil du bruge dine egne OpenAI-nøgler? [Tryk her](/#/settings) for at ændre indstillinger ⚙️`
+       \\ 1️⃣ Vil du bruge dine egne OpenAI-nøgler? [Tryk her](/#/settings) for at ændre indstillinger ⚙️`
       : `Hov, der skete en fejl. Lad os løse det:
-       \\ 1️⃣ Er du ny her? [Tryk for at starte nu 🚀](${SAAS_CHAT_UTM_URL})
-       \\ 2️⃣ Bruger du en privat opsætning? [Tryk her](/#/auth) for at taste din nøgle 🔑
-       \\ 3️⃣ Vil du bruge dine egne OpenAI-nøgler? [Tryk her](/#/settings) for at ændre indstillinger ⚙️
+       \\ 1️⃣ Bruger du en privat opsætning? [Tryk her](/#/auth) for at taste din nøgle 🔑
+       \\ 2️⃣ Vil du bruge dine egne OpenAI-nøgler? [Tryk her](/#/settings) for at ændre indstillinger ⚙️
        `,
   },
   Auth: {
@@ -25,7 +22,6 @@ const da: PartialLocaleType = {
     Input: "Adgangskode",
     Confirm: "OK",
     Later: "Senere",
-    SaasTips: "Hvis det er for svært, kan du starte nu",
   },
   ChatItem: {
     ChatItemCount: (count: number) => `${count} beskeder`,
@@ -467,17 +463,6 @@ const da: PartialLocaleType = {
           SubTitle: "F.eks.: ",
         },
       },
-      Stability: {
-        ApiKey: {
-          Title: "Stability-nøgle",
-          SubTitle: "Din egen Stability-nøgle",
-          Placeholder: "Stability API Key",
-        },
-        Endpoint: {
-          Title: "Adresse",
-          SubTitle: "F.eks.: ",
-        },
-      },
       Iflytek: {
         ApiKey: {
           Title: "Iflytek API Key",
@@ -574,39 +559,6 @@ const da: PartialLocaleType = {
       },
       Engine: "TTS-motor",
     },
-    Realtime: {
-      Enable: {
-        Title: "Live-chat",
-        SubTitle: "Slå live-svar til",
-      },
-      Provider: {
-        Title: "Modeludbyder",
-        SubTitle: "Vælg forskellig udbyder",
-      },
-      Model: {
-        Title: "Model",
-        SubTitle: "Vælg en model",
-      },
-      ApiKey: {
-        Title: "API-nøgle",
-        SubTitle: "Din nøgle",
-        Placeholder: "API-nøgle",
-      },
-      Azure: {
-        Endpoint: {
-          Title: "Adresse",
-          SubTitle: "Endpoint til Azure",
-        },
-        Deployment: {
-          Title: "Udrulningsnavn",
-          SubTitle: "Navn for dit Azure-setup",
-        },
-      },
-      Temperature: {
-        Title: "Temperatur",
-        SubTitle: "Højere tal = mere varierede svar",
-      },
-    },
   },
   Store: {
     DefaultTopic: "Ny samtale",
@@ -636,69 +588,11 @@ const da: PartialLocaleType = {
     Clear: "Kontekst ryddet",
     Revert: "Fortryd",
   },
-  Discovery: {
-    Name: "Søgning og plugins",
-  },
   Mcp: {
     Name: "MCP",
   },
   FineTuned: {
     Sysmessage: "Du er en hjælper, der skal...",
-  },
-  SearchChat: {
-    Name: "Søg",
-    Page: {
-      Title: "Søg i tidligere chats",
-      Search: "Skriv her for at søge",
-      NoResult: "Ingen resultater",
-      NoData: "Ingen data",
-      Loading: "Henter...",
-      SubTitle: (count: number) => `Fandt ${count} resultater`,
-    },
-    Item: {
-      View: "Vis",
-    },
-  },
-  Plugin: {
-    Name: "Plugin",
-    Page: {
-      Title: "Plugins",
-      SubTitle: (count: number) => `${count} plugins`,
-      Search: "Søg plugin",
-      Create: "Opret nyt",
-      Find: "Du kan finde flere plugins på GitHub: ",
-    },
-    Item: {
-      Info: (count: number) => `${count} metode`,
-      View: "Vis",
-      Edit: "Rediger",
-      Delete: "Slet",
-      DeleteConfirm: "Vil du slette?",
-    },
-    Auth: {
-      None: "Ingen",
-      Basic: "Basic",
-      Bearer: "Bearer",
-      Custom: "Tilpasset",
-      CustomHeader: "Parameternavn",
-      Token: "Token",
-      Proxy: "Brug Proxy",
-      ProxyDescription: "Løs CORS-problemer med Proxy",
-      Location: "Sted",
-      LocationHeader: "Header",
-      LocationQuery: "Query",
-      LocationBody: "Body",
-    },
-    EditModal: {
-      Title: (readonly: boolean) =>
-        `Rediger Plugin ${readonly ? "(skrivebeskyttet)" : ""}`,
-      Download: "Download",
-      Auth: "Godkendelsestype",
-      Content: "OpenAPI Schema",
-      Load: "Hent fra URL",
-      Method: "Metode",
-      Error: "Fejl i OpenAPI Schema",
-    },
   },
   Mask: {
     Name: "Persona",
@@ -782,61 +676,6 @@ const da: PartialLocaleType = {
   URLCommand: {
     Code: "Så ud til, at der var en kode i linket. Vil du bruge den?",
     Settings: "Så ud til, at der var indstillinger i linket. Vil du bruge dem?",
-  },
-  SdPanel: {
-    Prompt: "Prompt",
-    NegativePrompt: "Negativ prompt",
-    PleaseInput: (name: string) => `Indtast: ${name}`,
-    AspectRatio: "Billedformat",
-    ImageStyle: "Stil",
-    OutFormat: "Uddataformat",
-    AIModel: "AI-model",
-    ModelVersion: "Version",
-    Submit: "Send",
-    ParamIsRequired: (name: string) => `${name} er krævet`,
-    Styles: {
-      D3Model: "3d-model",
-      AnalogFilm: "analog-film",
-      Anime: "anime",
-      Cinematic: "cinematisk",
-      ComicBook: "tegneserie",
-      DigitalArt: "digital-art",
-      Enhance: "enhance",
-      FantasyArt: "fantasy-art",
-      Isometric: "isometric",
-      LineArt: "line-art",
-      LowPoly: "low-poly",
-      ModelingCompound: "modeling-compound",
-      NeonPunk: "neon-punk",
-      Origami: "origami",
-      Photographic: "fotografisk",
-      PixelArt: "pixel-art",
-      TileTexture: "tile-texture",
-    },
-  },
-  Sd: {
-    SubTitle: (count: number) => `${count} billeder`,
-    Actions: {
-      Params: "Se indstillinger",
-      Copy: "Kopiér prompt",
-      Delete: "Slet",
-      Retry: "Prøv igen",
-      ReturnHome: "Til forsiden",
-      History: "Historik",
-    },
-    EmptyRecord: "Ingen billeder endnu",
-    Status: {
-      Name: "Status",
-      Success: "Ok",
-      Error: "Fejl",
-      Wait: "Venter",
-      Running: "I gang",
-    },
-    Danger: {
-      Delete: "Vil du slette?",
-    },
-    GenerateParams: "Genereringsvalg",
-    Detail: "Detaljer",
   },
 };
 

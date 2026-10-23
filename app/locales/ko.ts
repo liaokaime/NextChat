@@ -1,7 +1,6 @@
 import { SubmitKey } from "../store/config";
 import type { PartialLocaleType } from "./index";
 import { getClientConfig } from "../config/client";
-import { SAAS_CHAT_UTM_URL } from "@/app/constant";
 const isApp = !!getClientConfig()?.isApp;
 
 const ko: PartialLocaleType = {
@@ -9,12 +8,10 @@ const ko: PartialLocaleType = {
   Error: {
     Unauthorized: isApp
       ? `😆 대화 중 문제가 발생했습니다, 걱정하지 마세요:
-    \\ 1️⃣ 세팅 없이 시작하고 싶다면, [여기를 클릭하여 즉시 대화를 시작하세요 🚀](${SAAS_CHAT_UTM_URL})
-    \\ 2️⃣ 자신의 OpenAI 리소스를 사용하고 싶다면, [여기를 클릭하여](/#/settings) 설정을 수정하세요 ⚙️`
+    \\ 1️⃣ 자신의 OpenAI 리소스를 사용하고 싶다면, [여기를 클릭하여](/#/settings) 설정을 수정하세요 ⚙️`
       : `😆 대화 중 문제가 발생했습니다, 걱정하지 마세요:
-    \ 1️⃣ 세팅 없이 시작하고 싶다면, [여기를 클릭하여 즉시 대화를 시작하세요 🚀](${SAAS_CHAT_UTM_URL})
-    \ 2️⃣ 개인 배포 버전을 사용하고 있다면, [여기를 클릭하여](/#/auth) 접근 키를 입력하세요 🔑
-    \ 3️⃣ 자신의 OpenAI 리소스를 사용하고 싶다면, [여기를 클릭하여](/#/settings) 설정을 수정하세요 ⚙️
+    \ 1️⃣ 개인 배포 버전을 사용하고 있다면, [여기를 클릭하여](/#/auth) 접근 키를 입력하세요 🔑
+    \ 2️⃣ 자신의 OpenAI 리소스를 사용하고 싶다면, [여기를 클릭하여](/#/settings) 설정을 수정하세요 ⚙️
  `,
   },
   Auth: {
@@ -25,9 +22,6 @@ const ko: PartialLocaleType = {
     Confirm: "확인",
     Later: "나중에 하기",
     Return: "돌아가기",
-    SaasTips: "설정이 너무 복잡합니다. 즉시 사용하고 싶습니다.",
-    TopTips:
-      "🥳 NextChat AI 출시 기념 할인: 지금 최신 대형 모델을 사용해보세요!",
   },
   ChatItem: {
     ChatItemCount: (count: number) => `${count} 개의 대화`,
@@ -312,14 +306,6 @@ const ko: PartialLocaleType = {
     },
 
     Access: {
-      SaasStart: {
-        Title: "NextChat AI 사용하기",
-        Label: "(가장 비용 효율적인 솔루션)",
-        SubTitle:
-          "NextChat에 의해 공식적으로 유지 관리되며, 설정 없이 즉시 사용할 수 있으며, 최신 대형 모델을 지원합니다",
-        ChatNow: "지금 채팅하기",
-      },
-
       AccessCode: {
         Title: "접근 비밀번호",
         SubTitle: "관리자가 암호화된 접근을 활성화했습니다.",
@@ -509,17 +495,6 @@ const ko: PartialLocaleType = {
           SubTitle: "예: ",
         },
       },
-      Stability: {
-        ApiKey: {
-          Title: "Stability API 키",
-          SubTitle: "커스텀 Stability API 키 사용",
-          Placeholder: "Stability API 키",
-        },
-        Endpoint: {
-          Title: "엔드포인트 주소",
-          SubTitle: "예: ",
-        },
-      },
       Iflytek: {
         ApiKey: {
           Title: "Iflytek API 키",
@@ -599,39 +574,6 @@ const ko: PartialLocaleType = {
       },
       Engine: "TTS Engine",
     },
-    Realtime: {
-      Enable: {
-        Title: "실시간 채팅",
-        SubTitle: "실시간 채팅 기능 활성화",
-      },
-      Provider: {
-        Title: "모델 제공업체",
-        SubTitle: "다른 제공업체 간 전환",
-      },
-      Model: {
-        Title: "모델",
-        SubTitle: "모델 선택",
-      },
-      ApiKey: {
-        Title: "API 키",
-        SubTitle: "API 키",
-        Placeholder: "API 키",
-      },
-      Azure: {
-        Endpoint: {
-          Title: "엔드포인트",
-          SubTitle: "엔드포인트",
-        },
-        Deployment: {
-          Title: "배포 이름",
-          SubTitle: "배포 이름",
-        },
-      },
-      Temperature: {
-        Title: "무작위성 (temperature)",
-        SubTitle: "값이 클수록 응답이 더 무작위적",
-      },
-    },
   },
   Store: {
     DefaultTopic: "새 채팅",
@@ -660,70 +602,11 @@ const ko: PartialLocaleType = {
     Clear: "컨텍스트가 지워졌습니다.",
     Revert: "컨텍스트 복원",
   },
-  Discovery: {
-    Name: "디스커버리",
-  },
   Mcp: {
     Name: "MCP 플러그인",
   },
   FineTuned: {
     Sysmessage: "당신은 보조자입니다.",
-  },
-  SearchChat: {
-    Name: "검색",
-    Page: {
-      Title: "채팅 기록 검색",
-      Search: "검색어 입력",
-      NoResult: "결과를 찾을 수 없습니다",
-      NoData: "데이터가 없습니다",
-      Loading: "로딩 중...",
-
-      SubTitle: (count: number) => `${count}개의 결과를 찾았습니다`,
-    },
-    Item: {
-      View: "보기",
-    },
-  },
-  Plugin: {
-    Name: "플러그인",
-    Page: {
-      Title: "플러그인",
-      SubTitle: (count: number) => `${count} 개의 플러그인`,
-      Search: "플러그인 검색",
-      Create: "새로 만들기",
-      Find: "github에서 멋진 플러그인을 찾을 수 있습니다: ",
-    },
-    Item: {
-      Info: (count: number) => `${count} 개의 메서드`,
-      View: "보기",
-      Edit: "편집",
-      Delete: "삭제",
-      DeleteConfirm: "삭제하시겠습니까?",
-    },
-    Auth: {
-      None: "없음",
-      Basic: "기본",
-      Bearer: "Bearer",
-      Custom: "커스텀",
-      CustomHeader: "파라미터 이름",
-      Token: "토큰",
-      Proxy: "프록시 사용",
-      ProxyDescription: "CORS 오류 해결을 위해 프록시 사용",
-      Location: "위치",
-      LocationHeader: "헤더",
-      LocationQuery: "쿼리",
-      LocationBody: "바디",
-    },
-    EditModal: {
-      Title: (readonly: boolean) =>
-        `플러그인 편집 ${readonly ? "(읽기 전용)" : ""}`,
-      Download: "다운로드",
-      Auth: "인증 유형",
-      Content: "OpenAPI Schema",
-      Load: "URL에서 로드",
-      Method: "메서드",
-      Error: "OpenAPI Schema 오류",
-    },
   },
   Mask: {
     Name: "마스크",
@@ -803,61 +686,6 @@ const ko: PartialLocaleType = {
     Messages: "메시지",
     Topic: "주제",
     Time: "시간",
-  },
-  SdPanel: {
-    Prompt: "프롬프트",
-    NegativePrompt: "부정적 프롬프트",
-    PleaseInput: (name: string) => `${name}을 입력하세요`,
-    AspectRatio: "비율",
-    ImageStyle: "이미지 스타일",
-    OutFormat: "출력 형식",
-    AIModel: "AI 모델",
-    ModelVersion: "모델 버전",
-    Submit: "제출",
-    ParamIsRequired: (name: string) => `${name}은 필수 입력 항목입니다`,
-    Styles: {
-      D3Model: "3d-model",
-      AnalogFilm: "analog-film",
-      Anime: "anime",
-      Cinematic: "cinematic",
-      ComicBook: "comic-book",
-      DigitalArt: "digital-art",
-      Enhance: "enhance",
-      FantasyArt: "fantasy-art",
-      Isometric: "isometric",
-      LineArt: "line-art",
-      LowPoly: "low-poly",
-      ModelingCompound: "modeling-compound",
-      NeonPunk: "neon-punk",
-      Origami: "origami",
-      Photographic: "photographic",
-      PixelArt: "pixel-art",
-      TileTexture: "tile-texture",
-    },
-  },
-  Sd: {
-    SubTitle: (count: number) => `${count} 개의 이미지`,
-    Actions: {
-      Params: "파라미터 보기",
-      Copy: "프롬프트 복사",
-      Delete: "삭제",
-      Retry: "다시 시도",
-      ReturnHome: "홈으로 돌아가기",
-      History: "기록",
-    },
-    EmptyRecord: "아직 이미지가 없습니다",
-    Status: {
-      Name: "상태",
-      Success: "성공",
-      Error: "오류",
-      Wait: "대기",
-      Running: "실행 중",
-    },
-    Danger: {
-      Delete: "삭제하시겠습니까?",
-    },
-    GenerateParams: "파라미터 생성",
-    Detail: "상세",
   },
 };
 

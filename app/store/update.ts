@@ -76,6 +76,7 @@ export const useUpdateStore = createPersistStore(
           : getClientConfig()?.version;
 
       set(() => ({ version }));
+      if (isApp && !getClientConfig()?.desktopUpdatesEnabled) return;
 
       const shouldCheck = Date.now() - get().lastUpdate > 2 * 60 * ONE_MINUTE;
       if (!force && !shouldCheck) return;

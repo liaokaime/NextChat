@@ -1,6 +1,5 @@
 import { getClientConfig } from "../config/client";
 import { SubmitKey } from "../store/config";
-import { SAAS_CHAT_UTM_URL } from "@/app/constant";
 
 const isApp = !!getClientConfig()?.isApp;
 
@@ -9,12 +8,10 @@ const cn = {
   Error: {
     Unauthorized: isApp
       ? `😆 对话遇到了一些问题，不用慌:
-       \\ 1️⃣ 想要零配置开箱即用，[点击这里立刻开启对话 🚀](${SAAS_CHAT_UTM_URL})
-       \\ 2️⃣ 如果你想消耗自己的 OpenAI 资源，点击[这里](/#/settings)修改设置 ⚙️`
+       \\ 1️⃣ 如果你想消耗自己的 OpenAI 资源，点击[这里](/#/settings)修改设置 ⚙️`
       : `😆 对话遇到了一些问题，不用慌:
-       \ 1️⃣ 想要零配置开箱即用，[点击这里立刻开启对话 🚀](${SAAS_CHAT_UTM_URL})
-       \ 2️⃣ 如果你正在使用私有部署版本，点击[这里](/#/auth)输入访问秘钥 🔑
-       \ 3️⃣ 如果你想消耗自己的 OpenAI 资源，点击[这里](/#/settings)修改设置 ⚙️
+       \ 1️⃣ 如果你正在使用私有部署版本，点击[这里](/#/auth)输入访问秘钥 🔑
+       \ 2️⃣ 如果你想消耗自己的 OpenAI 资源，点击[这里](/#/settings)修改设置 ⚙️
        `,
   },
   Auth: {
@@ -25,8 +22,6 @@ const cn = {
     Input: "在此处填写访问码",
     Confirm: "确认",
     Later: "稍后再说",
-    SaasTips: "配置太麻烦，想要立即使用",
-    TopTips: "🥳 NextChat AI 首发优惠，立刻解锁最新大模型",
   },
   ChatItem: {
     ChatItemCount: (count: number) => `${count} 条对话`,
@@ -310,12 +305,6 @@ const cn = {
     },
 
     Access: {
-      SaasStart: {
-        Title: "使用 NextChat AI",
-        Label: "（性价比最高的方案）",
-        SubTitle: "由 NextChat 官方维护, 零配置开箱即用，支持最新大模型",
-        ChatNow: "立刻对话",
-      },
       AccessCode: {
         Title: "访问密码",
         SubTitle: "管理员已开启加密访问",
@@ -505,17 +494,6 @@ const cn = {
           SubTitle: "样例：",
         },
       },
-      Stability: {
-        ApiKey: {
-          Title: "接口密钥",
-          SubTitle: "使用自定义 Stability API Key",
-          Placeholder: "Stability API Key",
-        },
-        Endpoint: {
-          Title: "接口地址",
-          SubTitle: "样例：",
-        },
-      },
       Iflytek: {
         ApiKey: {
           Title: "ApiKey",
@@ -594,39 +572,6 @@ const cn = {
         SubTitle: "生成语音的速度",
       },
     },
-    Realtime: {
-      Enable: {
-        Title: "实时聊天",
-        SubTitle: "开启实时聊天功能",
-      },
-      Provider: {
-        Title: "模型服务商",
-        SubTitle: "切换不同的服务商",
-      },
-      Model: {
-        Title: "模型",
-        SubTitle: "选择一个模型",
-      },
-      ApiKey: {
-        Title: "API Key",
-        SubTitle: "API Key",
-        Placeholder: "API Key",
-      },
-      Azure: {
-        Endpoint: {
-          Title: "接口地址",
-          SubTitle: "接口地址",
-        },
-        Deployment: {
-          Title: "部署名称",
-          SubTitle: "部署名称",
-        },
-      },
-      Temperature: {
-        Title: "随机性 (temperature)",
-        SubTitle: "值越大，回复越随机",
-      },
-    },
   },
   Store: {
     DefaultTopic: "新的聊天",
@@ -655,69 +600,11 @@ const cn = {
     Clear: "上下文已清除",
     Revert: "恢复上下文",
   },
-  Discovery: {
-    Name: "发现",
-  },
   Mcp: {
     Name: "MCP",
   },
   FineTuned: {
     Sysmessage: "你是一个助手",
-  },
-  SearchChat: {
-    Name: "搜索聊天记录",
-    Page: {
-      Title: "搜索聊天记录",
-      Search: "输入搜索关键词",
-      NoResult: "没有找到结果",
-      NoData: "没有数据",
-      Loading: "加载中",
-
-      SubTitle: (count: number) => `搜索到 ${count} 条结果`,
-    },
-    Item: {
-      View: "查看",
-    },
-  },
-  Plugin: {
-    Name: "插件",
-    Page: {
-      Title: "插件",
-      SubTitle: (count: number) => `${count} 个插件`,
-      Search: "搜索插件",
-      Create: "新建",
-      Find: "您可以在Github上找到优秀的插件：",
-    },
-    Item: {
-      Info: (count: number) => `${count} 方法`,
-      View: "查看",
-      Edit: "编辑",
-      Delete: "删除",
-      DeleteConfirm: "确认删除？",
-    },
-    Auth: {
-      None: "不需要授权",
-      Basic: "Basic",
-      Bearer: "Bearer",
-      Custom: "自定义",
-      CustomHeader: "自定义参数名称",
-      Token: "Token",
-      Proxy: "使用代理",
-      ProxyDescription: "使用代理解决 CORS 错误",
-      Location: "位置",
-      LocationHeader: "Header",
-      LocationQuery: "Query",
-      LocationBody: "Body",
-    },
-    EditModal: {
-      Title: (readonly: boolean) => `编辑插件 ${readonly ? "（只读）" : ""}`,
-      Download: "下载",
-      Auth: "授权方式",
-      Content: "OpenAPI Schema",
-      Load: "从网页加载",
-      Method: "方法",
-      Error: "格式错误",
-    },
   },
   Mask: {
     Name: "面具",
@@ -802,61 +689,6 @@ const cn = {
     Messages: "消息",
     Topic: "主题",
     Time: "时间",
-  },
-  SdPanel: {
-    Prompt: "画面提示",
-    NegativePrompt: "否定提示",
-    PleaseInput: (name: string) => `请输入${name}`,
-    AspectRatio: "横纵比",
-    ImageStyle: "图像风格",
-    OutFormat: "输出格式",
-    AIModel: "AI模型",
-    ModelVersion: "模型版本",
-    Submit: "提交生成",
-    ParamIsRequired: (name: string) => `${name}不能为空`,
-    Styles: {
-      D3Model: "3D模型",
-      AnalogFilm: "模拟电影",
-      Anime: "动漫",
-      Cinematic: "电影风格",
-      ComicBook: "漫画书",
-      DigitalArt: "数字艺术",
-      Enhance: "增强",
-      FantasyArt: "幻想艺术",
-      Isometric: "等角",
-      LineArt: "线描",
-      LowPoly: "低多边形",
-      ModelingCompound: "建模材料",
-      NeonPunk: "霓虹朋克",
-      Origami: "折纸",
-      Photographic: "摄影",
-      PixelArt: "像素艺术",
-      TileTexture: "贴图",
-    },
-  },
-  Sd: {
-    SubTitle: (count: number) => `共 ${count} 条绘画`,
-    Actions: {
-      Params: "查看参数",
-      Copy: "复制提示词",
-      Delete: "删除",
-      Retry: "重试",
-      ReturnHome: "返回首页",
-      History: "查看历史",
-    },
-    EmptyRecord: "暂无绘画记录",
-    Status: {
-      Name: "状态",
-      Success: "成功",
-      Error: "失败",
-      Wait: "等待中",
-      Running: "运行中",
-    },
-    Danger: {
-      Delete: "确认删除？",
-    },
-    GenerateParams: "生成参数",
-    Detail: "详情",
   },
 };
 

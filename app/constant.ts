@@ -1,15 +1,12 @@
 export const OWNER = "ChatGPTNextWeb";
 export const REPO = "ChatGPT-Next-Web";
 export const REPO_URL = `https://github.com/${OWNER}/${REPO}`;
-export const PLUGINS_REPO_URL = `https://github.com/${OWNER}/NextChat-Awesome-Plugins`;
 export const ISSUE_URL = `https://github.com/${OWNER}/${REPO}/issues`;
 export const UPDATE_URL = `${REPO_URL}#keep-updated`;
 export const RELEASE_URL = `${REPO_URL}/releases`;
 export const FETCH_COMMIT_URL = `https://api.github.com/repos/${OWNER}/${REPO}/commits?per_page=1`;
 export const FETCH_TAG_URL = `https://api.github.com/repos/${OWNER}/${REPO}/tags?per_page=1`;
 export const RUNTIME_CONFIG_DOM = "danger-runtime-config";
-
-export const STABILITY_BASE_URL = "https://api.stability.ai";
 
 export const OPENAI_BASE_URL = "https://api.openai.com";
 export const ANTHROPIC_BASE_URL = "https://api.anthropic.com";
@@ -47,12 +44,8 @@ export enum Path {
   Settings = "/settings",
   NewChat = "/new-chat",
   Masks = "/masks",
-  Plugins = "/plugins",
   Auth = "/auth",
-  Sd = "/sd",
-  SdNew = "/sd-new",
   Artifacts = "/artifacts",
-  SearchChat = "/search-chat",
   McpMarket = "/mcp-market",
 }
 
@@ -68,7 +61,6 @@ export enum ApiPath {
   Tencent = "/api/tencent",
   Moonshot = "/api/moonshot",
   Iflytek = "/api/iflytek",
-  Stability = "/api/stability",
   Artifacts = "/api/artifacts",
   XAI = "/api/xai",
   ChatGLM = "/api/chatglm",
@@ -89,14 +81,12 @@ export enum FileName {
 
 export enum StoreKey {
   Chat = "chat-next-web-store",
-  Plugin = "chat-next-web-plugin",
   Access = "access-control",
   Config = "app-config",
   Mask = "mask-store",
   Prompt = "prompt-store",
   Update = "chat-update",
   Sync = "sync",
-  SdList = "sd-list",
   Mcp = "mcp-store",
 }
 
@@ -127,7 +117,6 @@ export enum ServiceProvider {
   Alibaba = "Alibaba",
   Tencent = "Tencent",
   Moonshot = "Moonshot",
-  Stability = "Stability",
   Iflytek = "Iflytek",
   XAI = "XAI",
   ChatGLM = "ChatGLM",
@@ -146,7 +135,6 @@ export enum GoogleSafetySettingsThreshold {
 }
 
 export enum ModelProvider {
-  Stability = "Stability",
   GPT = "GPT",
   GeminiPro = "GeminiPro",
   Claude = "Claude",
@@ -162,11 +150,6 @@ export enum ModelProvider {
   SiliconFlow = "SiliconFlow",
   "302.AI" = "302.AI",
 }
-
-export const Stability = {
-  GeneratePath: "v2beta/stable-image/generate",
-  ExampleEndpoint: "https://api.stability.ai",
-};
 
 export const Anthropic = {
   ChatPath: "v1/messages",
@@ -365,7 +348,6 @@ You are an AI assistant with access to system tools. Your role is to help users 
    }
    \`\`\`"
 
-
   \`\`\`json:mcp-response:filesystem
   {
   "method": "tools/call",
@@ -493,7 +475,7 @@ export const VISION_MODEL_REGEXES = [
   /o3/,
   /o4-mini/,
   /grok-4/i,
-  /gpt-5/
+  /gpt-5/,
 ];
 
 export const EXCLUDE_VISION_MODEL_REGEXES = [/claude-3-5-haiku-20241022/];
@@ -561,7 +543,7 @@ const googleModels = [
   "gemini-2.0-pro-exp",
   "gemini-2.0-pro-exp-02-05",
   "gemini-2.5-pro-preview-06-05",
-  "gemini-2.5-pro"
+  "gemini-2.5-pro",
 ];
 
 const anthropicModels = [
@@ -928,6 +910,3 @@ export const internalAllowedWebDavEndpoints = [
 ];
 
 export const DEFAULT_GA_ID = "G-89WN60ZK2E";
-
-export const SAAS_CHAT_URL = "https://nextchat.club";
-export const SAAS_CHAT_UTM_URL = "https://nextchat.club?utm=github";

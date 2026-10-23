@@ -1,18 +1,7 @@
 "use client";
 
-import {
-  ApiPath,
-  AI302_BASE_URL,
-  DEFAULT_MODELS,
-  AI302,
-} from "@/app/constant";
-import {
-  useAccessStore,
-  useAppConfig,
-  useChatStore,
-  ChatMessageTool,
-  usePluginStore,
-} from "@/app/store";
+import { ApiPath, AI302_BASE_URL, DEFAULT_MODELS, AI302 } from "@/app/constant";
+import { useAccessStore, useAppConfig, useChatStore } from "@/app/store";
 import { preProcessImageContent, streamWithThink } from "@/app/utils/chat";
 import {
   ChatOptions,
@@ -61,10 +50,7 @@ export class Ai302Api implements LLMApi {
     if (baseUrl.endsWith("/")) {
       baseUrl = baseUrl.slice(0, baseUrl.length - 1);
     }
-    if (
-      !baseUrl.startsWith("http") &&
-      !baseUrl.startsWith(ApiPath["302.AI"])
-    ) {
+    if (!baseUrl.startsWith("http") && !baseUrl.startsWith(ApiPath["302.AI"])) {
       baseUrl = "https://" + baseUrl;
     }
 
@@ -141,48 +127,20 @@ export class Ai302Api implements LLMApi {
       );
 
       if (shouldStream) {
-        const [tools, funcs] = usePluginStore
-          .getState()
-          .getAsTools(
-            useChatStore.getState().currentSession().mask?.plugin || [],
-          );
         return streamWithThink(
           chatPath,
           requestPayload,
           getHeaders(),
-          tools as any,
-          funcs,
           controller,
-          // parseSSE
-          (text: string, runTools: ChatMessageTool[]) => {
-            // console.log("parseSSE", text, runTools);
+          (text: string) => {
             const json = JSON.parse(text);
             const choices = json.choices as Array<{
               delta: {
                 content: string | null;
-                tool_calls: ChatMessageTool[];
                 reasoning_content: string | null;
               };
             }>;
-            const tool_calls = choices[0]?.delta?.tool_calls;
-            if (tool_calls?.length > 0) {
-              const index = tool_calls[0]?.index;
-              const id = tool_calls[0]?.id;
-              const args = tool_calls[0]?.function?.arguments;
-              if (id) {
-                runTools.push({
-                  id,
-                  type: tool_calls[0]?.type,
-                  function: {
-                    name: tool_calls[0]?.function?.name as string,
-                    arguments: args,
-                  },
-                });
-              } else {
-                // @ts-ignore
-                runTools[index]["function"]["arguments"] += args;
-              }
-            }
+
             const reasoning = choices[0]?.delta?.reasoning_content;
             const content = choices[0]?.delta?.content;
 
@@ -213,21 +171,6 @@ export class Ai302Api implements LLMApi {
               isThinking: false,
               content: "",
             };
-          },
-          // processToolMessage, include tool_calls message and tool call results
-          (
-            requestPayload: RequestPayload,
-            toolCallMessage: any,
-            toolCallResult: any[],
-          ) => {
-            // @ts-ignore
-            requestPayload?.messages?.splice(
-              // @ts-ignore
-              requestPayload?.messages?.length,
-              0,
-              toolCallMessage,
-              ...toolCallResult,
-            );
           },
           options,
         );

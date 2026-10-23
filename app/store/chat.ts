@@ -19,14 +19,11 @@ import {
   DEFAULT_INPUT_TEMPLATE,
   DEFAULT_MODELS,
   DEFAULT_SYSTEM_TEMPLATE,
-  GEMINI_SUMMARIZE_MODEL,
-  DEEPSEEK_SUMMARIZE_MODEL,
   KnowledgeCutOffDate,
   MCP_SYSTEM_TEMPLATE,
   MCP_TOOLS_TEMPLATE,
   ServiceProvider,
   StoreKey,
-  SUMMARIZE_MODEL,
 } from "../constant";
 import Locale, { getLang } from "../locales";
 import { prettyObject } from "../utils/format";
@@ -34,25 +31,12 @@ import { createPersistStore } from "../utils/store";
 import { estimateTokenLength } from "../utils/token";
 import { ModelConfig, ModelType, useAppConfig } from "./config";
 import { useAccessStore } from "./access";
-import { collectModelsWithDefaultModel } from "../utils/model";
 import { createEmptyMask, Mask } from "./mask";
 import { executeMcpAction, getAllTools, isMcpEnabled } from "../mcp/actions";
 import { extractMcpJson, isMcpJson } from "../mcp/utils";
+import { summaryTarget } from "../client/providers";
 
 const localStorage = safeLocalStorage();
-
-export type ChatMessageTool = {
-  id: string;
-  index?: number;
-  type?: string;
-  function?: {
-    name: string;
-    arguments?: string;
-  };
-  content?: string;
-  isError?: boolean;
-  errorMsg?: string;
-};
 
 export type ChatMessage = RequestMessage & {
   date: string;
@@ -60,8 +44,7 @@ export type ChatMessage = RequestMessage & {
   isError?: boolean;
   id: string;
   model?: ModelType;
-  tools?: ChatMessageTool[];
-  audio_url?: string;
+  reasoning?: string;
   isMcpResponse?: boolean;
 };
 
@@ -117,38 +100,6 @@ function createEmptySession(): ChatSession {
 
     mask: createEmptyMask(),
   };
-}
-
-function getSummarizeModel(
-  currentModel: string,
-  providerName: string,
-): string[] {
-  // if it is using gpt-* models, force to use 4o-mini to summarize
-  if (currentModel.startsWith("gpt") || currentModel.startsWith("chatgpt")) {
-    const configStore = useAppConfig.getState();
-    const accessStore = useAccessStore.getState();
-    const allModel = collectModelsWithDefaultModel(
-      configStore.models,
-      [configStore.customModels, accessStore.customModels].join(","),
-      accessStore.defaultModel,
-    );
-    const summarizeModel = allModel.find(
-      (m) => m.name === SUMMARIZE_MODEL && m.available,
-    );
-    if (summarizeModel) {
-      return [
-        summarizeModel.name,
-        summarizeModel.provider?.providerName as string,
-      ];
-    }
-  }
-  if (currentModel.startsWith("gemini")) {
-    return [GEMINI_SUMMARIZE_MODEL, ServiceProvider.Google];
-  } else if (currentModel.startsWith("deepseek-")) {
-    return [DEEPSEEK_SUMMARIZE_MODEL, ServiceProvider.DeepSeek];
-  }
-
-  return [currentModel, providerName];
 }
 
 function countMessages(msgs: ChatMessage[]) {
@@ -399,7 +350,8 @@ export const useChatStore = createPersistStore(
 
         get().updateStat(message, targetSession);
 
-        get().checkMcpJson(message);
+        if (!targetSession.mask.modelConfig.providerId)
+          void get().checkMcpJson(message);
 
         get().summarizeSession(false, targetSession);
       },
@@ -456,11 +408,20 @@ export const useChatStore = createPersistStore(
           ]);
         });
 
-        const api: ClientApi = getClientApi(modelConfig.providerName);
+        const api: ClientApi = getClientApi(
+          modelConfig.providerName,
+          modelConfig.providerId,
+        );
         // make request
         api.llm.chat({
           messages: sendMessages,
           config: { ...modelConfig, stream: true },
+          onReasoning(reasoning) {
+            botMessage.reasoning = reasoning;
+            get().updateTargetSession(session, (session) => {
+              session.messages = session.messages.concat();
+            });
+          },
           onUpdate(message) {
             botMessage.streaming = true;
             if (message) {
@@ -479,30 +440,17 @@ export const useChatStore = createPersistStore(
             }
             ChatControllerPool.remove(session.id, botMessage.id);
           },
-          onBeforeTool(tool: ChatMessageTool) {
-            (botMessage.tools = botMessage?.tools || []).push(tool);
-            get().updateTargetSession(session, (session) => {
-              session.messages = session.messages.concat();
-            });
-          },
-          onAfterTool(tool: ChatMessageTool) {
-            botMessage?.tools?.forEach((t, i, tools) => {
-              if (tool.id == t.id) {
-                tools[i] = { ...tool };
-              }
-            });
-            get().updateTargetSession(session, (session) => {
-              session.messages = session.messages.concat();
-            });
-          },
           onError(error) {
-            const isAborted = error.message?.includes?.("aborted");
-            botMessage.content +=
-              "\n\n" +
-              prettyObject({
-                error: true,
-                message: error.message,
-              });
+            const isAborted =
+              error.name === "AbortError" ||
+              error.message?.includes?.("aborted");
+            if (!isAborted)
+              botMessage.content +=
+                "\n\n" +
+                prettyObject({
+                  error: true,
+                  message: error.message,
+                });
             botMessage.streaming = false;
             userMessage.isError = !isAborted;
             botMessage.isError = !isAborted;
@@ -672,14 +620,12 @@ export const useChatStore = createPersistStore(
           return;
         }
 
-        // if not config compressModel, then using getSummarizeModel
-        const [model, providerName] = modelConfig.compressModel
-          ? [modelConfig.compressModel, modelConfig.compressProviderName]
-          : getSummarizeModel(
-              session.mask.modelConfig.model,
-              session.mask.modelConfig.providerName,
-            );
-        const api: ClientApi = getClientApi(providerName as ServiceProvider);
+        // Titles and summaries follow the selected instance unless overridden.
+        const { model, providerName, providerId } = summaryTarget(modelConfig);
+        const api: ClientApi = getClientApi(
+          providerName as ServiceProvider,
+          providerId,
+        );
 
         // remove error messages if any
         const messages = session.messages;
@@ -710,9 +656,11 @@ export const useChatStore = createPersistStore(
           api.llm.chat({
             messages: topicMessages,
             config: {
+              ...modelConfig,
               model,
               stream: false,
               providerName,
+              providerId,
             },
             onFinish(message, responseRes) {
               if (responseRes?.status === 200) {
@@ -778,6 +726,7 @@ export const useChatStore = createPersistStore(
               stream: true,
               model,
               providerName,
+              providerId,
             },
             onUpdate(message) {
               session.memoryPrompt = message;
@@ -826,8 +775,8 @@ export const useChatStore = createPersistStore(
       },
 
       /** check if the message contains MCP JSON and execute the MCP action */
-      checkMcpJson(message: ChatMessage) {
-        const mcpEnabled = isMcpEnabled();
+      async checkMcpJson(message: ChatMessage) {
+        const mcpEnabled = await isMcpEnabled();
         if (!mcpEnabled) return;
         const content = getMessageTextContent(message);
         if (isMcpJson(content)) {

@@ -9,13 +9,7 @@ import {
   REQUEST_TIMEOUT_MS,
   ServiceProvider,
 } from "@/app/constant";
-import {
-  ChatMessageTool,
-  useAccessStore,
-  useAppConfig,
-  useChatStore,
-  usePluginStore,
-} from "@/app/store";
+import { useAccessStore, useAppConfig, useChatStore } from "@/app/store";
 import { collectModelsWithDefaultModel } from "@/app/utils/model";
 import {
   preProcessImageContent,
@@ -200,7 +194,7 @@ export class ChatGPTApi implements LLMApi {
       options.config.model.startsWith("o1") ||
       options.config.model.startsWith("o3") ||
       options.config.model.startsWith("o4-mini");
-    const isGpt5 =  options.config.model.startsWith("gpt-5");
+    const isGpt5 = options.config.model.startsWith("gpt-5");
     if (isDalle3) {
       const prompt = getMessageTextContent(
         options.messages.slice(-1)?.pop() as any,
@@ -226,12 +220,12 @@ export class ChatGPTApi implements LLMApi {
           messages.push({ role: v.role, content });
       }
 
-      // O1 not support image, tools (plugin in ChatGPTNextWeb) and system, stream, logprobs, temperature, top_p, n, presence_penalty, frequency_penalty yet.
+      // O1 not support image, tools and system, stream, logprobs, temperature, top_p, n, presence_penalty, frequency_penalty yet.
       requestPayload = {
         messages,
         stream: options.config.stream,
         model: modelConfig.model,
-        temperature: (!isO1OrO3 && !isGpt5) ? modelConfig.temperature : 1,
+        temperature: !isO1OrO3 && !isGpt5 ? modelConfig.temperature : 1,
         presence_penalty: !isO1OrO3 ? modelConfig.presence_penalty : 0,
         frequency_penalty: !isO1OrO3 ? modelConfig.frequency_penalty : 0,
         top_p: !isO1OrO3 ? modelConfig.top_p : 1,
@@ -240,11 +234,10 @@ export class ChatGPTApi implements LLMApi {
       };
 
       if (isGpt5) {
-  	// Remove max_tokens if present
-  	delete requestPayload.max_tokens;
-  	// Add max_completion_tokens (or max_completion_tokens if that's what you meant)
-  	requestPayload["max_completion_tokens"] = modelConfig.max_tokens;
-
+        // Remove max_tokens if present
+        delete requestPayload.max_tokens;
+        // Add max_completion_tokens (or max_completion_tokens if that's what you meant)
+        requestPayload["max_completion_tokens"] = modelConfig.max_tokens;
       } else if (isO1OrO3) {
         // by default the o1/o3 models will not attempt to produce output that includes markdown formatting
         // manually add "Formatting re-enabled" developer message to encourage markdown inclusion in model responses
@@ -258,9 +251,8 @@ export class ChatGPTApi implements LLMApi {
         requestPayload["max_completion_tokens"] = modelConfig.max_tokens;
       }
 
-
       // add max_tokens to vision model
-      if (visionModel && !isO1OrO3 && ! isGpt5) {
+      if (visionModel && !isO1OrO3 && !isGpt5) {
         requestPayload["max_tokens"] = Math.max(modelConfig.max_tokens, 4000);
       }
     }
@@ -304,53 +296,21 @@ export class ChatGPTApi implements LLMApi {
         );
       }
       if (shouldStream) {
-        let index = -1;
-        const [tools, funcs] = usePluginStore
-          .getState()
-          .getAsTools(
-            useChatStore.getState().currentSession().mask?.plugin || [],
-          );
-        // console.log("getAsTools", tools, funcs);
         streamWithThink(
           chatPath,
           requestPayload,
           getHeaders(),
-          tools as any,
-          funcs,
           controller,
-          // parseSSE
-          (text: string, runTools: ChatMessageTool[]) => {
-            // console.log("parseSSE", text, runTools);
+          (text: string) => {
             const json = JSON.parse(text);
             const choices = json.choices as Array<{
               delta: {
                 content: string;
-                tool_calls: ChatMessageTool[];
                 reasoning_content: string | null;
               };
             }>;
 
             if (!choices?.length) return { isThinking: false, content: "" };
-
-            const tool_calls = choices[0]?.delta?.tool_calls;
-            if (tool_calls?.length > 0) {
-              const id = tool_calls[0]?.id;
-              const args = tool_calls[0]?.function?.arguments;
-              if (id) {
-                index += 1;
-                runTools.push({
-                  id,
-                  type: tool_calls[0]?.type,
-                  function: {
-                    name: tool_calls[0]?.function?.name as string,
-                    arguments: args,
-                  },
-                });
-              } else {
-                // @ts-ignore
-                runTools[index]["function"]["arguments"] += args;
-              }
-            }
 
             const reasoning = choices[0]?.delta?.reasoning_content;
             const content = choices[0]?.delta?.content;
@@ -382,23 +342,6 @@ export class ChatGPTApi implements LLMApi {
               isThinking: false,
               content: "",
             };
-          },
-          // processToolMessage, include tool_calls message and tool call results
-          (
-            requestPayload: RequestPayload,
-            toolCallMessage: any,
-            toolCallResult: any[],
-          ) => {
-            // reset index value
-            index = -1;
-            // @ts-ignore
-            requestPayload?.messages?.splice(
-              // @ts-ignore
-              requestPayload?.messages?.length,
-              0,
-              toolCallMessage,
-              ...toolCallResult,
-            );
           },
           options,
         );

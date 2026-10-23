@@ -1,108 +1,108 @@
-// using tauri command to send request
-// see src-tauri/src/stream.rs, and src-tauri/src/main.rs
-// 1. invoke('stream_fetch', {url, method, headers, body}), get response with headers.
-// 2. listen event: `stream-response` multi times to get body
-
-type ResponseEvent = {
-  id: number;
-  payload: {
-    request_id: number;
-    status?: number;
-    chunk?: number[];
-  };
-};
-
 type StreamResponse = {
-  request_id: number;
+  request_id: string;
   status: number;
   status_text: string;
   headers: Record<string, string>;
 };
 
-export function fetch(url: string, options?: RequestInit): Promise<Response> {
-  if (window.__TAURI__) {
-    const {
-      signal,
-      method = "GET",
-      headers: _headers = {},
-      body = [],
-    } = options || {};
-    let unlisten: Function | undefined;
-    let setRequestId: Function | undefined;
-    const requestIdPromise = new Promise((resolve) => (setRequestId = resolve));
-    const ts = new TransformStream();
-    const writer = ts.writable.getWriter();
-
-    let closed = false;
-    const close = () => {
-      if (closed) return;
-      closed = true;
-      unlisten && unlisten();
-      writer.ready.then(() => {
-        writer.close().catch((e) => console.error(e));
-      });
-    };
-
-    if (signal) {
-      signal.addEventListener("abort", () => close());
+export async function fetch(
+  input: RequestInfo | URL,
+  options?: RequestInit,
+): Promise<Response> {
+  const tauri = typeof window !== "undefined" ? window.__TAURI__ : undefined;
+  if (!tauri) return globalThis.fetch(input, options);
+  const request = new Request(input, options);
+  const { signal } = request;
+  if (signal.aborted)
+    throw new DOMException("The operation was aborted.", "AbortError");
+  const body = ["GET", "HEAD"].includes(request.method)
+    ? []
+    : Array.from(new Uint8Array(await request.arrayBuffer()));
+  const requestId = crypto.randomUUID();
+  let streamController: ReadableStreamDefaultController<Uint8Array>;
+  let unlisten: (() => void) | undefined;
+  let finished = false;
+  let dispatched = false;
+  let rejectRequest: ((error: Error) => void) | undefined;
+  const cleanup = () => {
+    unlisten?.();
+    signal.removeEventListener("abort", abort);
+  };
+  const fail = (error: Error) => {
+    if (!finished) {
+      finished = true;
+      streamController.error(error);
     }
-    // @ts-ignore 2. listen response multi times, and write to Response.body
-    window.__TAURI__.event
-      .listen("stream-response", (e: ResponseEvent) =>
-        requestIdPromise.then((request_id) => {
-          const { request_id: rid, chunk, status } = e?.payload || {};
-          if (request_id != rid) {
-            return;
-          }
-          if (chunk) {
-            writer.ready.then(() => {
-              writer.write(new Uint8Array(chunk));
-            });
-          } else if (status === 0) {
-            // end of body
-            close();
-          }
-        }),
-      )
-      .then((u: Function) => (unlisten = u));
-
-    const headers: Record<string, string> = {
-      Accept: "application/json, text/plain, */*",
-      "Accept-Language": "en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7",
-      "User-Agent": navigator.userAgent,
-    };
-    for (const item of new Headers(_headers || {})) {
-      headers[item[0]] = item[1];
+    cleanup();
+    rejectRequest?.(error);
+  };
+  const abort = () => {
+    if (dispatched)
+      void tauri.invoke("cancel_stream", { requestId }).catch(() => {});
+    fail(new DOMException("The operation was aborted.", "AbortError"));
+  };
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      streamController = controller;
+    },
+    cancel() {
+      finished = true;
+      cleanup();
+      if (dispatched)
+        void tauri.invoke("cancel_stream", { requestId }).catch(() => {});
+    },
+  });
+  // Install the listener before Rust can emit any bytes.
+  unlisten = await tauri.event.listen<{
+    request_id: string;
+    chunk?: number[];
+    status?: number;
+    error?: string;
+  }>("stream-response", ({ payload }) => {
+    if (payload.request_id !== requestId || finished) return;
+    if (payload.error) fail(new Error(payload.error));
+    else if (payload.chunk)
+      streamController.enqueue(new Uint8Array(payload.chunk));
+    else if (payload.status === 0) {
+      finished = true;
+      streamController.close();
+      cleanup();
     }
-    return window.__TAURI__
+  });
+  return new Promise<Response>((resolve, reject) => {
+    rejectRequest = reject;
+    signal.addEventListener("abort", abort, { once: true });
+    if (signal.aborted) {
+      abort();
+      return;
+    }
+    dispatched = true;
+    tauri
       .invoke("stream_fetch", {
-        method: method.toUpperCase(),
-        url,
-        headers,
-        // TODO FormData
-        body:
-          typeof body === "string"
-            ? Array.from(new TextEncoder().encode(body))
-            : [],
+        requestId,
+        url: request.url,
+        method: request.method,
+        headers: Object.fromEntries(request.headers.entries()),
+        body,
       })
-      .then((res: StreamResponse) => {
-        const { request_id, status, status_text: statusText, headers } = res;
-        setRequestId?.(request_id);
-        const response = new Response(ts.readable, {
-          status,
-          statusText,
-          headers,
-        });
-        if (status >= 300) {
-          setTimeout(close, 100);
+      .then((response: StreamResponse) => {
+        if (signal.aborted) {
+          abort();
+          return;
         }
-        return response;
+        const noBody =
+          request.method === "HEAD" ||
+          [204, 205, 304].includes(response.status);
+        resolve(
+          new Response(noBody ? null : stream, {
+            status: response.status,
+            statusText: response.status_text,
+            headers: response.headers,
+          }),
+        );
       })
-      .catch((e) => {
-        console.error("stream error", e);
-        // throw e;
-        return new Response("", { status: 599 });
-      });
-  }
-  return window.fetch(url, options);
+      .catch((error: unknown) =>
+        fail(error instanceof Error ? error : new Error(String(error))),
+      );
+  });
 }

@@ -31,7 +31,6 @@ import SettingsIcon from "../icons/chat-settings.svg";
 import DeleteIcon from "../icons/clear.svg";
 import PinIcon from "../icons/pin.svg";
 import ConfirmIcon from "../icons/confirm.svg";
-import CloseIcon from "../icons/close.svg";
 import CancelIcon from "../icons/cancel.svg";
 import ImageIcon from "../icons/image.svg";
 
@@ -44,10 +43,8 @@ import RobotIcon from "../icons/robot.svg";
 import SizeIcon from "../icons/size.svg";
 import QualityIcon from "../icons/hd.svg";
 import StyleIcon from "../icons/palette.svg";
-import PluginIcon from "../icons/plugin.svg";
 import ShortcutkeyIcon from "../icons/shortcutkey.svg";
 import McpToolIcon from "../icons/tool.svg";
-import HeadphoneIcon from "../icons/headphone.svg";
 import {
   BOT_HELLO,
   ChatMessage,
@@ -59,7 +56,6 @@ import {
   useAccessStore,
   useAppConfig,
   useChatStore,
-  usePluginStore,
 } from "../store";
 
 import {
@@ -74,7 +70,6 @@ import {
   supportsCustomSize,
   useMobileScreen,
   selectOrCopy,
-  showPlugins,
 } from "../utils";
 
 import { uploadImage as uploadImageRemote } from "@/app/utils/chat";
@@ -121,8 +116,12 @@ import { createTTSPlayer } from "../utils/audio";
 import { MsEdgeTTS, OUTPUT_FORMAT } from "../utils/ms_edge_tts";
 
 import { isEmpty } from "lodash-es";
-import { getModelProvider } from "../utils/model";
-import { RealtimeChat } from "@/app/components/realtime-chat";
+import {
+  llmModelSelection,
+  modelSelection,
+  parseModelSelection,
+  instanceSupportsImages,
+} from "../client/providers";
 import clsx from "clsx";
 import { getAvailableClientsCount, isMcpEnabled } from "../mcp/actions";
 
@@ -503,12 +502,10 @@ export function ChatActions(props: {
   uploading: boolean;
   setShowShortcutKeyModal: React.Dispatch<React.SetStateAction<boolean>>;
   setUserInput: (input: string) => void;
-  setShowChatSidePanel: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
   const config = useAppConfig();
   const navigate = useNavigate();
   const chatStore = useChatStore();
-  const pluginStore = usePluginStore();
   const session = chatStore.currentSession();
 
   // switch themes
@@ -528,6 +525,7 @@ export function ChatActions(props: {
 
   // switch model
   const currentModel = session.mask.modelConfig.model;
+  const currentProviderId = session.mask.modelConfig.providerId;
   const currentProviderName =
     session.mask.modelConfig?.providerName || ServiceProvider.OpenAI;
   const allModels = useAllModels();
@@ -548,13 +546,12 @@ export function ChatActions(props: {
   const currentModelName = useMemo(() => {
     const model = models.find(
       (m) =>
-        m.name == currentModel &&
-        m?.provider?.providerName == currentProviderName,
+        llmModelSelection(m) ===
+        modelSelection(currentModel, currentProviderName, currentProviderId),
     );
-    return model?.displayName ?? "";
-  }, [models, currentModel, currentProviderName]);
+    return model?.displayName ?? currentModel;
+  }, [models, currentModel, currentProviderName, currentProviderId]);
   const [showModelSelector, setShowModelSelector] = useState(false);
-  const [showPluginSelector, setShowPluginSelector] = useState(false);
   const [showUploadImage, setShowUploadImage] = useState(false);
 
   const [showSizeSelector, setShowSizeSelector] = useState(false);
@@ -571,7 +568,13 @@ export function ChatActions(props: {
   const isMobileScreen = useMobileScreen();
 
   useEffect(() => {
-    const show = isVisionModel(currentModel);
+    const show = currentProviderId
+      ? instanceSupportsImages(
+          useAccessStore.getState().providers,
+          currentProviderId,
+          currentModel,
+        )
+      : isVisionModel(currentModel);
     setShowUploadImage(show);
     if (!show) {
       props.setAttachImages([]);
@@ -581,21 +584,25 @@ export function ChatActions(props: {
     // if current model is not available
     // switch to first available model
     const isUnavailableModel = !models.some((m) => m.name === currentModel);
-    if (isUnavailableModel && models.length > 0) {
+    if (!currentProviderId && isUnavailableModel && models.length > 0) {
       // show next model to default model if exist
       let nextModel = models.find((model) => model.isDefault) || models[0];
       chatStore.updateTargetSession(session, (session) => {
         session.mask.modelConfig.model = nextModel.name;
         session.mask.modelConfig.providerName = nextModel?.provider
           ?.providerName as ServiceProvider;
+        session.mask.modelConfig.providerId =
+          nextModel.provider?.providerType === "ai-sdk"
+            ? nextModel.provider.id
+            : undefined;
       });
       showToast(
         nextModel?.provider?.providerName == "ByteDance"
-          ? nextModel.displayName
+          ? nextModel.displayName || nextModel.name
           : nextModel.name,
       );
     }
-  }, [chatStore, currentModel, models, session]);
+  }, [chatStore, currentModel, currentProviderId, models, session]);
 
   return (
     <div className={styles["chat-input-actions"]}>
@@ -682,23 +689,33 @@ export function ChatActions(props: {
 
         {showModelSelector && (
           <Selector
-            defaultSelectedValue={`${currentModel}@${currentProviderName}`}
+            defaultSelectedValue={modelSelection(
+              currentModel,
+              currentProviderName,
+              currentProviderId,
+            )}
             items={models.map((m) => ({
               title: `${m.displayName}${
                 m?.provider?.providerName
                   ? " (" + m?.provider?.providerName + ")"
                   : ""
               }`,
-              value: `${m.name}@${m?.provider?.providerName}`,
+              value: llmModelSelection(m),
             }))}
             onClose={() => setShowModelSelector(false)}
             onSelection={(s) => {
               if (s.length === 0) return;
-              const [model, providerName] = getModelProvider(s[0]);
+              const { model, providerName, providerId } = parseModelSelection(
+                s[0],
+              );
+              const selectedModel = models.find(
+                (m) => llmModelSelection(m) === s[0],
+              );
               chatStore.updateTargetSession(session, (session) => {
                 session.mask.modelConfig.model = model as ModelType;
-                session.mask.modelConfig.providerName =
-                  providerName as ServiceProvider;
+                session.mask.modelConfig.providerName = (selectedModel?.provider
+                  ?.providerName || providerName) as ServiceProvider;
+                session.mask.modelConfig.providerId = providerId;
                 session.mask.syncGlobalConfig = false;
               });
               if (providerName == "ByteDance") {
@@ -796,36 +813,6 @@ export function ChatActions(props: {
           />
         )}
 
-        {showPlugins(currentProviderName, currentModel) && (
-          <ChatAction
-            onClick={() => {
-              if (pluginStore.getAll().length == 0) {
-                navigate(Path.Plugins);
-              } else {
-                setShowPluginSelector(true);
-              }
-            }}
-            text={Locale.Plugin.Name}
-            icon={<PluginIcon />}
-          />
-        )}
-        {showPluginSelector && (
-          <Selector
-            multiple
-            defaultSelectedValue={chatStore.currentSession().mask?.plugin}
-            items={pluginStore.getAll().map((item) => ({
-              title: `${item?.title}@${item?.version}`,
-              value: item?.id,
-            }))}
-            onClose={() => setShowPluginSelector(false)}
-            onSelection={(s) => {
-              chatStore.updateTargetSession(session, (session) => {
-                session.mask.plugin = s as string[];
-              });
-            }}
-          />
-        )}
-
         {!isMobileScreen && (
           <ChatAction
             onClick={() => props.setShowShortcutKeyModal(true)}
@@ -835,15 +822,6 @@ export function ChatActions(props: {
         )}
         {!isMobileScreen && <MCPAction />}
       </>
-      <div className={styles["chat-input-actions-end"]}>
-        {config.realtimeConfig.enable && (
-          <ChatAction
-            onClick={() => props.setShowChatSidePanel(true)}
-            text={"Realtime Chat"}
-            icon={<HeadphoneIcon />}
-          />
-        )}
-      </div>
     </div>
   );
 }
@@ -1512,8 +1490,15 @@ function _Chat() {
 
   const handlePaste = useCallback(
     async (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
-      const currentModel = chatStore.currentSession().mask.modelConfig.model;
-      if (!isVisionModel(currentModel)) {
+      const imageModelConfig = chatStore.currentSession().mask.modelConfig;
+      const canUpload = imageModelConfig.providerId
+        ? instanceSupportsImages(
+            accessStore.providers,
+            imageModelConfig.providerId,
+            imageModelConfig.model,
+          )
+        : isVisionModel(imageModelConfig.model);
+      if (!canUpload) {
         return;
       }
       const items = (event.clipboardData || window.clipboardData).items;
@@ -1550,7 +1535,7 @@ function _Chat() {
         }
       }
     },
-    [attachImages, chatStore],
+    [attachImages, chatStore, accessStore.providers],
   );
 
   async function uploadImage() {
@@ -1677,8 +1662,6 @@ function _Chat() {
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [messages, chatStore, navigate, session]);
-
-  const [showChatSidePanel, setShowChatSidePanel] = useState(false);
 
   return (
     <>
@@ -1941,33 +1924,29 @@ function _Chat() {
                               </div>
                             )}
                           </div>
-                          {message?.tools?.length == 0 && showTyping && (
+                          {showTyping && (
                             <div className={styles["chat-message-status"]}>
                               {Locale.Chat.Typing}
                             </div>
                           )}
-                          {/*@ts-ignore*/}
-                          {message?.tools?.length > 0 && (
-                            <div className={styles["chat-message-tools"]}>
-                              {message?.tools?.map((tool) => (
-                                <div
-                                  key={tool.id}
-                                  title={tool?.errorMsg}
-                                  className={styles["chat-message-tool"]}
-                                >
-                                  {tool.isError === false ? (
-                                    <ConfirmIcon />
-                                  ) : tool.isError === true ? (
-                                    <CloseIcon />
-                                  ) : (
-                                    <LoadingButtonIcon />
-                                  )}
-                                  <span>{tool?.function?.name}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
                           <div className={styles["chat-message-item"]}>
+                            {message.reasoning && (
+                              <details
+                                className={styles["chat-message-reasoning"]}
+                              >
+                                <summary>
+                                  {message.streaming ? "思考中…" : "思考过程"}
+                                </summary>
+                                <Markdown
+                                  content={message.reasoning}
+                                  loading={false}
+                                  fontSize={fontSize}
+                                  fontFamily={fontFamily}
+                                  parentRef={scrollRef}
+                                  defaultShow
+                                />
+                              </details>
+                            )}
                             <Markdown
                               key={message.streaming ? "loading" : "done"}
                               content={getMessageTextContent(message)}
@@ -2022,12 +2001,6 @@ function _Chat() {
                               </div>
                             )}
                           </div>
-                          {message?.audio_url && (
-                            <div className={styles["chat-message-audio"]}>
-                              <audio src={message.audio_url} controls />
-                            </div>
-                          )}
-
                           <div className={styles["chat-message-action-date"]}>
                             {isContext
                               ? Locale.Chat.IsContext
@@ -2067,7 +2040,6 @@ function _Chat() {
                 }}
                 setShowShortcutKeyModal={setShowShortcutKeyModal}
                 setUserInput={setUserInput}
-                setShowChatSidePanel={setShowChatSidePanel}
               />
               <label
                 className={clsx(styles["chat-input-panel-inner"], {
@@ -2126,23 +2098,6 @@ function _Chat() {
                 />
               </label>
             </div>
-          </div>
-          <div
-            className={clsx(styles["chat-side-panel"], {
-              [styles["mobile"]]: isMobileScreen,
-              [styles["chat-side-panel-show"]]: showChatSidePanel,
-            })}
-          >
-            {showChatSidePanel && (
-              <RealtimeChat
-                onClose={() => {
-                  setShowChatSidePanel(false);
-                }}
-                onStartVoice={async () => {
-                  console.log("start voice");
-                }}
-              />
-            )}
           </div>
         </div>
       </div>

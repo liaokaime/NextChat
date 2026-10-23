@@ -1,6 +1,5 @@
 import { getClientConfig } from "../config/client";
 import { SubmitKey } from "../store/config";
-import { SAAS_CHAT_UTM_URL } from "@/app/constant";
 const isApp = !!getClientConfig()?.isApp;
 
 const tw = {
@@ -8,12 +7,10 @@ const tw = {
   Error: {
     Unauthorized: isApp
       ? `😆 對話遇到了一些問題，不用慌:
-    \\ 1️⃣ 想要無須設定開箱即用，[點選這裡立刻開啟對話 🚀](${SAAS_CHAT_UTM_URL})
-    \\ 2️⃣ 如果你想消耗自己的 OpenAI 資源，點選[這裡](/#/settings)修改設定 ⚙️`
+    \\ 1️⃣ 如果你想消耗自己的 OpenAI 資源，點選[這裡](/#/settings)修改設定 ⚙️`
       : `😆 對話遇到了一些問題，不用慌:
-    \ 1️⃣ 想要無須設定開箱即用，[點選這裡立刻開啟對話 🚀](${SAAS_CHAT_UTM_URL})
-    \ 2️⃣ 如果你正在使用私有部署版本，點選[這裡](/#/auth)輸入存取金鑰 🔑
-    \ 3️⃣ 如果你想消耗自己的 OpenAI 資源，點選[這裡](/#/settings)修改設定 ⚙️
+    \ 1️⃣ 如果你正在使用私有部署版本，點選[這裡](/#/auth)輸入存取金鑰 🔑
+    \ 2️⃣ 如果你想消耗自己的 OpenAI 資源，點選[這裡](/#/settings)修改設定 ⚙️
  `,
   },
 
@@ -25,8 +22,6 @@ const tw = {
     Confirm: "確認",
     Later: "稍候再說",
     Return: "返回",
-    SaasTips: "設定太麻煩，想要立即使用",
-    TopTips: "🥳 NextChat AI 首發優惠，立刻解鎖最新的大型語言模型",
   },
   ChatItem: {
     ChatItemCount: (count: number) => `${count} 則對話`,
@@ -297,14 +292,6 @@ const tw = {
     },
 
     Access: {
-      SaasStart: {
-        Title: "使用 NextChat AI",
-        Label: "(性價比最高的方案)",
-        SubTitle:
-          "由 NextChat 官方維護，無須設定開箱即用，支援最新的大型語言模型",
-        ChatNow: "立刻開始對話",
-      },
-
       AccessCode: {
         Title: "存取密碼",
         SubTitle: "管理員已開啟加密存取",
@@ -452,7 +439,6 @@ const tw = {
     Clear: "上下文已清除",
     Revert: "恢復上下文",
   },
-  Plugin: { Name: "外掛" },
   FineTuned: { Sysmessage: "你是一個助手" },
   Mask: {
     Name: "角色範本",
@@ -493,21 +479,6 @@ const tw = {
         SubTitle: "產生此角色範本的直達連結",
         Action: "複製連結",
       },
-    },
-  },
-  SearchChat: {
-    Name: "搜尋聊天記錄",
-    Page: {
-      Title: "搜尋聊天記錄",
-      Search: "輸入搜尋關鍵詞",
-      NoResult: "沒有找到結果",
-      NoData: "沒有資料",
-      Loading: "載入中",
-
-      SubTitle: (count: number) => `找到 ${count} 條結果`,
-    },
-    Item: {
-      View: "檢視",
     },
   },
   NewChat: {

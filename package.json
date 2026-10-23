@@ -17,10 +17,16 @@
     "prompts": "node ./scripts/fetch-prompts.mjs",
     "prepare": "husky install",
     "proxy-dev": "sh ./scripts/init-proxy.sh && proxychains -f ./scripts/proxychains.conf yarn dev",
-    "test": "node --no-warnings --experimental-vm-modules $(yarn bin jest) --watch",
-    "test:ci": "node --no-warnings --experimental-vm-modules $(yarn bin jest) --ci"
+    "test": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
+    "test:ci": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js --ci",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "ai": "7.0.150",
+    "@ai-sdk/openai": "4.0.101",
+    "@ai-sdk/openai-compatible": "3.0.77",
+    "@ai-sdk/anthropic": "4.0.87",
+    "@ai-sdk/google": "4.0.104",
     "@fortaine/fetch-event-source": "^3.0.6",
     "@hello-pangea/dnd": "^16.5.0",
     "@modelcontextprotocol/sdk": "^1.0.4",
@@ -28,7 +34,6 @@
     "@svgr/webpack": "^6.5.1",
     "@vercel/analytics": "^0.1.11",
     "@vercel/speed-insights": "^1.0.2",
-    "axios": "^1.7.5",
     "clsx": "^2.1.1",
     "emoji-picker-react": "^4.9.2",
     "fuse.js": "^7.0.0",
@@ -41,7 +46,6 @@
     "nanoid": "^5.0.3",
     "next": "^14.1.1",
     "node-fetch": "^3.3.1",
-    "openapi-client-axios": "^7.5.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-markdown": "^8.0.7",
@@ -51,11 +55,10 @@
     "remark-breaks": "^3.0.2",
     "remark-gfm": "^3.0.1",
     "remark-math": "^5.1.1",
-    "rt-client": "https://github.com/Azure-Samples/aoai-realtime-audio-sdk/releases/download/js/v0.5.0/rt-client-0.5.0.tgz",
     "sass": "^1.59.2",
     "spark-md5": "^3.0.2",
     "use-debounce": "^9.0.4",
-    "zod": "^3.24.1",
+    "zod": "3.25.76",
     "zustand": "^4.3.8"
   },
   "devDependencies": {
@@ -65,7 +68,6 @@
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
     "@types/jest": "^29.5.14",
-    "@types/js-yaml": "4.0.9",
     "@types/lodash-es": "^4.17.12",
     "@types/node": "^20.11.30",
     "@types/react": "^18.2.70",
@@ -75,7 +77,8 @@
     "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",
     "eslint": "^8.49.0",
-    "eslint-config-next": "13.4.19",
+    "eslint-config-next": "14.1.1",
+    "@typescript-eslint/eslint-plugin": "6.21.0",
     "eslint-config-prettier": "^8.8.0",
     "eslint-plugin-prettier": "^5.1.3",
     "eslint-plugin-unused-imports": "^3.2.0",
@@ -86,12 +89,15 @@
     "prettier": "^3.0.2",
     "ts-node": "^10.9.2",
     "tsx": "^4.16.0",
-    "typescript": "5.2.2",
+    "typescript": "5.9.3",
     "watch": "^1.0.2",
     "webpack": "^5.88.1"
   },
   "resolutions": {
     "lint-staged/yaml": "^2.2.2"
   },
-  "packageManager": "yarn@1.22.19"
+  "packageManager": "yarn@1.22.19",
+  "engines": {
+    "node": ">=24"
+  }
 }

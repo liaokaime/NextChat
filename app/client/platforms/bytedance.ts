@@ -1,12 +1,6 @@
 "use client";
 import { ApiPath, ByteDance, BYTEDANCE_BASE_URL } from "@/app/constant";
-import {
-  useAccessStore,
-  useAppConfig,
-  useChatStore,
-  ChatMessageTool,
-  usePluginStore,
-} from "@/app/store";
+import { useAccessStore, useAppConfig, useChatStore } from "@/app/store";
 
 import {
   ChatOptions,
@@ -132,51 +126,22 @@ export class DoubaoApi implements LLMApi {
       );
 
       if (shouldStream) {
-        const [tools, funcs] = usePluginStore
-          .getState()
-          .getAsTools(
-            useChatStore.getState().currentSession().mask?.plugin || [],
-          );
         return streamWithThink(
           chatPath,
           requestPayload,
           getHeaders(),
-          tools as any,
-          funcs,
           controller,
-          // parseSSE
-          (text: string, runTools: ChatMessageTool[]) => {
-            // console.log("parseSSE", text, runTools);
+          (text: string) => {
             const json = JSON.parse(text);
             const choices = json.choices as Array<{
               delta: {
                 content: string | null;
-                tool_calls: ChatMessageTool[];
                 reasoning_content: string | null;
               };
             }>;
 
             if (!choices?.length) return { isThinking: false, content: "" };
 
-            const tool_calls = choices[0]?.delta?.tool_calls;
-            if (tool_calls?.length > 0) {
-              const index = tool_calls[0]?.index;
-              const id = tool_calls[0]?.id;
-              const args = tool_calls[0]?.function?.arguments;
-              if (id) {
-                runTools.push({
-                  id,
-                  type: tool_calls[0]?.type,
-                  function: {
-                    name: tool_calls[0]?.function?.name as string,
-                    arguments: args,
-                  },
-                });
-              } else {
-                // @ts-ignore
-                runTools[index]["function"]["arguments"] += args;
-              }
-            }
             const reasoning = choices[0]?.delta?.reasoning_content;
             const content = choices[0]?.delta?.content;
 
@@ -207,19 +172,6 @@ export class DoubaoApi implements LLMApi {
               isThinking: false,
               content: "",
             };
-          },
-          // processToolMessage, include tool_calls message and tool call results
-          (
-            requestPayload: RequestPayloadForByteDance,
-            toolCallMessage: any,
-            toolCallResult: any[],
-          ) => {
-            requestPayload?.messages?.splice(
-              requestPayload?.messages?.length,
-              0,
-              toolCallMessage,
-              ...toolCallResult,
-            );
           },
           options,
         );

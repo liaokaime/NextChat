@@ -4,13 +4,7 @@ import {
   ModelProvider,
   ServiceProvider,
 } from "../constant";
-import {
-  ChatMessageTool,
-  ChatMessage,
-  ModelType,
-  useAccessStore,
-  useChatStore,
-} from "../store";
+import { ChatMessage, ModelType, useAccessStore, useChatStore } from "../store";
 import { ChatGPTApi, DalleRequestPayload } from "./platforms/openai";
 import { GeminiProApi } from "./platforms/google";
 import { ClaudeApi } from "./platforms/anthropic";
@@ -25,6 +19,7 @@ import { XAIApi } from "./platforms/xai";
 import { ChatGLMApi } from "./platforms/glm";
 import { SiliconflowApi } from "./platforms/siliconflow";
 import { Ai302Api } from "./platforms/ai302";
+import { SdkApi } from "./platforms/ai-sdk";
 
 export const ROLES = ["system", "user", "assistant"] as const;
 export type MessageRole = (typeof ROLES)[number];
@@ -54,6 +49,8 @@ export interface RequestMessage {
 export interface LLMConfig {
   model: string;
   providerName?: string;
+  providerId?: string;
+  max_tokens?: number;
   temperature?: number;
   top_p?: number;
   stream?: boolean;
@@ -78,11 +75,10 @@ export interface ChatOptions {
   config: LLMConfig;
 
   onUpdate?: (message: string, chunk: string) => void;
+  onReasoning?: (reasoning: string) => void;
   onFinish: (message: string, responseRes: Response) => void;
   onError?: (err: Error) => void;
   onController?: (controller: AbortController) => void;
-  onBeforeTool?: (tool: ChatMessageTool) => void;
-  onAfterTool?: (tool: ChatMessageTool) => void;
 }
 
 export interface LLMUsage {
@@ -91,6 +87,7 @@ export interface LLMUsage {
 }
 
 export interface LLMModel {
+  isDefault?: boolean;
   name: string;
   displayName?: string;
   available: boolean;
@@ -136,7 +133,14 @@ interface ChatProvider {
 export class ClientApi {
   public llm: LLMApi;
 
-  constructor(provider: ModelProvider = ModelProvider.GPT) {
+  constructor(
+    provider: ModelProvider = ModelProvider.GPT,
+    providerId?: string,
+  ) {
+    if (providerId) {
+      this.llm = new SdkApi(providerId);
+      return;
+    }
     switch (provider) {
       case ModelProvider.GeminiPro:
         this.llm = new GeminiProApi();
@@ -365,7 +369,11 @@ export function getHeaders(ignoreHeaders: boolean = false) {
   return headers;
 }
 
-export function getClientApi(provider: ServiceProvider): ClientApi {
+export function getClientApi(
+  provider: ServiceProvider,
+  providerId?: string,
+): ClientApi {
+  if (providerId) return new ClientApi(ModelProvider.GPT, providerId);
   switch (provider) {
     case ServiceProvider.Google:
       return new ClientApi(ModelProvider.GeminiPro);

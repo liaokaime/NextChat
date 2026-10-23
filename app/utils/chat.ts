@@ -176,22 +176,13 @@ export function stream(
   chatPath: string,
   requestPayload: any,
   headers: any,
-  tools: any[],
-  funcs: Record<string, Function>,
   controller: AbortController,
-  parseSSE: (text: string, runTools: any[]) => string | undefined,
-  processToolMessage: (
-    requestPayload: any,
-    toolCallMessage: any,
-    toolCallResult: any[],
-  ) => void,
+  parseSSE: (text: string) => string | undefined,
   options: any,
 ) {
   let responseText = "";
   let remainText = "";
   let finished = false;
-  let running = false;
-  let runTools: any[] = [];
   let responseRes: Response;
 
   // animate response to make it looks smooth
@@ -221,74 +212,6 @@ export function stream(
 
   const finish = () => {
     if (!finished) {
-      if (!running && runTools.length > 0) {
-        const toolCallMessage = {
-          role: "assistant",
-          tool_calls: [...runTools],
-        };
-        running = true;
-        runTools.splice(0, runTools.length); // empty runTools
-        return Promise.all(
-          toolCallMessage.tool_calls.map((tool) => {
-            options?.onBeforeTool?.(tool);
-            return Promise.resolve(
-              // @ts-ignore
-              funcs[tool.function.name](
-                // @ts-ignore
-                tool?.function?.arguments
-                  ? JSON.parse(tool?.function?.arguments)
-                  : {},
-              ),
-            )
-              .then((res) => {
-                let content = res.data || res?.statusText;
-                // hotfix #5614
-                content =
-                  typeof content === "string"
-                    ? content
-                    : JSON.stringify(content);
-                if (res.status >= 300) {
-                  return Promise.reject(content);
-                }
-                return content;
-              })
-              .then((content) => {
-                options?.onAfterTool?.({
-                  ...tool,
-                  content,
-                  isError: false,
-                });
-                return content;
-              })
-              .catch((e) => {
-                options?.onAfterTool?.({
-                  ...tool,
-                  isError: true,
-                  errorMsg: e.toString(),
-                });
-                return e.toString();
-              })
-              .then((content) => ({
-                name: tool.function.name,
-                role: "tool",
-                content,
-                tool_call_id: tool.id,
-              }));
-          }),
-        ).then((toolCallResult) => {
-          processToolMessage(requestPayload, toolCallMessage, toolCallResult);
-          setTimeout(() => {
-            // call again
-            console.debug("[ChatAPI] restart");
-            running = false;
-            chatApi(chatPath, headers, requestPayload, tools); // call fetchEventSource
-          }, 60);
-        });
-        return;
-      }
-      if (running) {
-        return;
-      }
       console.debug("[ChatAPI] end");
       finished = true;
       options.onFinish(responseText + remainText, responseRes); // 将res传递给onFinish
@@ -297,18 +220,10 @@ export function stream(
 
   controller.signal.onabort = finish;
 
-  function chatApi(
-    chatPath: string,
-    headers: any,
-    requestPayload: any,
-    tools: any,
-  ) {
+  function chatApi(chatPath: string, headers: any, requestPayload: any) {
     const chatPayload = {
       method: "POST",
-      body: JSON.stringify({
-        ...requestPayload,
-        tools: tools && tools.length ? tools : undefined,
-      }),
+      body: JSON.stringify(requestPayload),
       signal: controller.signal,
       headers,
     };
@@ -367,7 +282,7 @@ export function stream(
           return;
         }
         try {
-          const chunk = parseSSE(text, runTools);
+          const chunk = parseSSE(text);
           if (chunk) {
             remainText += chunk;
           }
@@ -386,35 +301,23 @@ export function stream(
     });
   }
   console.debug("[ChatAPI] start");
-  chatApi(chatPath, headers, requestPayload, tools); // call fetchEventSource
+  chatApi(chatPath, headers, requestPayload); // call fetchEventSource
 }
 
 export function streamWithThink(
   chatPath: string,
   requestPayload: any,
   headers: any,
-  tools: any[],
-  funcs: Record<string, Function>,
   controller: AbortController,
-  parseSSE: (
-    text: string,
-    runTools: any[],
-  ) => {
+  parseSSE: (text: string) => {
     isThinking: boolean;
     content: string | undefined;
   },
-  processToolMessage: (
-    requestPayload: any,
-    toolCallMessage: any,
-    toolCallResult: any[],
-  ) => void,
   options: any,
 ) {
   let responseText = "";
   let remainText = "";
   let finished = false;
-  let running = false;
-  let runTools: any[] = [];
   let responseRes: Response;
   let isInThinkingMode = false;
   let lastIsThinking = false;
@@ -447,74 +350,6 @@ export function streamWithThink(
 
   const finish = () => {
     if (!finished) {
-      if (!running && runTools.length > 0) {
-        const toolCallMessage = {
-          role: "assistant",
-          tool_calls: [...runTools],
-        };
-        running = true;
-        runTools.splice(0, runTools.length); // empty runTools
-        return Promise.all(
-          toolCallMessage.tool_calls.map((tool) => {
-            options?.onBeforeTool?.(tool);
-            return Promise.resolve(
-              // @ts-ignore
-              funcs[tool.function.name](
-                // @ts-ignore
-                tool?.function?.arguments
-                  ? JSON.parse(tool?.function?.arguments)
-                  : {},
-              ),
-            )
-              .then((res) => {
-                let content = res.data || res?.statusText;
-                // hotfix #5614
-                content =
-                  typeof content === "string"
-                    ? content
-                    : JSON.stringify(content);
-                if (res.status >= 300) {
-                  return Promise.reject(content);
-                }
-                return content;
-              })
-              .then((content) => {
-                options?.onAfterTool?.({
-                  ...tool,
-                  content,
-                  isError: false,
-                });
-                return content;
-              })
-              .catch((e) => {
-                options?.onAfterTool?.({
-                  ...tool,
-                  isError: true,
-                  errorMsg: e.toString(),
-                });
-                return e.toString();
-              })
-              .then((content) => ({
-                name: tool.function.name,
-                role: "tool",
-                content,
-                tool_call_id: tool.id,
-              }));
-          }),
-        ).then((toolCallResult) => {
-          processToolMessage(requestPayload, toolCallMessage, toolCallResult);
-          setTimeout(() => {
-            // call again
-            console.debug("[ChatAPI] restart");
-            running = false;
-            chatApi(chatPath, headers, requestPayload, tools); // call fetchEventSource
-          }, 60);
-        });
-        return;
-      }
-      if (running) {
-        return;
-      }
       console.debug("[ChatAPI] end");
       finished = true;
       options.onFinish(responseText + remainText, responseRes);
@@ -523,18 +358,10 @@ export function streamWithThink(
 
   controller.signal.onabort = finish;
 
-  function chatApi(
-    chatPath: string,
-    headers: any,
-    requestPayload: any,
-    tools: any,
-  ) {
+  function chatApi(chatPath: string, headers: any, requestPayload: any) {
     const chatPayload = {
       method: "POST",
-      body: JSON.stringify({
-        ...requestPayload,
-        tools: tools && tools.length ? tools : undefined,
-      }),
+      body: JSON.stringify(requestPayload),
       signal: controller.signal,
       headers,
     };
@@ -593,7 +420,7 @@ export function streamWithThink(
           return;
         }
         try {
-          const chunk = parseSSE(text, runTools);
+          const chunk = parseSSE(text);
           // Skip if content is empty
           if (!chunk?.content || chunk.content.length === 0) {
             return;
@@ -663,5 +490,5 @@ export function streamWithThink(
     });
   }
   console.debug("[ChatAPI] start");
-  chatApi(chatPath, headers, requestPayload, tools); // call fetchEventSource
+  chatApi(chatPath, headers, requestPayload); // call fetchEventSource
 }

@@ -1,5 +1,5 @@
 import { ApiPath } from "@/app/constant";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { handle as openaiHandler } from "../../openai";
 import { handle as azureHandler } from "../../azure";
 import { handle as googleHandler } from "../../google";
@@ -8,13 +8,11 @@ import { handle as baiduHandler } from "../../baidu";
 import { handle as bytedanceHandler } from "../../bytedance";
 import { handle as alibabaHandler } from "../../alibaba";
 import { handle as moonshotHandler } from "../../moonshot";
-import { handle as stabilityHandler } from "../../stability";
 import { handle as iflytekHandler } from "../../iflytek";
 import { handle as deepseekHandler } from "../../deepseek";
 import { handle as siliconflowHandler } from "../../siliconflow";
 import { handle as xaiHandler } from "../../xai";
 import { handle as chatglmHandler } from "../../glm";
-import { handle as proxyHandler } from "../../proxy";
 import { handle as ai302Handler } from "../../302ai";
 
 async function handle(
@@ -39,8 +37,6 @@ async function handle(
     // case ApiPath.Tencent: using "/api/tencent"
     case ApiPath.Moonshot:
       return moonshotHandler(req, { params });
-    case ApiPath.Stability:
-      return stabilityHandler(req, { params });
     case ApiPath.Iflytek:
       return iflytekHandler(req, { params });
     case ApiPath.DeepSeek:
@@ -56,7 +52,7 @@ async function handle(
     case ApiPath["302.AI"]:
       return ai302Handler(req, { params });
     default:
-      return proxyHandler(req, { params });
+      return NextResponse.json({ error: "Unknown provider" }, { status: 404 });
   }
 }
 

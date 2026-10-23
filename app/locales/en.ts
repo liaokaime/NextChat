@@ -1,7 +1,6 @@
 import { getClientConfig } from "../config/client";
 import { SubmitKey } from "../store/config";
 import { LocaleType } from "./index";
-import { SAAS_CHAT_UTM_URL } from "@/app/constant";
 // if you are adding a new translation, please use PartialLocaleType instead of LocaleType
 
 const isApp = !!getClientConfig()?.isApp;
@@ -10,12 +9,10 @@ const en: LocaleType = {
   Error: {
     Unauthorized: isApp
       ? `😆 Oops, there's an issue. No worries:
-     \\ 1️⃣ New here? [Click to start chatting now 🚀](${SAAS_CHAT_UTM_URL})
-     \\ 2️⃣ Want to use your own OpenAI resources? [Click here](/#/settings) to change settings ⚙️`
+     \\ 1️⃣ Want to use your own OpenAI resources? [Click here](/#/settings) to change settings ⚙️`
       : `😆 Oops, there's an issue. Let's fix it:
-     \ 1️⃣ New here? [Click to start chatting now 🚀](${SAAS_CHAT_UTM_URL})
-     \ 2️⃣ Using a private setup? [Click here](/#/auth) to enter your key 🔑
-     \ 3️⃣ Want to use your own OpenAI resources? [Click here](/#/settings) to change settings ⚙️
+     \ 1️⃣ Using a private setup? [Click here](/#/auth) to enter your key 🔑
+     \ 2️⃣ Want to use your own OpenAI resources? [Click here](/#/settings) to change settings ⚙️
      `,
   },
   Auth: {
@@ -26,9 +23,6 @@ const en: LocaleType = {
     Input: "access code",
     Confirm: "Confirm",
     Later: "Later",
-    SaasTips: "Too Complex, Use Immediately Now",
-    TopTips:
-      "🥳 NextChat AI launch promotion: Instantly unlock the latest models!",
   },
   ChatItem: {
     ChatItemCount: (count: number) => `${count} messages`,
@@ -314,13 +308,6 @@ const en: LocaleType = {
       NoAccess: "Enter API Key to check balance",
     },
     Access: {
-      SaasStart: {
-        Title: "Use NextChat AI",
-        Label: " (Most Cost-Effective Option)",
-        SubTitle:
-          "Maintained by NextChat, zero setup needed, unlock the latest models",
-        ChatNow: "Start Now",
-      },
       AccessCode: {
         Title: "Access Code",
         SubTitle: "Access control Enabled",
@@ -490,17 +477,6 @@ const en: LocaleType = {
           SubTitle: "Example: ",
         },
       },
-      Stability: {
-        ApiKey: {
-          Title: "Stability API Key",
-          SubTitle: "Use a custom Stability API Key",
-          Placeholder: "Stability API Key",
-        },
-        Endpoint: {
-          Title: "Endpoint Address",
-          SubTitle: "Example: ",
-        },
-      },
       Iflytek: {
         ApiKey: {
           Title: "Iflytek API Key",
@@ -603,39 +579,6 @@ const en: LocaleType = {
       },
       Engine: "TTS Engine",
     },
-    Realtime: {
-      Enable: {
-        Title: "Realtime Chat",
-        SubTitle: "Enable realtime chat feature",
-      },
-      Provider: {
-        Title: "Model Provider",
-        SubTitle: "Switch between different providers",
-      },
-      Model: {
-        Title: "Model",
-        SubTitle: "Select a model",
-      },
-      ApiKey: {
-        Title: "API Key",
-        SubTitle: "API Key",
-        Placeholder: "API Key",
-      },
-      Azure: {
-        Endpoint: {
-          Title: "Endpoint",
-          SubTitle: "Endpoint",
-        },
-        Deployment: {
-          Title: "Deployment Name",
-          SubTitle: "Deployment Name",
-        },
-      },
-      Temperature: {
-        Title: "Randomness (temperature)",
-        SubTitle: "Higher values result in more random responses",
-      },
-    },
   },
   Store: {
     DefaultTopic: "New Conversation",
@@ -665,70 +608,11 @@ const en: LocaleType = {
     Clear: "Context Cleared",
     Revert: "Revert",
   },
-  Discovery: {
-    Name: "Discovery",
-  },
   Mcp: {
     Name: "MCP",
   },
   FineTuned: {
     Sysmessage: "You are an assistant that",
-  },
-  SearchChat: {
-    Name: "Search",
-    Page: {
-      Title: "Search Chat History",
-      Search: "Enter search query to search chat history",
-      NoResult: "No results found",
-      NoData: "No data",
-      Loading: "Loading...",
-
-      SubTitle: (count: number) => `Found ${count} results`,
-    },
-    Item: {
-      View: "View",
-    },
-  },
-  Plugin: {
-    Name: "Plugin",
-    Page: {
-      Title: "Plugins",
-      SubTitle: (count: number) => `${count} plugins`,
-      Search: "Search Plugin",
-      Create: "Create",
-      Find: "You can find awesome plugins on github: ",
-    },
-    Item: {
-      Info: (count: number) => `${count} method`,
-      View: "View",
-      Edit: "Edit",
-      Delete: "Delete",
-      DeleteConfirm: "Confirm to delete?",
-    },
-    Auth: {
-      None: "None",
-      Basic: "Basic",
-      Bearer: "Bearer",
-      Custom: "Custom",
-      CustomHeader: "Parameter Name",
-      Token: "Token",
-      Proxy: "Using Proxy",
-      ProxyDescription: "Using proxies to solve CORS error",
-      Location: "Location",
-      LocationHeader: "Header",
-      LocationQuery: "Query",
-      LocationBody: "Body",
-    },
-    EditModal: {
-      Title: (readonly: boolean) =>
-        `Edit Plugin ${readonly ? "(readonly)" : ""}`,
-      Download: "Download",
-      Auth: "Authentication Type",
-      Content: "OpenAPI Schema",
-      Load: "Load From URL",
-      Method: "Method",
-      Error: "OpenAPI Schema Error",
-    },
   },
   Mask: {
     Name: "Mask",
@@ -813,61 +697,6 @@ const en: LocaleType = {
   URLCommand: {
     Code: "Detected access code from url, confirm to apply? ",
     Settings: "Detected settings from url, confirm to apply?",
-  },
-  SdPanel: {
-    Prompt: "Prompt",
-    NegativePrompt: "Negative Prompt",
-    PleaseInput: (name: string) => `Please input ${name}`,
-    AspectRatio: "Aspect Ratio",
-    ImageStyle: "Image Style",
-    OutFormat: "Output Format",
-    AIModel: "AI Model",
-    ModelVersion: "Model Version",
-    Submit: "Submit",
-    ParamIsRequired: (name: string) => `${name} is required`,
-    Styles: {
-      D3Model: "3d-model",
-      AnalogFilm: "analog-film",
-      Anime: "anime",
-      Cinematic: "cinematic",
-      ComicBook: "comic-book",
-      DigitalArt: "digital-art",
-      Enhance: "enhance",
-      FantasyArt: "fantasy-art",
-      Isometric: "isometric",
-      LineArt: "line-art",
-      LowPoly: "low-poly",
-      ModelingCompound: "modeling-compound",
-      NeonPunk: "neon-punk",
-      Origami: "origami",
-      Photographic: "photographic",
-      PixelArt: "pixel-art",
-      TileTexture: "tile-texture",
-    },
-  },
-  Sd: {
-    SubTitle: (count: number) => `${count} images`,
-    Actions: {
-      Params: "See Params",
-      Copy: "Copy Prompt",
-      Delete: "Delete",
-      Retry: "Retry",
-      ReturnHome: "Return Home",
-      History: "History",
-    },
-    EmptyRecord: "No images yet",
-    Status: {
-      Name: "Status",
-      Success: "Success",
-      Error: "Error",
-      Wait: "Waiting",
-      Running: "Running",
-    },
-    Danger: {
-      Delete: "Confirm to delete?",
-    },
-    GenerateParams: "Generate Params",
-    Detail: "Detail",
   },
 };
 

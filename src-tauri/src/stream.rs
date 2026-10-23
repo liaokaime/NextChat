@@ -1,145 +1,153 @@
-//
-//
+use futures_util::{
+    future::{AbortHandle, Abortable},
+    StreamExt,
+};
+use reqwest::{
+    header::{HeaderMap, HeaderName, HeaderValue},
+    Client,
+};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 
-use std::time::Duration;
-use std::error::Error;
-use std::sync::atomic::{AtomicU32, Ordering};
-use std::collections::HashMap;
-use futures_util::{StreamExt};
-use reqwest::Client;
-use reqwest::header::{HeaderName, HeaderMap};
+#[derive(Clone, Default)]
+pub struct Requests(Arc<Mutex<HashMap<String, AbortHandle>>>);
 
-static REQUEST_COUNTER: AtomicU32 = AtomicU32::new(0);
-
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(serde::Serialize)]
 pub struct StreamResponse {
-  request_id: u32,
-  status: u16,
-  status_text: String,
-  headers: HashMap<String, String>
+    request_id: String,
+    status: u16,
+    status_text: String,
+    headers: HashMap<String, String>,
 }
 
 #[derive(Clone, serde::Serialize)]
-pub struct EndPayload {
-  request_id: u32,
-  status: u16,
+struct StreamEvent {
+    request_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    chunk: Option<Vec<u8>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    status: Option<u16>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    error: Option<String>,
 }
 
-#[derive(Clone, serde::Serialize)]
-pub struct ChunkPayload {
-  request_id: u32,
-  chunk: bytes::Bytes,
+#[tauri::command]
+pub fn cancel_stream(request_id: String, requests: tauri::State<'_, Requests>) {
+    if let Some(handle) = requests.0.lock().unwrap().remove(&request_id) {
+        handle.abort();
+    }
 }
 
 #[tauri::command]
 pub async fn stream_fetch(
-  window: tauri::Window,
-  method: String,
-  url: String,
-  headers: HashMap<String, String>,
-  body: Vec<u8>,
+    window: tauri::Window,
+    requests: tauri::State<'_, Requests>,
+    request_id: String,
+    method: String,
+    url: String,
+    headers: HashMap<String, String>,
+    body: Vec<u8>,
 ) -> Result<StreamResponse, String> {
-
-  let event_name = "stream-response";
-  let request_id = REQUEST_COUNTER.fetch_add(1, Ordering::SeqCst);
-
-  let mut _headers = HeaderMap::new();
-  for (key, value) in &headers {
-    _headers.insert(key.parse::<HeaderName>().unwrap(), value.parse().unwrap());
-  }
-
-  // println!("method: {:?}", method);
-  // println!("url: {:?}", url);
-  // println!("headers: {:?}", headers);
-  // println!("headers: {:?}", _headers);
-
-  let method = method.parse::<reqwest::Method>().map_err(|err| format!("failed to parse method: {}", err))?;
-  let client = Client::builder()
-    .default_headers(_headers)
-    .redirect(reqwest::redirect::Policy::limited(3))
-    .connect_timeout(Duration::new(3, 0))
-    .build()
-    .map_err(|err| format!("failed to generate client: {}", err))?;
-
-  let mut request = client.request(
-    method.clone(),
-    url.parse::<reqwest::Url>().map_err(|err| format!("failed to parse url: {}", err))?
-  );
-
-  if method == reqwest::Method::POST || method == reqwest::Method::PUT || method == reqwest::Method::PATCH {
-    let body = bytes::Bytes::from(body);
-    // println!("body: {:?}", body);
-    request = request.body(body);
-  }
-
-  // println!("client: {:?}", client);
-  // println!("request: {:?}", request);
-
-  let response_future = request.send();
-
-  let res = response_future.await;
-  let response = match res {
-    Ok(res) => {
-      // get response and emit to client
-      let mut headers = HashMap::new();
-      for (name, value) in res.headers() {
-        headers.insert(
-          name.as_str().to_string(),
-          std::str::from_utf8(value.as_bytes()).unwrap().to_string()
+    let mut request_headers = HeaderMap::new();
+    for (key, value) in headers {
+        request_headers.insert(
+            key.parse::<HeaderName>().map_err(|e| e.to_string())?,
+            value.parse::<HeaderValue>().map_err(|e| e.to_string())?,
         );
-      }
-      let status = res.status().as_u16();
-
-      tauri::async_runtime::spawn(async move {
-        let mut stream = res.bytes_stream();
-
-        while let Some(chunk) = stream.next().await {
-          match chunk {
-            Ok(bytes) => {
-              // println!("chunk: {:?}", bytes);
-              if let Err(e) = window.emit(event_name, ChunkPayload{ request_id, chunk: bytes }) {
-                println!("Failed to emit chunk payload: {:?}", e);
-              }
-            }
-            Err(err) => {
-              println!("Error chunk: {:?}", err);
-            }
-          }
-        }
-        if let Err(e) = window.emit(event_name, EndPayload{ request_id, status: 0 }) {
-          println!("Failed to emit end payload: {:?}", e);
-        }
-      });
-
-      StreamResponse {
-        request_id,
-        status,
-        status_text: "OK".to_string(),
-        headers,
-      }
     }
-    Err(err) => {
-      let error: String = err.source()
-        .map(|e| e.to_string())
-        .unwrap_or_else(|| "Unknown error occurred".to_string());
-      println!("Error response: {:?}", error);
-      tauri::async_runtime::spawn( async move {
-        if let Err(e) = window.emit(event_name, ChunkPayload{ request_id, chunk: error.into() }) {
-          println!("Failed to emit chunk payload: {:?}", e);
+    let client = Client::builder()
+        .redirect(reqwest::redirect::Policy::limited(3))
+        .connect_timeout(Duration::from_secs(30))
+        .build()
+        .map_err(|e| e.to_string())?;
+    let request = client
+        .request(
+            method
+                .parse::<reqwest::Method>()
+                .map_err(|e| e.to_string())?,
+            &url,
+        )
+        .headers(request_headers)
+        .body(body);
+    let (handle, registration) = AbortHandle::new_pair();
+    requests
+        .0
+        .lock()
+        .unwrap()
+        .insert(request_id.clone(), handle);
+    let response = match Abortable::new(request.send(), registration).await {
+        Ok(Ok(response)) => response,
+        result => {
+            requests.0.lock().unwrap().remove(&request_id);
+            return Err(match result {
+                Ok(Err(e)) => e.to_string(),
+                _ => "The operation was aborted.".into(),
+            });
         }
-        if let Err(e) = window.emit(event_name, EndPayload{ request_id, status: 0 }) {
-          println!("Failed to emit end payload: {:?}", e);
+    };
+    let metadata = StreamResponse {
+        request_id: request_id.clone(),
+        status: response.status().as_u16(),
+        status_text: response.status().canonical_reason().unwrap_or("").into(),
+        headers: response
+            .headers()
+            .iter()
+            .filter_map(|(k, v)| v.to_str().ok().map(|v| (k.to_string(), v.to_string())))
+            .collect(),
+    };
+    let (handle, registration) = AbortHandle::new_pair();
+    {
+        let mut pending = requests.0.lock().unwrap();
+        if !pending.contains_key(&request_id) {
+            return Err("The operation was aborted.".into());
         }
-      });
-      StreamResponse {
-        request_id,
-        status: 599,
-        status_text: "Error".to_string(),
-        headers: HashMap::new(),
-      }
+        pending.insert(request_id.clone(), handle);
     }
-  };
-  // println!("Response: {:?}", response);
-  Ok(response)
+    let pending = requests.0.clone();
+    tauri::async_runtime::spawn(async move {
+        let id = request_id.clone();
+        let transfer = async {
+            let mut stream = response.bytes_stream();
+            while let Some(chunk) = stream.next().await {
+                let event = match chunk {
+                    Ok(bytes) => StreamEvent {
+                        request_id: id.clone(),
+                        chunk: Some(bytes.to_vec()),
+                        status: None,
+                        error: None,
+                    },
+                    Err(error) => {
+                        let _ = window.emit(
+                            "stream-response",
+                            StreamEvent {
+                                request_id: id.clone(),
+                                chunk: None,
+                                status: None,
+                                error: Some(error.to_string()),
+                            },
+                        );
+                        return;
+                    }
+                };
+                if window.emit("stream-response", event).is_err() {
+                    return;
+                }
+            }
+            let _ = window.emit(
+                "stream-response",
+                StreamEvent {
+                    request_id: id,
+                    chunk: None,
+                    status: Some(0),
+                    error: None,
+                },
+            );
+        };
+        let _ = Abortable::new(transfer, registration).await;
+        pending.lock().unwrap().remove(&request_id);
+    });
+    Ok(metadata)
 }
-

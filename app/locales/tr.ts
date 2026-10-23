@@ -1,7 +1,6 @@
 import { SubmitKey } from "../store/config";
 import type { PartialLocaleType } from "./index";
 import { getClientConfig } from "../config/client";
-import { SAAS_CHAT_UTM_URL } from "@/app/constant";
 const isApp = !!getClientConfig()?.isApp;
 
 const tr: PartialLocaleType = {
@@ -9,12 +8,10 @@ const tr: PartialLocaleType = {
   Error: {
     Unauthorized: isApp
       ? `😆 Sohbet bazı sorunlarla karşılaştı, endişelenmeyin:
-    \\ 1️⃣ Eğer sıfır yapılandırma ile başlamak istiyorsanız, [buraya tıklayarak hemen sohbete başlayın 🚀](${SAAS_CHAT_UTM_URL})
-    \\ 2️⃣ Kendi OpenAI kaynaklarınızı kullanmak istiyorsanız, [buraya tıklayarak](/#/settings) ayarları değiştirin ⚙️`
+    \\ 1️⃣ Kendi OpenAI kaynaklarınızı kullanmak istiyorsanız, [buraya tıklayarak](/#/settings) ayarları değiştirin ⚙️`
       : `😆 Sohbet bazı sorunlarla karşılaştı, endişelenmeyin:
-    \ 1️⃣ Eğer sıfır yapılandırma ile başlamak istiyorsanız, [buraya tıklayarak hemen sohbete başlayın 🚀](${SAAS_CHAT_UTM_URL})
-    \ 2️⃣ Eğer özel dağıtım sürümü kullanıyorsanız, [buraya tıklayarak](/#/auth) erişim anahtarını girin 🔑
-    \ 3️⃣ Kendi OpenAI kaynaklarınızı kullanmak istiyorsanız, [buraya tıklayarak](/#/settings) ayarları değiştirin ⚙️
+    \ 1️⃣ Eğer özel dağıtım sürümü kullanıyorsanız, [buraya tıklayarak](/#/auth) erişim anahtarını girin 🔑
+    \ 2️⃣ Kendi OpenAI kaynaklarınızı kullanmak istiyorsanız, [buraya tıklayarak](/#/settings) ayarları değiştirin ⚙️
  `,
   },
   Auth: {
@@ -25,9 +22,6 @@ const tr: PartialLocaleType = {
     Confirm: "Onayla",
     Later: "Sonra",
     Return: "Geri",
-    SaasTips: "Ayarlar çok karmaşık, hemen kullanmak istiyorum",
-    TopTips:
-      "🥳 NextChat AI lansman teklifi, en son büyük modelleri şimdi açın",
   },
   ChatItem: {
     ChatItemCount: (count: number) => `${count} konuşma`,
@@ -297,14 +291,6 @@ const tr: PartialLocaleType = {
     },
 
     Access: {
-      SaasStart: {
-        Title: "NextChat AI kullanın",
-        Label: "(En maliyet etkin çözüm)",
-        SubTitle:
-          "NextChat tarafından resmi olarak yönetilmektedir, yapılandırma olmadan hemen kullanıma hazırdır, en son büyük modelleri destekler",
-        ChatNow: "Şimdi sohbet et",
-      },
-
       AccessCode: {
         Title: "Erişim Şifresi",
         SubTitle: "Yönetici şifreli erişimi etkinleştirdi",
@@ -500,26 +486,8 @@ const tr: PartialLocaleType = {
     Clear: "Bağlam temizlendi",
     Revert: "Bağlamı geri getir",
   },
-  Plugin: {
-    Name: "Eklenti",
-  },
   FineTuned: {
     Sysmessage: "Sen bir asistansın",
-  },
-  SearchChat: {
-    Name: "Ara",
-    Page: {
-      Title: "Sohbet geçmişini ara",
-      Search: "Arama anahtar kelimelerini girin",
-      NoResult: "Sonuç bulunamadı",
-      NoData: "Veri yok",
-      Loading: "Yükleniyor",
-
-      SubTitle: (count: number) => `${count} sonuç bulundu`,
-    },
-    Item: {
-      View: "Görüntüle",
-    },
   },
   Mask: {
     Name: "Maske",

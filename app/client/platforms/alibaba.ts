@@ -1,12 +1,6 @@
 "use client";
 import { ApiPath, Alibaba, ALIBABA_BASE_URL } from "@/app/constant";
-import {
-  useAccessStore,
-  useAppConfig,
-  useChatStore,
-  ChatMessageTool,
-  usePluginStore,
-} from "@/app/store";
+import { useAccessStore, useAppConfig, useChatStore } from "@/app/store";
 import {
   preProcessImageContentForAlibabaDashScope,
   streamWithThink,
@@ -156,51 +150,21 @@ export class QwenApi implements LLMApi {
       );
 
       if (shouldStream) {
-        const [tools, funcs] = usePluginStore
-          .getState()
-          .getAsTools(
-            useChatStore.getState().currentSession().mask?.plugin || [],
-          );
         return streamWithThink(
           chatPath,
           requestPayload,
           headers,
-          tools as any,
-          funcs,
           controller,
-          // parseSSE
-          (text: string, runTools: ChatMessageTool[]) => {
-            // console.log("parseSSE", text, runTools);
+          (text: string) => {
             const json = JSON.parse(text);
             const choices = json.output.choices as Array<{
               message: {
                 content: string | null | MultimodalContentForAlibaba[];
-                tool_calls: ChatMessageTool[];
                 reasoning_content: string | null;
               };
             }>;
 
             if (!choices?.length) return { isThinking: false, content: "" };
-
-            const tool_calls = choices[0]?.message?.tool_calls;
-            if (tool_calls?.length > 0) {
-              const index = tool_calls[0]?.index;
-              const id = tool_calls[0]?.id;
-              const args = tool_calls[0]?.function?.arguments;
-              if (id) {
-                runTools.push({
-                  id,
-                  type: tool_calls[0]?.type,
-                  function: {
-                    name: tool_calls[0]?.function?.name as string,
-                    arguments: args,
-                  },
-                });
-              } else {
-                // @ts-ignore
-                runTools[index]["function"]["arguments"] += args;
-              }
-            }
 
             const reasoning = choices[0]?.message?.reasoning_content;
             const content = choices[0]?.message?.content;
@@ -234,19 +198,6 @@ export class QwenApi implements LLMApi {
               isThinking: false,
               content: "",
             };
-          },
-          // processToolMessage, include tool_calls message and tool call results
-          (
-            requestPayload: RequestPayload,
-            toolCallMessage: any,
-            toolCallResult: any[],
-          ) => {
-            requestPayload?.input?.messages?.splice(
-              requestPayload?.input?.messages?.length,
-              0,
-              toolCallMessage,
-              ...toolCallResult,
-            );
           },
           options,
         );

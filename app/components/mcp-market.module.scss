@@ -179,26 +179,6 @@
           }
         }
 
-        .repo-link {
-          color: var(--primary);
-          font-size: 12px;
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          text-decoration: none;
-          opacity: 0.8;
-          transition: opacity 0.2s;
-
-          &:hover {
-            opacity: 1;
-          }
-
-          svg {
-            width: 14px;
-            height: 14px;
-          }
-        }
-
         .tags-container {
           display: flex;
           gap: 4px;

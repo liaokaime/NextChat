@@ -1,18 +1,11 @@
 import { Anthropic, ApiPath } from "@/app/constant";
 import { ChatOptions, getHeaders, LLMApi, SpeechOptions } from "../api";
-import {
-  useAccessStore,
-  useAppConfig,
-  useChatStore,
-  usePluginStore,
-  ChatMessageTool,
-} from "@/app/store";
+import { useAccessStore, useAppConfig, useChatStore } from "@/app/store";
 import { getClientConfig } from "@/app/config/client";
 import { ANTHROPIC_BASE_URL } from "@/app/constant";
 import { getMessageTextContent, isVisionModel } from "@/app/utils";
 import { preProcessImageContent, stream } from "@/app/utils/chat";
 import { cloudflareAIGatewayUrl } from "@/app/utils/cloudflare";
-import { RequestPayload } from "./openai";
 import { fetch } from "@/app/utils/stream";
 
 export type MultiBlockContent = {
@@ -197,12 +190,6 @@ export class ClaudeApi implements LLMApi {
     options.onController?.(controller);
 
     if (shouldStream) {
-      let index = -1;
-      const [tools, funcs] = usePluginStore
-        .getState()
-        .getAsTools(
-          useChatStore.getState().currentSession().mask?.plugin || [],
-        );
       return stream(
         path,
         requestBody,
@@ -210,105 +197,22 @@ export class ClaudeApi implements LLMApi {
           ...getHeaders(),
           "anthropic-version": accessStore.anthropicApiVersion,
         },
-        // @ts-ignore
-        tools.map((tool) => ({
-          name: tool?.function?.name,
-          description: tool?.function?.description,
-          input_schema: tool?.function?.parameters,
-        })),
-        funcs,
         controller,
-        // parseSSE
-        (text: string, runTools: ChatMessageTool[]) => {
-          // console.log("parseSSE", text, runTools);
-          let chunkJson:
-            | undefined
-            | {
-                type: "content_block_delta" | "content_block_stop" | "message_delta" | "message_stop";
-                content_block?: {
-                  type: "tool_use";
-                  id: string;
-                  name: string;
-                };
-                delta?: {
-                  type: "text_delta" | "input_json_delta";
-                  text?: string;
-                  partial_json?: string;
-                  stop_reason?: string;
-                };
-                index: number;
-              };
-          chunkJson = JSON.parse(text);
-
-          // Handle refusal stop reason in message_delta
+        (text: string) => {
+          const chunkJson = JSON.parse(text) as {
+            delta?: { type?: string; text?: string; stop_reason?: string };
+          };
           if (chunkJson?.delta?.stop_reason === "refusal") {
-            // Return a message to display to the user
-            const refusalMessage = "\n\n[Assistant refused to respond. Please modify your request and try again.]";
-            options.onError?.(new Error("Content policy violation: " + refusalMessage));
+            const refusalMessage =
+              "\n\n[Assistant refused to respond. Please modify your request and try again.]";
+            options.onError?.(
+              new Error("Content policy violation: " + refusalMessage),
+            );
             return refusalMessage;
           }
-
-          if (chunkJson?.content_block?.type == "tool_use") {
-            index += 1;
-            const id = chunkJson?.content_block.id;
-            const name = chunkJson?.content_block.name;
-            runTools.push({
-              id,
-              type: "function",
-              function: {
-                name,
-                arguments: "",
-              },
-            });
-          }
-          if (
-            chunkJson?.delta?.type == "input_json_delta" &&
-            chunkJson?.delta?.partial_json
-          ) {
-            // @ts-ignore
-            runTools[index]["function"]["arguments"] +=
-              chunkJson?.delta?.partial_json;
-          }
-          return chunkJson?.delta?.text;
-        },
-        // processToolMessage, include tool_calls message and tool call results
-        (
-          requestPayload: RequestPayload,
-          toolCallMessage: any,
-          toolCallResult: any[],
-        ) => {
-          // reset index value
-          index = -1;
-          // @ts-ignore
-          requestPayload?.messages?.splice(
-            // @ts-ignore
-            requestPayload?.messages?.length,
-            0,
-            {
-              role: "assistant",
-              content: toolCallMessage.tool_calls.map(
-                (tool: ChatMessageTool) => ({
-                  type: "tool_use",
-                  id: tool.id,
-                  name: tool?.function?.name,
-                  input: tool?.function?.arguments
-                    ? JSON.parse(tool?.function?.arguments)
-                    : {},
-                }),
-              ),
-            },
-            // @ts-ignore
-            ...toolCallResult.map((result) => ({
-              role: "user",
-              content: [
-                {
-                  type: "tool_result",
-                  tool_use_id: result.tool_call_id,
-                  content: result.content,
-                },
-              ],
-            })),
-          );
+          return chunkJson?.delta?.type === "text_delta"
+            ? chunkJson.delta.text
+            : undefined;
         },
         options,
       );

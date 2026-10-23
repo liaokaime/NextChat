@@ -60,21 +60,6 @@ const MaskPage = dynamic(async () => (await import("./mask")).MaskPage, {
   loading: () => <Loading noLogo />,
 });
 
-const PluginPage = dynamic(async () => (await import("./plugin")).PluginPage, {
-  loading: () => <Loading noLogo />,
-});
-
-const SearchChat = dynamic(
-  async () => (await import("./search-chat")).SearchChatPage,
-  {
-    loading: () => <Loading noLogo />,
-  },
-);
-
-const Sd = dynamic(async () => (await import("./sd")).Sd, {
-  loading: () => <Loading noLogo />,
-});
-
 const McpMarketPage = dynamic(
   async () => (await import("./mcp-market")).McpMarketPage,
   {
@@ -163,8 +148,6 @@ function Screen() {
   const isArtifact = location.pathname.includes(Path.Artifacts);
   const isHome = location.pathname === Path.Home;
   const isAuth = location.pathname === Path.Auth;
-  const isSd = location.pathname === Path.Sd;
-  const isSdNew = location.pathname === Path.SdNew;
 
   const isMobileScreen = useMobileScreen();
   const shouldTightBorder =
@@ -183,8 +166,6 @@ function Screen() {
   }
   const renderContent = () => {
     if (isAuth) return <AuthPage />;
-    if (isSd) return <Sd />;
-    if (isSdNew) return <Sd />;
     return (
       <>
         <SideBar
@@ -197,11 +178,11 @@ function Screen() {
             <Route path={Path.Home} element={<Chat />} />
             <Route path={Path.NewChat} element={<NewChat />} />
             <Route path={Path.Masks} element={<MaskPage />} />
-            <Route path={Path.Plugins} element={<PluginPage />} />
-            <Route path={Path.SearchChat} element={<SearchChat />} />
+
             <Route path={Path.Chat} element={<Chat />} />
             <Route path={Path.Settings} element={<Settings />} />
             <Route path={Path.McpMarket} element={<McpMarketPage />} />
+            <Route path="*" element={<Chat />} />
           </Routes>
         </WindowContent>
       </>
@@ -222,6 +203,19 @@ function Screen() {
 
 export function useLoadData() {
   const config = useAppConfig();
+  const access = useAccessStore();
+  useEffect(() => {
+    if (
+      getClientConfig()?.isApp &&
+      access._hasHydrated &&
+      config._hasHydrated
+    ) {
+      access.initializeProviders(
+        config.models,
+        [config.customModels, access.customModels].join(","),
+      );
+    }
+  }, [access, config]);
 
   const api: ClientApi = getClientApi(config.modelConfig.providerName);
 

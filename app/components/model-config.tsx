@@ -7,7 +7,11 @@ import { ListItem, Select } from "./ui-lib";
 import { useAllModels } from "../utils/hooks";
 import { groupBy } from "lodash-es";
 import styles from "./model-config.module.scss";
-import { getModelProvider } from "../utils/model";
+import {
+  llmModelSelection,
+  modelSelection,
+  parseModelSelection,
+} from "../client/providers";
 
 export function ModelConfigList(props: {
   modelConfig: ModelConfig;
@@ -16,10 +20,21 @@ export function ModelConfigList(props: {
   const allModels = useAllModels();
   const groupModels = groupBy(
     allModels.filter((v) => v.available),
-    "provider.providerName",
+    (model) =>
+      model.provider?.providerType === "ai-sdk"
+        ? model.provider.id
+        : model.provider?.providerName,
   );
-  const value = `${props.modelConfig.model}@${props.modelConfig?.providerName}`;
-  const compressModelValue = `${props.modelConfig.compressModel}@${props.modelConfig?.compressProviderName}`;
+  const value = modelSelection(
+    props.modelConfig.model,
+    props.modelConfig.providerName,
+    props.modelConfig.providerId,
+  );
+  const compressModelValue = modelSelection(
+    props.modelConfig.compressModel,
+    props.modelConfig.compressProviderName,
+    props.modelConfig.compressProviderId,
+  );
 
   return (
     <>
@@ -29,19 +44,27 @@ export function ModelConfigList(props: {
           value={value}
           align="left"
           onChange={(e) => {
-            const [model, providerName] = getModelProvider(
+            const { model, providerName, providerId } = parseModelSelection(
               e.currentTarget.value,
+            );
+            const selected = allModels.find(
+              (m) => llmModelSelection(m) === e.currentTarget.value,
             );
             props.updateConfig((config) => {
               config.model = ModalConfigValidator.model(model);
-              config.providerName = providerName as ServiceProvider;
+              config.providerName = (selected?.provider?.providerName ||
+                providerName) as ServiceProvider;
+              config.providerId = providerId;
             });
           }}
         >
           {Object.keys(groupModels).map((providerName, index) => (
-            <optgroup label={providerName} key={index}>
+            <optgroup
+              label={groupModels[providerName][0].provider?.providerName}
+              key={index}
+            >
               {groupModels[providerName].map((v, i) => (
-                <option value={`${v.name}@${v.provider?.providerName}`} key={i}>
+                <option value={llmModelSelection(v)} key={i}>
                   {v.displayName}
                 </option>
               ))}
@@ -110,7 +133,8 @@ export function ModelConfigList(props: {
         ></input>
       </ListItem>
 
-      {props.modelConfig?.providerName == ServiceProvider.Google ? null : (
+      {!props.modelConfig.providerId &&
+      props.modelConfig?.providerName == ServiceProvider.Google ? null : (
         <>
           <ListItem
             title={Locale.Settings.PresencePenalty.Title}
@@ -250,19 +274,25 @@ export function ModelConfigList(props: {
           aria-label={Locale.Settings.CompressModel.Title}
           value={compressModelValue}
           onChange={(e) => {
-            const [model, providerName] = getModelProvider(
+            const { model, providerName, providerId } = parseModelSelection(
               e.currentTarget.value,
+            );
+            const selected = allModels.find(
+              (m) => llmModelSelection(m) === e.currentTarget.value,
             );
             props.updateConfig((config) => {
               config.compressModel = ModalConfigValidator.model(model);
-              config.compressProviderName = providerName as ServiceProvider;
+              config.compressProviderName =
+                selected?.provider?.providerName || providerName;
+              config.compressProviderId = providerId;
             });
           }}
         >
+          <option value="@">跟随当前模型</option>
           {allModels
             .filter((v) => v.available)
             .map((v, i) => (
-              <option value={`${v.name}@${v.provider?.providerName}`} key={i}>
+              <option value={llmModelSelection(v)} key={i}>
                 {v.displayName}({v.provider?.providerName})
               </option>
             ))}
