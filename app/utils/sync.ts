@@ -12,6 +12,7 @@ import {
   migrateLegacyProviders,
   normalizeProviders,
 } from "../client/providers";
+import { normalizeLegacyConnections } from "../client/connections";
 
 type NonFunctionKeys<T> = {
   [K in keyof T]: T[K] extends (...args: any[]) => any ? never : K;
@@ -119,7 +120,15 @@ const MergeStates: StateMerger = {
     return localState;
   },
   [StoreKey.Config]: mergeWithUpdate<AppState[StoreKey.Config]>,
-  [StoreKey.Access]: mergeWithUpdate<AppState[StoreKey.Access]>,
+  [StoreKey.Access]: (local, remote) => ({
+    ...mergeWithUpdate(local, remote),
+    legacyConnections: JSON.parse(
+      JSON.stringify(
+        (local.lastUpdateTime >= remote.lastUpdateTime ? local : remote)
+          .legacyConnections,
+      ),
+    ),
+  }),
 };
 
 export function getLocalAppState() {
@@ -186,5 +195,20 @@ export function normalizeAppState(appState: AppState) {
         [config.customModels, access.customModels].filter(Boolean).join(","),
       );
   access.providerInstancesInitialized = true;
+  access.legacyConnections = normalizeLegacyConnections(
+    access.legacyConnections,
+  );
+  access.connectionManagerInitialized =
+    access.connectionManagerInitialized === true;
+  config.modelPicker = {
+    favorites: Array.isArray(config.modelPicker?.favorites)
+      ? config.modelPicker.favorites.filter((key) => typeof key === "string")
+      : [],
+    recent: Array.isArray(config.modelPicker?.recent)
+      ? config.modelPicker.recent
+          .filter((key) => typeof key === "string")
+          .slice(0, 8)
+      : [],
+  };
   return appState;
 }

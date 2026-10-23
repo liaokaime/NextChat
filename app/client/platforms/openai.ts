@@ -140,6 +140,14 @@ export class ChatGPTApi implements LLMApi {
   }
 
   async speech(options: SpeechOptions): Promise<ArrayBuffer> {
+    const connection = useAccessStore.getState().legacyConnections.OpenAI;
+    if (
+      getClientConfig()?.isApp &&
+      connection &&
+      (connection.hidden || !connection.enabled)
+    ) {
+      throw new Error(Locale.ModelServices.Unavailable);
+    }
     const requestPayload = {
       model: options.model,
       input: options.input,
@@ -159,7 +167,7 @@ export class ChatGPTApi implements LLMApi {
         method: "POST",
         body: JSON.stringify(requestPayload),
         signal: controller.signal,
-        headers: getHeaders(),
+        headers: getHeaders(false, { providerName: ServiceProvider.OpenAI }),
       };
 
       // make a fetch request
@@ -181,10 +189,7 @@ export class ChatGPTApi implements LLMApi {
     const modelConfig = {
       ...useAppConfig.getState().modelConfig,
       ...useChatStore.getState().currentSession().mask.modelConfig,
-      ...{
-        model: options.config.model,
-        providerName: options.config.providerName,
-      },
+      ...options.config,
     };
 
     let requestPayload: RequestPayload | DalleRequestPayload;
@@ -286,7 +291,14 @@ export class ChatGPTApi implements LLMApi {
         );
         chatPath = this.path(
           (isDalle3 ? Azure.ImagePath : Azure.ChatPath)(
-            (model?.displayName ?? model?.name) as string,
+            (useAccessStore
+              .getState()
+              .legacyConnections.Azure?.models?.find(
+                (m) => m.id === modelConfig.model,
+              )?.displayName ||
+              model?.displayName ||
+              model?.name ||
+              modelConfig.model) as string,
             useCustomConfig ? useAccessStore.getState().azureApiVersion : "",
           ),
         );
@@ -299,7 +311,7 @@ export class ChatGPTApi implements LLMApi {
         streamWithThink(
           chatPath,
           requestPayload,
-          getHeaders(),
+          getHeaders(false, options.config),
           controller,
           (text: string) => {
             const json = JSON.parse(text);
@@ -350,7 +362,7 @@ export class ChatGPTApi implements LLMApi {
           method: "POST",
           body: JSON.stringify(requestPayload),
           signal: controller.signal,
-          headers: getHeaders(),
+          headers: getHeaders(false, options.config),
         };
 
         // make a fetch request
@@ -390,12 +402,12 @@ export class ChatGPTApi implements LLMApi {
         ),
         {
           method: "GET",
-          headers: getHeaders(),
+          headers: getHeaders(false, { providerName: ServiceProvider.OpenAI }),
         },
       ),
       fetch(this.path(OpenaiPath.SubsPath), {
         method: "GET",
-        headers: getHeaders(),
+        headers: getHeaders(false, { providerName: ServiceProvider.OpenAI }),
       }),
     ]);
 

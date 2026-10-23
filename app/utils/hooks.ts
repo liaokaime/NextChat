@@ -1,8 +1,9 @@
 import { useMemo } from "react";
 import { useAccessStore, useAppConfig } from "../store";
 import { collectModelsWithDefaultModel } from "./model";
-import { instanceModels } from "../client/providers";
+import { desktopConnectionModels } from "../client/connections";
 import { getClientConfig } from "../config/client";
+import type { LLMModel } from "../client/api";
 
 export function useAllModels() {
   const accessStore = useAccessStore();
@@ -14,15 +15,9 @@ export function useAllModels() {
       accessStore.defaultModel,
     );
     return getClientConfig()?.isApp
-      ? [...instanceModels(accessStore.providers), ...legacy]
+      ? desktopConnectionModels(accessStore, legacy as LLMModel[])
       : legacy;
-  }, [
-    accessStore.customModels,
-    accessStore.defaultModel,
-    configStore.customModels,
-    configStore.models,
-    accessStore.providers,
-  ]);
+  }, [accessStore, configStore.customModels, configStore.models]);
 
   return models;
 }

@@ -1,3 +1,8 @@
+import { useState } from "react";
+import { getClientConfig } from "../config/client";
+import { ModelPicker } from "./model-picker";
+import { IconButton } from "./button";
+import { modelConnectionName } from "../client/connections";
 import { ServiceProvider } from "@/app/constant";
 import { ModalConfigValidator, ModelConfig } from "../store";
 
@@ -15,9 +20,12 @@ import {
 
 export function ModelConfigList(props: {
   modelConfig: ModelConfig;
+  globalSettings?: boolean;
   updateConfig: (updater: (config: ModelConfig) => void) => void;
 }) {
   const allModels = useAllModels();
+  const desktop = !!getClientConfig()?.isApp;
+  const [picker, setPicker] = useState<"model" | "compress">();
   const groupModels = groupBy(
     allModels.filter((v) => v.available),
     (model) =>
@@ -38,39 +46,58 @@ export function ModelConfigList(props: {
 
   return (
     <>
-      <ListItem title={Locale.Settings.Model}>
-        <Select
-          aria-label={Locale.Settings.Model}
-          value={value}
-          align="left"
-          onChange={(e) => {
-            const { model, providerName, providerId } = parseModelSelection(
-              e.currentTarget.value,
-            );
-            const selected = allModels.find(
-              (m) => llmModelSelection(m) === e.currentTarget.value,
-            );
-            props.updateConfig((config) => {
-              config.model = ModalConfigValidator.model(model);
-              config.providerName = (selected?.provider?.providerName ||
-                providerName) as ServiceProvider;
-              config.providerId = providerId;
-            });
-          }}
-        >
-          {Object.keys(groupModels).map((providerName, index) => (
-            <optgroup
-              label={groupModels[providerName][0].provider?.providerName}
-              key={index}
-            >
-              {groupModels[providerName].map((v, i) => (
-                <option value={llmModelSelection(v)} key={i}>
-                  {v.displayName}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </Select>
+      <ListItem
+        title={Locale.Settings.Model}
+        subTitle={
+          desktop && props.globalSettings
+            ? Locale.ModelServices.GlobalHint
+            : undefined
+        }
+      >
+        {desktop ? (
+          <IconButton
+            text={(() => {
+              const m = allModels.find((m) => llmModelSelection(m) === value);
+              return m
+                ? `${m.displayName || m.name} · ${modelConnectionName(m)}`
+                : `${props.modelConfig.model} · ${props.modelConfig.providerName}`;
+            })()}
+            onClick={() => setPicker("model")}
+          />
+        ) : (
+          <Select
+            aria-label={Locale.Settings.Model}
+            value={value}
+            align="left"
+            onChange={(e) => {
+              const { model, providerName, providerId } = parseModelSelection(
+                e.currentTarget.value,
+              );
+              const selected = allModels.find(
+                (m) => llmModelSelection(m) === e.currentTarget.value,
+              );
+              props.updateConfig((config) => {
+                config.model = ModalConfigValidator.model(model);
+                config.providerName = (selected?.provider?.providerName ||
+                  providerName) as ServiceProvider;
+                config.providerId = providerId;
+              });
+            }}
+          >
+            {Object.keys(groupModels).map((providerName, index) => (
+              <optgroup
+                label={groupModels[providerName][0].provider?.providerName}
+                key={index}
+              >
+                {groupModels[providerName].map((v, i) => (
+                  <option value={llmModelSelection(v)} key={i}>
+                    {v.displayName}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </Select>
+        )}
       </ListItem>
       <ListItem
         title={Locale.Settings.Temperature.Title}
@@ -269,35 +296,81 @@ export function ModelConfigList(props: {
         title={Locale.Settings.CompressModel.Title}
         subTitle={Locale.Settings.CompressModel.SubTitle}
       >
-        <Select
-          className={styles["select-compress-model"]}
-          aria-label={Locale.Settings.CompressModel.Title}
-          value={compressModelValue}
-          onChange={(e) => {
-            const { model, providerName, providerId } = parseModelSelection(
-              e.currentTarget.value,
-            );
-            const selected = allModels.find(
-              (m) => llmModelSelection(m) === e.currentTarget.value,
-            );
-            props.updateConfig((config) => {
-              config.compressModel = ModalConfigValidator.model(model);
-              config.compressProviderName =
-                selected?.provider?.providerName || providerName;
-              config.compressProviderId = providerId;
-            });
-          }}
-        >
-          <option value="@">跟随当前模型</option>
-          {allModels
-            .filter((v) => v.available)
-            .map((v, i) => (
-              <option value={llmModelSelection(v)} key={i}>
-                {v.displayName}({v.provider?.providerName})
-              </option>
-            ))}
-        </Select>
+        {desktop ? (
+          <IconButton
+            text={
+              !props.modelConfig.compressModel
+                ? Locale.ModelServices.Following
+                : (() => {
+                    const m = allModels.find(
+                      (m) => llmModelSelection(m) === compressModelValue,
+                    );
+                    return m
+                      ? `${m.displayName || m.name} · ${modelConnectionName(m)}`
+                      : props.modelConfig.compressModel;
+                  })()
+            }
+            onClick={() => setPicker("compress")}
+          />
+        ) : (
+          <Select
+            className={styles["select-compress-model"]}
+            aria-label={Locale.Settings.CompressModel.Title}
+            value={compressModelValue}
+            onChange={(e) => {
+              const { model, providerName, providerId } = parseModelSelection(
+                e.currentTarget.value,
+              );
+              const selected = allModels.find(
+                (m) => llmModelSelection(m) === e.currentTarget.value,
+              );
+              props.updateConfig((config) => {
+                config.compressModel = ModalConfigValidator.model(model);
+                config.compressProviderName =
+                  selected?.provider?.providerName || providerName;
+                config.compressProviderId = providerId;
+              });
+            }}
+          >
+            <option value="@">跟随当前模型</option>
+            {allModels
+              .filter((v) => v.available)
+              .map((v, i) => (
+                <option value={llmModelSelection(v)} key={i}>
+                  {v.displayName}({v.provider?.providerName})
+                </option>
+              ))}
+          </Select>
+        )}
       </ListItem>
+      {picker && (
+        <ModelPicker
+          current={picker === "model" ? value : compressModelValue}
+          allowFollow={picker === "compress"}
+          onClose={() => setPicker(undefined)}
+          onSelect={(model) =>
+            props.updateConfig((config) => {
+              if (picker === "compress") {
+                config.compressModel = model?.name || "";
+                config.compressProviderName =
+                  model?.provider.providerName || "";
+                config.compressProviderId =
+                  model?.provider.providerType === "ai-sdk"
+                    ? model.provider.id
+                    : undefined;
+              } else if (model) {
+                config.model = model.name;
+                config.providerName = model.provider
+                  .providerName as ServiceProvider;
+                config.providerId =
+                  model.provider.providerType === "ai-sdk"
+                    ? model.provider.id
+                    : undefined;
+              }
+            })
+          }
+        />
+      )}
     </>
   );
 }

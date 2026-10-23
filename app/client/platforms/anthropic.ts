@@ -86,9 +86,7 @@ export class ClaudeApi implements LLMApi {
     const modelConfig = {
       ...useAppConfig.getState().modelConfig,
       ...useChatStore.getState().currentSession().mask.modelConfig,
-      ...{
-        model: options.config.model,
-      },
+      ...options.config,
     };
 
     // try get base64image from local cache image_url
@@ -194,7 +192,7 @@ export class ClaudeApi implements LLMApi {
         path,
         requestBody,
         {
-          ...getHeaders(),
+          ...getHeaders(false, options.config),
           "anthropic-version": accessStore.anthropicApiVersion,
         },
         controller,
@@ -222,7 +220,7 @@ export class ClaudeApi implements LLMApi {
         body: JSON.stringify(requestBody),
         signal: controller.signal,
         headers: {
-          ...getHeaders(), // get common headers
+          ...getHeaders(false, options.config), // get common headers
           "anthropic-version": accessStore.anthropicApiVersion,
           // do not send `anthropicApiKey` in browser!!!
           // Authorization: getAuthKey(accessStore.anthropicApiKey),

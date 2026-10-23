@@ -60,6 +60,7 @@ export const DEFAULT_CONFIG = {
   hideBuiltinMasks: false, // dont add builtin masks
 
   customModels: "",
+  modelPicker: { favorites: [] as string[], recent: [] as string[] },
   models: DEFAULT_MODELS as any as LLMModel[],
 
   modelConfig: {
@@ -195,7 +196,21 @@ export const useAppConfig = createPersistStore(
         if (idx !== -1) models[idx] = pModel;
         else models.push(pModel);
       });
-      return { ...currentState, ...state, models: models };
+      return {
+        ...currentState,
+        ...state,
+        models: models,
+        modelPicker: {
+          favorites: Array.isArray(state.modelPicker?.favorites)
+            ? state.modelPicker.favorites.filter((k) => typeof k === "string")
+            : [],
+          recent: Array.isArray(state.modelPicker?.recent)
+            ? state.modelPicker.recent
+                .filter((k) => typeof k === "string")
+                .slice(0, 8)
+            : [],
+        },
+      };
     },
 
     migrate(persistedState, version) {

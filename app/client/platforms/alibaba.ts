@@ -91,9 +91,7 @@ export class QwenApi implements LLMApi {
     const modelConfig = {
       ...useAppConfig.getState().modelConfig,
       ...useChatStore.getState().currentSession().mask.modelConfig,
-      ...{
-        model: options.config.model,
-      },
+      ...options.config,
     };
 
     const visionModel = isVisionModel(options.config.model);
@@ -131,7 +129,7 @@ export class QwenApi implements LLMApi {
 
     try {
       const headers = {
-        ...getHeaders(),
+        ...getHeaders(false, options.config),
         "X-DashScope-SSE": shouldStream ? "enable" : "disable",
       };
 

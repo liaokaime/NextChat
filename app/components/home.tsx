@@ -28,6 +28,10 @@ import { AuthPage } from "./auth";
 import { getClientConfig } from "../config/client";
 import { type ClientApi, getClientApi } from "../client/api";
 import { useAccessStore } from "../store";
+import { useInsertionEffect } from "react";
+import { installBrowserNavigationGuard } from "../utils/unsaved-navigation";
+import { useChatStore } from "../store/chat";
+import { useMaskStore } from "../store/mask";
 import clsx from "clsx";
 import { initializeMcpSystem, isMcpEnabled } from "../mcp/actions";
 
@@ -47,6 +51,12 @@ const Artifacts = dynamic(async () => (await import("./artifacts")).Artifacts, {
 const Settings = dynamic(async () => (await import("./settings")).Settings, {
   loading: () => <Loading noLogo />,
 });
+const ModelServices = dynamic(
+  async () => (await import("./model-services")).ModelServices,
+  {
+    loading: () => <Loading noLogo />,
+  },
+);
 
 const Chat = dynamic(async () => (await import("./chat")).Chat, {
   loading: () => <Loading noLogo />,
@@ -181,6 +191,9 @@ function Screen() {
 
             <Route path={Path.Chat} element={<Chat />} />
             <Route path={Path.Settings} element={<Settings />} />
+            {getClientConfig()?.isApp && (
+              <Route path={Path.ModelServices} element={<ModelServices />} />
+            )}
             <Route path={Path.McpMarket} element={<McpMarketPage />} />
             <Route path="*" element={<Chat />} />
           </Routes>
@@ -204,6 +217,8 @@ function Screen() {
 export function useLoadData() {
   const config = useAppConfig();
   const access = useAccessStore();
+  const chats = useChatStore();
+  const masks = useMaskStore();
   useEffect(() => {
     if (
       getClientConfig()?.isApp &&
@@ -214,8 +229,19 @@ export function useLoadData() {
         config.models,
         [config.customModels, access.customModels].join(","),
       );
+      if (chats._hasHydrated && masks._hasHydrated) {
+        access.initializeConnectionManager(
+          config.models,
+          [config.customModels, access.customModels].join(","),
+          [
+            config.modelConfig,
+            ...chats.sessions.map((s) => s.mask.modelConfig),
+            ...Object.values(masks.masks).map((m) => m.modelConfig),
+          ],
+        );
+      }
     }
-  }, [access, config]);
+  }, [access, config, chats, masks]);
 
   const api: ClientApi = getClientApi(config.modelConfig.providerName);
 
@@ -229,6 +255,7 @@ export function useLoadData() {
 }
 
 export function Home() {
+  useInsertionEffect(installBrowserNavigationGuard, []);
   useSwitchTheme();
   useLoadData();
   useHtmlLang();

@@ -20,6 +20,7 @@ import { ChatGLMApi } from "./platforms/glm";
 import { SiliconflowApi } from "./platforms/siliconflow";
 import { Ai302Api } from "./platforms/ai302";
 import { SdkApi } from "./platforms/ai-sdk";
+import Locale from "../locales";
 
 export const ROLES = ["system", "user", "assistant"] as const;
 export type MessageRole = (typeof ROLES)[number];
@@ -99,6 +100,7 @@ export interface LLMModelProvider {
   id: string;
   providerName: string;
   providerType: string;
+  connectionName?: string;
   sorted: number;
 }
 
@@ -245,7 +247,10 @@ export function validString(x: string): boolean {
   return x?.length > 0;
 }
 
-export function getHeaders(ignoreHeaders: boolean = false) {
+export function getHeaders(
+  ignoreHeaders: boolean = false,
+  requestConfig?: Pick<LLMConfig, "providerName">,
+) {
   const accessStore = useAccessStore.getState();
   const chatStore = useChatStore.getState();
   let headers: Record<string, string> = {};
@@ -259,7 +264,8 @@ export function getHeaders(ignoreHeaders: boolean = false) {
   const clientConfig = getClientConfig();
 
   function getConfig() {
-    const modelConfig = chatStore.currentSession().mask.modelConfig;
+    const modelConfig =
+      requestConfig ?? chatStore.currentSession().mask.modelConfig;
     const isGoogle = modelConfig.providerName === ServiceProvider.Google;
     const isAzure = modelConfig.providerName === ServiceProvider.Azure;
     const isAnthropic = modelConfig.providerName === ServiceProvider.Anthropic;
@@ -374,6 +380,27 @@ export function getClientApi(
   providerId?: string,
 ): ClientApi {
   if (providerId) return new ClientApi(ModelProvider.GPT, providerId);
+  const api = getLegacyClientApi(provider);
+  const chat = api.llm.chat.bind(api.llm);
+  api.llm.chat = async (options) => {
+    const meta = useAccessStore.getState().legacyConnections[provider];
+    if (
+      getClientConfig()?.isApp &&
+      meta &&
+      (meta.hidden ||
+        !meta.enabled ||
+        (meta.models &&
+          !meta.models.some((m) => m.id === options.config.model && m.enabled)))
+    ) {
+      options.onError?.(new Error(Locale.ModelServices.Unavailable));
+      return;
+    }
+    return chat(options);
+  };
+  return api;
+}
+
+function getLegacyClientApi(provider: ServiceProvider): ClientApi {
   switch (provider) {
     case ServiceProvider.Google:
       return new ClientApi(ModelProvider.GeminiPro);

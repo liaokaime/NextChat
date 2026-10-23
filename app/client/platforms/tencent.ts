@@ -108,9 +108,7 @@ export class HunyuanApi implements LLMApi {
     const modelConfig = {
       ...useAppConfig.getState().modelConfig,
       ...useChatStore.getState().currentSession().mask.modelConfig,
-      ...{
-        model: options.config.model,
-      },
+      ...options.config,
     };
 
     const requestPayload: RequestPayload = capitalizeKeys({
@@ -133,7 +131,7 @@ export class HunyuanApi implements LLMApi {
         method: "POST",
         body: JSON.stringify(requestPayload),
         signal: controller.signal,
-        headers: getHeaders(),
+        headers: getHeaders(false, options.config),
       };
 
       // make a fetch request

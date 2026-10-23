@@ -92,7 +92,7 @@ export class XAIApi implements LLMApi {
         method: "POST",
         body: JSON.stringify(requestPayload),
         signal: controller.signal,
-        headers: getHeaders(),
+        headers: getHeaders(false, options.config),
       };
 
       // make a fetch request
@@ -105,7 +105,7 @@ export class XAIApi implements LLMApi {
         return stream(
           chatPath,
           requestPayload,
-          getHeaders(),
+          getHeaders(false, options.config),
           controller,
           (text: string) => {
             const json = JSON.parse(text);

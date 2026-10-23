@@ -78,3 +78,24 @@ test("sync replaces provider arrays from the newer backup without resurrecting d
   mergeAppState(local, remote);
   expect(local[StoreKey.Access].providers).toEqual([]);
 });
+
+test("newer connection metadata replaces stale disabled connections and backup preferences round trip", () => {
+  const local = snapshot();
+  const remote = snapshot();
+  local[StoreKey.Access].legacyConnections = {
+    OpenAI: { name: "old", enabled: false, hidden: true },
+  };
+  local[StoreKey.Access].lastUpdateTime = 1;
+  remote[StoreKey.Access].legacyConnections = {};
+  remote[StoreKey.Access].lastUpdateTime = 2;
+  remote[StoreKey.Config].modelPicker = {
+    favorites: ['["id","model"]'],
+    recent: ["model@Google"],
+  };
+  remote[StoreKey.Config].lastUpdateTime = 2;
+  mergeAppState(local, remote);
+  expect(local[StoreKey.Access].legacyConnections).toEqual({});
+  expect(
+    normalizeAppState(snapshotRoundTrip(remote))[StoreKey.Config].modelPicker,
+  ).toEqual(remote[StoreKey.Config].modelPicker);
+});

@@ -138,9 +138,7 @@ export class GeminiProApi implements LLMApi {
     const modelConfig = {
       ...useAppConfig.getState().modelConfig,
       ...useChatStore.getState().currentSession().mask.modelConfig,
-      ...{
-        model: options.config.model,
-      },
+      ...options.config,
     };
     const requestPayload = {
       contents: messages,
@@ -187,7 +185,7 @@ export class GeminiProApi implements LLMApi {
         method: "POST",
         body: JSON.stringify(requestPayload),
         signal: controller.signal,
-        headers: getHeaders(),
+        headers: getHeaders(false, options.config),
       };
 
       const isThinking = options.config.model.includes("-thinking");
@@ -201,7 +199,7 @@ export class GeminiProApi implements LLMApi {
         return stream(
           chatPath,
           requestPayload,
-          getHeaders(),
+          getHeaders(false, options.config),
           controller,
           (text: string) => {
             const chunkJson = JSON.parse(text);

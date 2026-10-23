@@ -30,6 +30,12 @@ import {
   type ProviderInstance,
 } from "../client/providers";
 import type { LLMModel } from "../client/api";
+import {
+  normalizeLegacyConnections,
+  pruneUnusedImportedProviders,
+  type LegacyConnections,
+  type ModelReference,
+} from "../client/connections";
 
 let fetchState = 0; // 0 not fetch, 1 fetching, 2 done
 
@@ -67,6 +73,8 @@ const DEFAULT_AI302_URL = isApp ? AI302_BASE_URL : ApiPath["302.AI"];
 
 const DEFAULT_ACCESS_STATE = {
   providers: [] as ProviderInstance[],
+  legacyConnections: {} as LegacyConnections,
+  connectionManagerInitialized: false,
   providerInstancesInitialized: false,
   accessCode: "",
   useCustomConfig: false,
@@ -158,6 +166,22 @@ export const useAccessStore = createPersistStore(
   { ...DEFAULT_ACCESS_STATE },
 
   (set, get) => ({
+    initializeConnectionManager(
+      models: readonly LLMModel[],
+      customModels: string,
+      refs: ModelReference[],
+    ) {
+      if (get().connectionManagerInitialized) return;
+      set({
+        providers: pruneUnusedImportedProviders(
+          get(),
+          models,
+          customModels,
+          refs,
+        ),
+        connectionManagerInitialized: true,
+      });
+    },
     initializeProviders(models: readonly LLMModel[], customModels: string) {
       if (get().providerInstancesInitialized) return;
       const providers = migrateLegacyProviders(
@@ -307,6 +331,7 @@ export const useAccessStore = createPersistStore(
         ...currentState,
         ...state,
         providers: normalizeProviders(state?.providers),
+        legacyConnections: normalizeLegacyConnections(state?.legacyConnections),
       };
     },
     migrate(persistedState, version) {
