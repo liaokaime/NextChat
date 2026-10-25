@@ -15,6 +15,16 @@ describe("isVisionModel", () => {
 
   test("should identify vision models using regex patterns", () => {
     const visionModels = [
+      "gpt-6-luna",
+      "gpt-6.1-sol",
+      "gpt-6-astra",
+      "gemini-3.8-flash",
+      "gemini-3.5-flash-lite",
+      "claude-sonnet-5-5",
+      "claude-haiku-5-5",
+      "claude-opus-4-8",
+      "kimi-k3.1-pro",
+      "deepseek-flash",
       "gpt-4-vision",
       "claude-3-opus",
       "gemini-1.5-pro",
@@ -38,6 +48,7 @@ describe("isVisionModel", () => {
 
   test("should not identify non-vision models", () => {
     const nonVisionModels = [
+      "deepseek-v4-pro",
       "gpt-3.5-turbo",
       "gpt-4-turbo-preview",
       "claude-2",

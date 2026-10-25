@@ -274,7 +274,7 @@ export function pruneUnusedImportedProviders(
         m.displayName,
         m.enabled,
         m.vision,
-        m.sampling,
+        m.params,
         m.providerOptions,
       ]),
     ]);

@@ -39,7 +39,6 @@ export const getBuildConfig = () => {
     ...commitInfo,
     buildMode,
     isApp,
-    desktopUpdatesEnabled: tauriConfig.tauri.updater.active,
     template: process.env.DEFAULT_INPUT_TEMPLATE ?? DEFAULT_INPUT_TEMPLATE,
   };
 };

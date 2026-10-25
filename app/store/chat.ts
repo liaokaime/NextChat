@@ -29,7 +29,13 @@ import Locale, { getLang } from "../locales";
 import { prettyObject } from "../utils/format";
 import { createPersistStore } from "../utils/store";
 import { estimateTokenLength } from "../utils/token";
-import { ModelConfig, ModelType, useAppConfig } from "./config";
+import {
+  DEFAULT_COMPRESS_MESSAGE_LENGTH_THRESHOLD,
+  DEFAULT_HISTORY_MESSAGE_COUNT,
+  ModelConfig,
+  ModelType,
+  useAppConfig,
+} from "./config";
 import { useAccessStore } from "./access";
 import { createEmptyMask, Mask } from "./mask";
 import { executeMcpAction, getAllTools, isMcpEnabled } from "../mcp/actions";
@@ -183,6 +189,9 @@ const DEFAULT_CHAT_STATE = {
 export const useChatStore = createPersistStore(
   DEFAULT_CHAT_STATE,
   (set, _get) => {
+    // Invalidates outstanding single-session undo actions after a bulk deletion.
+    let sessionsRevision = 0;
+
     function get() {
       return {
         ..._get(),
@@ -218,9 +227,13 @@ export const useChatStore = createPersistStore(
       },
 
       clearSessions() {
+        sessionsRevision += 1;
+        ChatControllerPool.stopAll();
         set(() => ({
           sessions: [createEmptySession()],
           currentSessionIndex: 0,
+          lastInput: "",
+          lastUpdateTime: Date.now(),
         }));
       },
 
@@ -310,6 +323,7 @@ export const useChatStore = createPersistStore(
           currentSessionIndex: get().currentSessionIndex,
           sessions: get().sessions.slice(),
         };
+        const restoreRevision = sessionsRevision;
 
         set(() => ({
           currentSessionIndex: nextIndex,
@@ -321,6 +335,7 @@ export const useChatStore = createPersistStore(
           {
             text: Locale.Home.Revert,
             onClick() {
+              if (restoreRevision !== sessionsRevision) return;
               set(() => restoreState);
             },
           },
@@ -564,7 +579,11 @@ export const useChatStore = createPersistStore(
           : shortTermMemoryStartIndex;
         // and if user has cleared history messages, we should exclude the memory too.
         const contextStartIndex = Math.max(clearContextIndex, memoryStartIndex);
-        const maxTokenThreshold = modelConfig.max_tokens;
+        // Legacy routes reuse max_tokens as a history budget; SDK instances
+        // configure output limits per model, so only the message count applies.
+        const maxTokenThreshold = modelConfig.providerId
+          ? Infinity
+          : modelConfig.max_tokens;
 
         // get recent messages as much as possible
         const reversedRecentMessages = [];
@@ -684,7 +703,11 @@ export const useChatStore = createPersistStore(
 
         const historyMsgLength = countMessages(toBeSummarizedMsgs);
 
-        if (historyMsgLength > (modelConfig?.max_tokens || 4000)) {
+        // Same legacy-only max_tokens budget, keyed on the summary target route.
+        if (
+          !providerId &&
+          historyMsgLength > (modelConfig?.max_tokens || 4000)
+        ) {
           const n = toBeSummarizedMsgs.length;
           toBeSummarizedMsgs = toBeSummarizedMsgs.slice(
             Math.max(0, n - modelConfig.historyMessageCount),
@@ -716,7 +739,8 @@ export const useChatStore = createPersistStore(
           api.llm.chat({
             messages: toBeSummarizedMsgs.concat(
               createMessage({
-                role: "system",
+                // Gemini via the AI SDK rejects system messages after the first user turn.
+                role: providerId ? "user" : "system",
                 content: Locale.Store.Prompt.Summarize,
                 date: "",
               }),
@@ -815,7 +839,7 @@ export const useChatStore = createPersistStore(
   },
   {
     name: StoreKey.Chat,
-    version: 3.3,
+    version: 3.5,
     migrate(persistedState, version) {
       const state = persistedState as any;
       const newState = JSON.parse(
@@ -831,8 +855,10 @@ export const useChatStore = createPersistStore(
           newSession.topic = oldSession.topic;
           newSession.messages = [...oldSession.messages];
           newSession.mask.modelConfig.sendMemory = true;
-          newSession.mask.modelConfig.historyMessageCount = 4;
-          newSession.mask.modelConfig.compressMessageLengthThreshold = 1000;
+          newSession.mask.modelConfig.historyMessageCount =
+            DEFAULT_HISTORY_MESSAGE_COUNT;
+          newSession.mask.modelConfig.compressMessageLengthThreshold =
+            DEFAULT_COMPRESS_MESSAGE_LENGTH_THRESHOLD;
           newState.sessions.push(newSession);
         }
       }
@@ -877,6 +903,27 @@ export const useChatStore = createPersistStore(
           const config = useAppConfig.getState();
           s.mask.modelConfig.compressModel = "";
           s.mask.modelConfig.compressProviderName = "";
+        });
+      }
+
+      // Move sessions that still carry the old built-in count to the larger
+      // context default while preserving explicitly different values.
+      if (version < 3.4) {
+        newState.sessions.forEach((s) => {
+          if (s.mask.modelConfig.historyMessageCount === 4) {
+            s.mask.modelConfig.historyMessageCount =
+              DEFAULT_HISTORY_MESSAGE_COUNT;
+          }
+        });
+      }
+
+      if (version < 3.5) {
+        newState.sessions.forEach((s) => {
+          const threshold = s.mask.modelConfig.compressMessageLengthThreshold;
+          if (threshold === 1000 || threshold === 256000) {
+            s.mask.modelConfig.compressMessageLengthThreshold =
+              DEFAULT_COMPRESS_MESSAGE_LENGTH_THRESHOLD;
+          }
         });
       }
 

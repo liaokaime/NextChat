@@ -104,18 +104,8 @@ export async function runSdkChat(
     messages,
     abortSignal: controller.signal,
     maxRetries: 0,
-    maxOutputTokens:
-      options.config.max_tokens && options.config.max_tokens > 0
-        ? options.config.max_tokens
-        : undefined,
-    ...(model.sampling
-      ? {
-          temperature: options.config.temperature,
-          topP: options.config.top_p,
-          presencePenalty: options.config.presence_penalty,
-          frequencyPenalty: options.config.frequency_penalty,
-        }
-      : {}),
+    // Per-model settings from the provider editor; unset keys use provider defaults.
+    ...model.params,
     providerOptions: model.providerOptions as Parameters<
       typeof streamText
     >[0]["providerOptions"],

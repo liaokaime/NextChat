@@ -3,7 +3,6 @@ import type {
   LLMApi,
   LLMModel,
   LLMUsage,
-  SpeechOptions,
 } from "../api";
 import { useAccessStore } from "../../store/access";
 import { cacheImageToBase64Image } from "../../utils/chat";
@@ -39,8 +38,5 @@ export class SdkApi implements LLMApi {
   }
   async usage(): Promise<LLMUsage> {
     throw new Error("此实例不提供余额查询。");
-  }
-  async speech(_options: SpeechOptions): Promise<ArrayBuffer> {
-    throw new Error("请通过现有语音设置使用朗读功能。");
   }
 }

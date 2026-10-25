@@ -3,6 +3,28 @@
   overflow: auto;
 }
 
+.settings .modelSelect {
+  width: auto;
+  min-width: 0;
+}
+
+.compressThresholdInput {
+  width: 140px;
+  max-width: 40vw;
+}
+
+.sendKeyActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.sendKeyActions .sendKeyInfo {
+  padding: 3px;
+  flex-shrink: 0;
+  align-self: center;
+}
+
 .avatar {
   cursor: pointer;
   position: relative;

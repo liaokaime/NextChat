@@ -54,12 +54,47 @@
     margin-bottom: 20px;
 
     .sidebar-bar-button {
-      flex-grow: 1;
+      flex: 1 1 0;
+      min-width: 0;
 
       &:not(:last-child) {
         margin-right: 10px;
       }
     }
+
+    &[hidden] {
+      display: none;
+    }
+  }
+
+  .session-search {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 20px;
+
+    input {
+      flex: 1;
+      min-width: 0;
+      width: 100%;
+      max-width: none;
+      box-sizing: border-box;
+      text-align: start;
+      border: var(--border-in-light);
+      border-radius: 10px;
+      min-height: 36px;
+      padding: 0 10px;
+      background: var(--white);
+      color: var(--black);
+      font: inherit;
+      font-size: 12px;
+    }
+  }
+
+  .session-search-empty {
+    padding: 20px 0;
+    text-align: center;
+    font-size: 13px;
+    color: var(--black);
   }
 
   &:hover,
@@ -254,6 +289,7 @@
     flex-direction: column;
 
     .sidebar-bar-button {
+      flex: auto;
       &:not(:last-child) {
         margin-right: 0;
         margin-bottom: 10px;

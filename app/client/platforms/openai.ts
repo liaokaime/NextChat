@@ -6,7 +6,6 @@ import {
   DEFAULT_MODELS,
   OpenaiPath,
   Azure,
-  REQUEST_TIMEOUT_MS,
   ServiceProvider,
 } from "@/app/constant";
 import { useAccessStore, useAppConfig, useChatStore } from "@/app/store";
@@ -27,7 +26,6 @@ import {
   LLMModel,
   LLMUsage,
   MultimodalContent,
-  SpeechOptions,
 } from "../api";
 import Locale from "../../locales";
 import { getClientConfig } from "@/app/config/client";
@@ -55,10 +53,10 @@ export interface RequestPayload {
   }[];
   stream?: boolean;
   model: string;
-  temperature: number;
-  presence_penalty: number;
-  frequency_penalty: number;
-  top_p: number;
+  temperature?: number;
+  presence_penalty?: number;
+  frequency_penalty?: number;
+  top_p?: number;
   max_tokens?: number;
   max_completion_tokens?: number;
 }
@@ -139,52 +137,6 @@ export class ChatGPTApi implements LLMApi {
     return res.choices?.at(0)?.message?.content ?? res;
   }
 
-  async speech(options: SpeechOptions): Promise<ArrayBuffer> {
-    const connection = useAccessStore.getState().legacyConnections.OpenAI;
-    if (
-      getClientConfig()?.isApp &&
-      connection &&
-      (connection.hidden || !connection.enabled)
-    ) {
-      throw new Error(Locale.ModelServices.Unavailable);
-    }
-    const requestPayload = {
-      model: options.model,
-      input: options.input,
-      voice: options.voice,
-      response_format: options.response_format,
-      speed: options.speed,
-    };
-
-    console.log("[Request] openai speech payload: ", requestPayload);
-
-    const controller = new AbortController();
-    options.onController?.(controller);
-
-    try {
-      const speechPath = this.path(OpenaiPath.SpeechPath);
-      const speechPayload = {
-        method: "POST",
-        body: JSON.stringify(requestPayload),
-        signal: controller.signal,
-        headers: getHeaders(false, { providerName: ServiceProvider.OpenAI }),
-      };
-
-      // make a fetch request
-      const requestTimeoutId = setTimeout(
-        () => controller.abort(),
-        REQUEST_TIMEOUT_MS,
-      );
-
-      const res = await fetch(speechPath, speechPayload);
-      clearTimeout(requestTimeoutId);
-      return await res.arrayBuffer();
-    } catch (e) {
-      console.log("[Request] failed to make a speech request", e);
-      throw e;
-    }
-  }
-
   async chat(options: ChatOptions) {
     const modelConfig = {
       ...useAppConfig.getState().modelConfig,
@@ -199,7 +151,7 @@ export class ChatGPTApi implements LLMApi {
       options.config.model.startsWith("o1") ||
       options.config.model.startsWith("o3") ||
       options.config.model.startsWith("o4-mini");
-    const isGpt5 = options.config.model.startsWith("gpt-5");
+    const isModernGpt = /^gpt-[56]/.test(options.config.model);
     if (isDalle3) {
       const prompt = getMessageTextContent(
         options.messages.slice(-1)?.pop() as any,
@@ -230,7 +182,7 @@ export class ChatGPTApi implements LLMApi {
         messages,
         stream: options.config.stream,
         model: modelConfig.model,
-        temperature: !isO1OrO3 && !isGpt5 ? modelConfig.temperature : 1,
+        temperature: !isO1OrO3 && !isModernGpt ? modelConfig.temperature : 1,
         presence_penalty: !isO1OrO3 ? modelConfig.presence_penalty : 0,
         frequency_penalty: !isO1OrO3 ? modelConfig.frequency_penalty : 0,
         top_p: !isO1OrO3 ? modelConfig.top_p : 1,
@@ -238,7 +190,12 @@ export class ChatGPTApi implements LLMApi {
         // Please do not ask me why not send max_tokens, no reason, this param is just shit, I dont want to explain anymore.
       };
 
-      if (isGpt5) {
+      if (isModernGpt) {
+        // Reasoning models reject sampling and penalty overrides.
+        delete requestPayload.temperature;
+        delete requestPayload.top_p;
+        delete requestPayload.presence_penalty;
+        delete requestPayload.frequency_penalty;
         // Remove max_tokens if present
         delete requestPayload.max_tokens;
         // Add max_completion_tokens (or max_completion_tokens if that's what you meant)
@@ -257,7 +214,7 @@ export class ChatGPTApi implements LLMApi {
       }
 
       // add max_tokens to vision model
-      if (visionModel && !isO1OrO3 && !isGpt5) {
+      if (visionModel && !isO1OrO3 && !isModernGpt) {
         requestPayload["max_tokens"] = Math.max(modelConfig.max_tokens, 4000);
       }
     }

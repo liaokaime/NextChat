@@ -48,9 +48,6 @@
       "fs": {
         "all": true
       },
-      "notification": {
-        "all": true
-      },
       "http": {
         "all": true,
         "request": true,
@@ -93,17 +90,6 @@
     "security": {
       "csp": null,
       "dangerousUseHttpScheme": true
-    },
-    "updater": {
-      "active": false,
-      "endpoints": [
-        "https://github.com/ChatGPTNextWeb/ChatGPT-Next-Web/releases/latest/download/latest.json"
-      ],
-      "dialog": true,
-      "windows": {
-        "installMode": "passive"
-      },
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IERFNDE4MENFM0Y1RTZBOTQKUldTVWFsNC96b0JCM3RqM2NmMnlFTmxIaStRaEJrTHNOU2VqRVlIV1hwVURoWUdVdEc1eDcxVEYK"
     },
     "windows": [
       {

@@ -15,7 +15,6 @@ import { useAppConfig, useChatStore } from "../store";
 import { MaskAvatar } from "./mask";
 import { useCommand } from "../command";
 import { showConfirm } from "./ui-lib";
-import { BUILTIN_MASK_STORE } from "../masks";
 import clsx from "clsx";
 
 function MaskItem(props: { mask: Mask; onClick?: () => void }) {
@@ -98,7 +97,7 @@ export function NewChat() {
   useCommand({
     mask: (id) => {
       try {
-        const mask = maskStore.get(id) ?? BUILTIN_MASK_STORE.get(id);
+        const mask = maskStore.get(id);
         startChat(mask ?? undefined);
       } catch {
         console.error("[New Chat] failed to create chat from mask id=", id);

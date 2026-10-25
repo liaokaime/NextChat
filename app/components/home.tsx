@@ -18,6 +18,7 @@ import { getISOLang, getLang } from "../locales";
 
 import {
   HashRouter as Router,
+  Navigate,
   Route,
   Routes,
   useLocation,
@@ -51,12 +52,6 @@ const Artifacts = dynamic(async () => (await import("./artifacts")).Artifacts, {
 const Settings = dynamic(async () => (await import("./settings")).Settings, {
   loading: () => <Loading noLogo />,
 });
-const ModelServices = dynamic(
-  async () => (await import("./model-services")).ModelServices,
-  {
-    loading: () => <Loading noLogo />,
-  },
-);
 
 const Chat = dynamic(async () => (await import("./chat")).Chat, {
   loading: () => <Loading noLogo />,
@@ -192,7 +187,16 @@ function Screen() {
             <Route path={Path.Chat} element={<Chat />} />
             <Route path={Path.Settings} element={<Settings />} />
             {getClientConfig()?.isApp && (
-              <Route path={Path.ModelServices} element={<ModelServices />} />
+              <Route
+                path={Path.ModelServices}
+                element={
+                  <Navigate
+                    to={{ pathname: Path.Settings, search: location.search }}
+                    state={location.state}
+                    replace
+                  />
+                }
+              />
             )}
             <Route path={Path.McpMarket} element={<McpMarketPage />} />
             <Route path="*" element={<Chat />} />

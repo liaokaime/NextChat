@@ -1,5 +1,5 @@
 import { Anthropic, ApiPath } from "@/app/constant";
-import { ChatOptions, getHeaders, LLMApi, SpeechOptions } from "../api";
+import { ChatOptions, getHeaders, LLMApi } from "../api";
 import { useAccessStore, useAppConfig, useChatStore } from "@/app/store";
 import { getClientConfig } from "@/app/config/client";
 import { ANTHROPIC_BASE_URL } from "@/app/constant";
@@ -67,10 +67,6 @@ const ClaudeMapper = {
 const keys = ["claude-2, claude-instant-1"];
 
 export class ClaudeApi implements LLMApi {
-  speech(options: SpeechOptions): Promise<ArrayBuffer> {
-    throw new Error("Method not implemented.");
-  }
-
   extractMessage(res: any) {
     console.log("[Response] claude response: ", res);
 
@@ -181,6 +177,13 @@ export class ClaudeApi implements LLMApi {
       // top_k: modelConfig.top_k,
       top_k: 5,
     };
+    if (
+      /^claude-(?:sonnet-5|haiku-5|opus-4-[789]|opus-5)/.test(modelConfig.model)
+    ) {
+      delete requestBody.temperature;
+      delete requestBody.top_p;
+      delete requestBody.top_k;
+    }
 
     const path = this.path(Anthropic.ChatPath);
 

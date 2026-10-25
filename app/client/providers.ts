@@ -12,12 +12,76 @@ export const PROVIDER_PROTOCOLS = {
   google: "Gemini",
 } as const;
 export type ProviderProtocol = keyof typeof PROVIDER_PROTOCOLS;
+// Mirrors the AI SDK `reasoning` call setting; each protocol maps it to its own option.
+export const REASONING_LEVELS = [
+  "provider-default",
+  "none",
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+] as const;
+export type ReasoningLevel = (typeof REASONING_LEVELS)[number];
+// Passed to the AI SDK call as-is; unset keys leave the provider default.
+export type ModelParams = {
+  temperature?: number;
+  topP?: number;
+  presencePenalty?: number;
+  frequencyPenalty?: number;
+  maxOutputTokens?: number;
+  reasoning?: Exclude<ReasoningLevel, "provider-default">;
+};
+const PARAM_RANGES = {
+  temperature: [0, 2],
+  topP: [0, 1],
+  presencePenalty: [-2, 2],
+  frequencyPenalty: [-2, 2],
+  maxOutputTokens: [1, Number.MAX_SAFE_INTEGER],
+} as const;
+// Anthropic Messages and OpenAI Responses do not accept penalties.
+export const supportsPenalties = (protocol: ProviderProtocol) =>
+  protocol === "openai-chat" || protocol === "google";
+export const maxTemperature = (protocol: ProviderProtocol) =>
+  protocol === "anthropic" ? 1 : 2;
+export function normalizeModelParams(
+  value: unknown,
+  protocol: ProviderProtocol,
+): ModelParams {
+  const source = (value && typeof value === "object" ? value : {}) as Record<
+    string,
+    unknown
+  >;
+  const params: ModelParams = {};
+  for (const [key, [min, max]] of Object.entries(PARAM_RANGES)) {
+    const v = source[key];
+    if (
+      typeof v === "number" &&
+      v >= min &&
+      v <= max &&
+      (key !== "maxOutputTokens" || Number.isInteger(v))
+    )
+      params[key as keyof typeof PARAM_RANGES] = v;
+  }
+  // Keep only what the current protocol can send, e.g. after a protocol switch.
+  if (params.temperature !== undefined)
+    params.temperature = Math.min(params.temperature, maxTemperature(protocol));
+  if (!supportsPenalties(protocol)) {
+    delete params.presencePenalty;
+    delete params.frequencyPenalty;
+  }
+  const reasoning = source.reasoning as ReasoningLevel;
+  if (REASONING_LEVELS.includes(reasoning) && reasoning !== "provider-default")
+    params.reasoning = reasoning;
+  return params;
+}
 export type ProviderModel = {
   id: string;
   displayName: string;
   enabled: boolean;
   vision: boolean;
-  sampling: boolean;
+  params: ModelParams;
   providerOptions: Record<string, Record<string, unknown>>;
 };
 export type ProviderInstance = {
@@ -42,7 +106,7 @@ export function createProviderModel(id: string): ProviderModel {
     displayName: id.trim(),
     enabled: true,
     vision: false,
-    sampling: false,
+    params: {},
     providerOptions: {},
   };
 }
@@ -90,15 +154,22 @@ export function normalizeProviders(value: unknown): ProviderInstance[] {
         new Map(
           (Array.isArray(p.models) ? p.models : [])
             .filter((m) => m && typeof m.id === "string" && m.id.trim())
-            .map((m) => [
-              m.id,
-              {
-                ...createProviderModel(m.id),
-                ...m,
-                enabled: m.enabled !== false,
-                providerOptions: m.providerOptions || {},
-              },
-            ]),
+            // `sampling` was the old per-model switch, superseded by `params`.
+            .map(
+              ({
+                sampling: _sampling,
+                ...m
+              }: ProviderModel & { sampling?: unknown }) => [
+                m.id,
+                {
+                  ...createProviderModel(m.id),
+                  ...m,
+                  enabled: m.enabled !== false,
+                  params: normalizeModelParams(m.params, p.protocol),
+                  providerOptions: m.providerOptions || {},
+                },
+              ],
+            ),
         ).values(),
       ),
     }));

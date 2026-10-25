@@ -3,14 +3,36 @@ import { jest } from "@jest/globals";
 import { ChatGPTApi } from "../app/client/platforms/openai";
 import { GeminiProApi } from "../app/client/platforms/google";
 import { ClaudeApi } from "../app/client/platforms/anthropic";
+import { MoonshotApi } from "../app/client/platforms/moonshot";
+import { DeepSeekApi } from "../app/client/platforms/deepseek";
 import { ServiceProvider } from "../app/constant";
 import { useAccessStore, useChatStore } from "../app/store";
 import type { ChatOptions } from "../app/client/api";
 
 const fixtures = [
   {
+    provider: ServiceProvider.DeepSeek,
+    model: "deepseek-flash",
+    api: new DeepSeekApi(),
+    events: [
+      { choices: [{ delta: { content: "你好" } }] },
+      { choices: [{ delta: { content: "世界" } }] },
+    ],
+    expected: "你好世界",
+  },
+  {
+    provider: ServiceProvider.Moonshot,
+    model: "kimi-k3.1-pro",
+    api: new MoonshotApi(),
+    events: [
+      { choices: [{ delta: { content: "你好" } }] },
+      { choices: [{ delta: { content: "世界" } }] },
+    ],
+    expected: "你好世界",
+  },
+  {
     provider: ServiceProvider.OpenAI,
-    model: "gpt-4",
+    model: "gpt-6-luna",
     api: new ChatGPTApi(),
     events: [
       { choices: [{ delta: { reasoning_content: "先思考" } }] },
@@ -21,7 +43,7 @@ const fixtures = [
   },
   {
     provider: ServiceProvider.Google,
-    model: "gemini-pro",
+    model: "gemini-3.8-flash",
     api: new GeminiProApi(),
     events: [
       { candidates: [{ content: { parts: [{ text: "你好" }] } }] },
@@ -35,7 +57,7 @@ const fixtures = [
   },
   {
     provider: ServiceProvider.Anthropic,
-    model: "claude-3-haiku",
+    model: "claude-haiku-5-5",
     api: new ClaudeApi(),
     events: [
       { type: "message_start", message: { role: "assistant" } },
@@ -97,7 +119,22 @@ test.each(fixtures)(
       finish = resolve;
     });
     const options: ChatOptions = {
-      messages: [{ role: "user", content: "你好" }],
+      messages: [
+        {
+          role: "user",
+          content:
+            fixture.provider === ServiceProvider.Moonshot ||
+            fixture.provider === ServiceProvider.DeepSeek
+              ? [
+                  { type: "text", text: "你好" },
+                  {
+                    type: "image_url",
+                    image_url: { url: "data:image/png;base64,iVBORw0KGgo=" },
+                  },
+                ]
+              : "你好",
+        },
+      ],
       config: {
         model: fixture.model,
         providerName: fixture.provider,
@@ -111,6 +148,31 @@ test.each(fixtures)(
     expect(onError).not.toHaveBeenCalled();
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const body = JSON.parse(fetchMock.mock.calls[0][1]!.body as string);
+    if (
+      fixture.provider === ServiceProvider.Moonshot ||
+      fixture.provider === ServiceProvider.DeepSeek
+    ) {
+      expect(body.messages[0].content).toEqual(options.messages[0].content);
+    }
+    if (
+      fixture.provider === ServiceProvider.OpenAI ||
+      fixture.provider === ServiceProvider.Moonshot
+    ) {
+      if (fixture.provider === ServiceProvider.OpenAI)
+        expect(body).toHaveProperty("max_completion_tokens");
+      for (const key of [
+        "temperature",
+        "top_p",
+        "presence_penalty",
+        "frequency_penalty",
+        "max_tokens",
+      ])
+        expect(body).not.toHaveProperty(key);
+    }
+    if (fixture.provider === ServiceProvider.Anthropic) {
+      for (const key of ["temperature", "top_p", "top_k"])
+        expect(body).not.toHaveProperty(key);
+    }
     expect(body).not.toHaveProperty("tools");
     expect(body).not.toHaveProperty("functions");
     jest.runOnlyPendingTimers();

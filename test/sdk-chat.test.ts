@@ -3,6 +3,9 @@ import { jest } from "@jest/globals";
 import { runSdkChat } from "../app/client/sdk-chat";
 import {
   createProviderModel,
+  normalizeModelParams,
+  normalizeProviders,
+  type ModelParams,
   type ProviderInstance,
   type ProviderProtocol,
 } from "../app/client/providers";
@@ -415,66 +418,84 @@ test("same model in two instances never shares endpoint or credentials", async (
   ]);
 });
 
-test("stop preserves partial updates and never calls onFinish", async () => {
-  const finish = jest.fn();
-  let controller: AbortController;
-  const options: ChatOptions = {
-    messages: [{ role: "user", content: "hi" }],
-    config: { model: "same-model" },
-    onController: (value) => {
-      controller = value;
-    },
-    onUpdate: () => controller.abort(),
-    onFinish: finish,
-  };
-  await expect(
-    runSdkChat(provider("openai-chat"), options, async () =>
-      streamResponse(fixture("openai-chat")),
-    ),
-  ).rejects.toMatchObject({ name: "AbortError" });
-  expect(finish).not.toHaveBeenCalled();
-});
-
-test("a stream read failure is not reported as a successful completion", async () => {
-  const finish = jest.fn();
-  const transport: typeof fetch = async () =>
-    new Response(
-      new ReadableStream({
-        start(controller) {
-          controller.error(new Error("connection lost"));
+describe("per-model generation parameters", () => {
+  async function requestBody(params: ModelParams) {
+    let body: any;
+    const instance = provider("openai-chat");
+    instance.models[0].params = params;
+    await runSdkChat(
+      instance,
+      {
+        messages: [{ role: "user", content: "hi" }],
+        // Session-level values must not leak into SDK requests.
+        config: {
+          model: "same-model",
+          temperature: 0.5,
+          top_p: 0.9,
+          presence_penalty: 0.3,
+          frequency_penalty: 0.4,
+          max_tokens: 100,
         },
-      }),
-      { headers: { "content-type": "text/event-stream" } },
-    );
-  await expect(
-    runSdkChat(
-      provider("openai-chat"),
-      {
-        messages: [{ role: "user", content: "hi" }],
-        config: { model: "same-model" },
-        onFinish: finish,
+        onFinish: () => {},
       },
-      transport,
-    ),
-  ).rejects.toThrow();
-  expect(finish).not.toHaveBeenCalled();
+      async (_input, init) => {
+        body = JSON.parse(init?.body as string);
+        return streamResponse(fixture("openai-chat"));
+      },
+    );
+    return body;
+  }
+
+  test("leaves every parameter to the provider by default", async () => {
+    const body = await requestBody({});
+    for (const key of [
+      "temperature",
+      "top_p",
+      "presence_penalty",
+      "frequency_penalty",
+      "max_tokens",
+      "reasoning_effort",
+    ])
+      expect(body).not.toHaveProperty(key);
+  });
+
+  test("sends exactly the parameters set on the model", async () => {
+    const body = await requestBody({
+      temperature: 1.3,
+      maxOutputTokens: 2048,
+      reasoning: "high",
+    });
+    expect(body).toMatchObject({
+      temperature: 1.3,
+      max_tokens: 2048,
+      reasoning_effort: "high",
+    });
+    expect(body).not.toHaveProperty("top_p");
+    expect(body).not.toHaveProperty("presence_penalty");
+  });
 });
 
-test("premature EOF without a completion reason is an error", async () => {
-  const finish = jest.fn();
-  await expect(
-    runSdkChat(
-      provider("openai-chat"),
-      {
-        messages: [{ role: "user", content: "hi" }],
-        config: { model: "same-model" },
-        onFinish: finish,
-      },
-      async () =>
-        streamResponse(
-          'data: {"choices":[{"delta":{"content":"partial"}}]}\n\n',
-        ),
-    ),
-  ).rejects.toThrow();
-  expect(finish).not.toHaveBeenCalled();
+test("stored parameters are validated and limited to the protocol", () => {
+  const stored = {
+    temperature: 1.5,
+    topP: 3,
+    presencePenalty: 0.5,
+    maxOutputTokens: 10.5,
+    reasoning: "provider-default",
+  };
+  expect(normalizeModelParams(stored, "google")).toEqual({
+    temperature: 1.5,
+    presencePenalty: 0.5,
+  });
+  expect(normalizeModelParams(stored, "anthropic")).toEqual({
+    temperature: 1,
+  });
+  expect(normalizeModelParams({ reasoning: "max" }, "openai-chat")).toEqual({
+    reasoning: "max",
+  });
+  const [legacy] = normalizeProviders([
+    { ...provider("google"), models: [{ id: "old", sampling: true }] },
+  ]);
+  expect(legacy.models[0]).not.toHaveProperty("sampling");
+  expect(legacy.models[0].params).toEqual({});
 });

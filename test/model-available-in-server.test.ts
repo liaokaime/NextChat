@@ -6,17 +6,23 @@ describe("isModelAvailableInServer", () => {
   // otherwise (including when the model is enabled or unknown).
 
   test("returns false for a model that is available by default", () => {
-    expect(isModelAvailableInServer("", "gpt-4", "openai")).toBe(false);
+    expect(isModelAvailableInServer("", "gpt-4.1-nano", "openai")).toBe(false);
   });
 
   test("returns true when '-all' disables every model", () => {
-    expect(isModelAvailableInServer("-all", "gpt-4", "openai")).toBe(true);
+    expect(isModelAvailableInServer("-all", "gpt-4.1-nano", "openai")).toBe(
+      true,
+    );
   });
 
   test("returns true when the specific model is disabled", () => {
-    expect(isModelAvailableInServer("-gpt-4@openai", "gpt-4", "openai")).toBe(
-      true,
-    );
+    expect(
+      isModelAvailableInServer(
+        "-gpt-4.1-nano@openai",
+        "gpt-4.1-nano",
+        "openai",
+      ),
+    ).toBe(true);
   });
 
   test("returns false for an unknown model that is not in the table", () => {
@@ -27,7 +33,11 @@ describe("isModelAvailableInServer", () => {
 
   test("a model re-enabled after '-all' is not reported as disabled", () => {
     expect(
-      isModelAvailableInServer("-all,+gpt-4@openai", "gpt-4", "openai"),
+      isModelAvailableInServer(
+        "-all,+gpt-4.1-nano@openai",
+        "gpt-4.1-nano",
+        "openai",
+      ),
     ).toBe(false);
   });
 });

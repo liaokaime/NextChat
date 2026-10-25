@@ -1,38 +1,20 @@
-import { useState } from "react";
 import { getClientConfig } from "../config/client";
 import { ModelPicker } from "./model-picker";
-import { IconButton } from "./button";
-import { modelConnectionName } from "../client/connections";
 import { ServiceProvider } from "@/app/constant";
 import { ModalConfigValidator, ModelConfig } from "../store";
 
 import Locale from "../locales";
 import { InputRange } from "./input-range";
-import { ListItem, Select } from "./ui-lib";
-import { useAllModels } from "../utils/hooks";
-import { groupBy } from "lodash-es";
-import styles from "./model-config.module.scss";
-import {
-  llmModelSelection,
-  modelSelection,
-  parseModelSelection,
-} from "../client/providers";
+import { ListItem } from "./ui-lib";
+import { modelSelection } from "../client/providers";
+import styles from "./settings.module.scss";
 
 export function ModelConfigList(props: {
   modelConfig: ModelConfig;
   globalSettings?: boolean;
   updateConfig: (updater: (config: ModelConfig) => void) => void;
 }) {
-  const allModels = useAllModels();
   const desktop = !!getClientConfig()?.isApp;
-  const [picker, setPicker] = useState<"model" | "compress">();
-  const groupModels = groupBy(
-    allModels.filter((v) => v.available),
-    (model) =>
-      model.provider?.providerType === "ai-sdk"
-        ? model.provider.id
-        : model.provider?.providerName,
-  );
   const value = modelSelection(
     props.modelConfig.model,
     props.modelConfig.providerName,
@@ -54,194 +36,170 @@ export function ModelConfigList(props: {
             : undefined
         }
       >
-        {desktop ? (
-          <IconButton
-            text={(() => {
-              const m = allModels.find((m) => llmModelSelection(m) === value);
-              return m
-                ? `${m.displayName || m.name} · ${modelConnectionName(m)}`
-                : `${props.modelConfig.model} · ${props.modelConfig.providerName}`;
-            })()}
-            onClick={() => setPicker("model")}
-          />
-        ) : (
-          <Select
-            aria-label={Locale.Settings.Model}
-            value={value}
-            align="left"
-            onChange={(e) => {
-              const { model, providerName, providerId } = parseModelSelection(
-                e.currentTarget.value,
-              );
-              const selected = allModels.find(
-                (m) => llmModelSelection(m) === e.currentTarget.value,
-              );
-              props.updateConfig((config) => {
-                config.model = ModalConfigValidator.model(model);
-                config.providerName = (selected?.provider?.providerName ||
-                  providerName) as ServiceProvider;
-                config.providerId = providerId;
-              });
-            }}
+        <ModelPicker
+          className={props.globalSettings ? styles.modelSelect : undefined}
+          current={value}
+          currentLabel={`${props.modelConfig.model} · ${props.modelConfig.providerName}`}
+          ariaLabel={Locale.Settings.Model}
+          onSelect={(model) => {
+            if (!model) return;
+            props.updateConfig((config) => {
+              config.model = model.name;
+              config.providerName = model.provider
+                .providerName as ServiceProvider;
+              config.providerId =
+                model.provider.providerType === "ai-sdk"
+                  ? model.provider.id
+                  : undefined;
+            });
+          }}
+        />
+      </ListItem>
+      {!props.modelConfig.providerId && (
+        <>
+          <ListItem
+            title={Locale.Settings.Temperature.Title}
+            subTitle={Locale.Settings.Temperature.SubTitle}
           >
-            {Object.keys(groupModels).map((providerName, index) => (
-              <optgroup
-                label={groupModels[providerName][0].provider?.providerName}
-                key={index}
+            <InputRange
+              aria={Locale.Settings.Temperature.Title}
+              value={props.modelConfig.temperature?.toFixed(1)}
+              min="0"
+              max="1" // lets limit it to 0-1
+              step="0.1"
+              onChange={(e) => {
+                props.updateConfig(
+                  (config) =>
+                    (config.temperature = ModalConfigValidator.temperature(
+                      e.currentTarget.valueAsNumber,
+                    )),
+                );
+              }}
+            ></InputRange>
+          </ListItem>
+          <ListItem
+            title={Locale.Settings.TopP.Title}
+            subTitle={Locale.Settings.TopP.SubTitle}
+          >
+            <InputRange
+              aria={Locale.Settings.TopP.Title}
+              value={(props.modelConfig.top_p ?? 1).toFixed(1)}
+              min="0"
+              max="1"
+              step="0.1"
+              onChange={(e) => {
+                props.updateConfig(
+                  (config) =>
+                    (config.top_p = ModalConfigValidator.top_p(
+                      e.currentTarget.valueAsNumber,
+                    )),
+                );
+              }}
+            ></InputRange>
+          </ListItem>
+          <ListItem
+            title={Locale.Settings.MaxTokens.Title}
+            subTitle={Locale.Settings.MaxTokens.SubTitle}
+          >
+            <input
+              aria-label={Locale.Settings.MaxTokens.Title}
+              type="number"
+              min={1024}
+              max={512000}
+              value={props.modelConfig.max_tokens}
+              onChange={(e) =>
+                props.updateConfig(
+                  (config) =>
+                    (config.max_tokens = ModalConfigValidator.max_tokens(
+                      e.currentTarget.valueAsNumber,
+                    )),
+                )
+              }
+            ></input>
+          </ListItem>
+
+          {props.modelConfig.providerName !== ServiceProvider.Google && (
+            <>
+              <ListItem
+                title={Locale.Settings.PresencePenalty.Title}
+                subTitle={Locale.Settings.PresencePenalty.SubTitle}
               >
-                {groupModels[providerName].map((v, i) => (
-                  <option value={llmModelSelection(v)} key={i}>
-                    {v.displayName}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </Select>
-        )}
-      </ListItem>
+                <InputRange
+                  aria={Locale.Settings.PresencePenalty.Title}
+                  value={props.modelConfig.presence_penalty?.toFixed(1)}
+                  min="-2"
+                  max="2"
+                  step="0.1"
+                  onChange={(e) => {
+                    props.updateConfig(
+                      (config) =>
+                        (config.presence_penalty =
+                          ModalConfigValidator.presence_penalty(
+                            e.currentTarget.valueAsNumber,
+                          )),
+                    );
+                  }}
+                ></InputRange>
+              </ListItem>
+
+              <ListItem
+                title={Locale.Settings.FrequencyPenalty.Title}
+                subTitle={Locale.Settings.FrequencyPenalty.SubTitle}
+              >
+                <InputRange
+                  aria={Locale.Settings.FrequencyPenalty.Title}
+                  value={props.modelConfig.frequency_penalty?.toFixed(1)}
+                  min="-2"
+                  max="2"
+                  step="0.1"
+                  onChange={(e) => {
+                    props.updateConfig(
+                      (config) =>
+                        (config.frequency_penalty =
+                          ModalConfigValidator.frequency_penalty(
+                            e.currentTarget.valueAsNumber,
+                          )),
+                    );
+                  }}
+                ></InputRange>
+              </ListItem>
+            </>
+          )}
+        </>
+      )}
+
       <ListItem
-        title={Locale.Settings.Temperature.Title}
-        subTitle={Locale.Settings.Temperature.SubTitle}
-      >
-        <InputRange
-          aria={Locale.Settings.Temperature.Title}
-          value={props.modelConfig.temperature?.toFixed(1)}
-          min="0"
-          max="1" // lets limit it to 0-1
-          step="0.1"
-          onChange={(e) => {
-            props.updateConfig(
-              (config) =>
-                (config.temperature = ModalConfigValidator.temperature(
-                  e.currentTarget.valueAsNumber,
-                )),
-            );
-          }}
-        ></InputRange>
-      </ListItem>
-      <ListItem
-        title={Locale.Settings.TopP.Title}
-        subTitle={Locale.Settings.TopP.SubTitle}
-      >
-        <InputRange
-          aria={Locale.Settings.TopP.Title}
-          value={(props.modelConfig.top_p ?? 1).toFixed(1)}
-          min="0"
-          max="1"
-          step="0.1"
-          onChange={(e) => {
-            props.updateConfig(
-              (config) =>
-                (config.top_p = ModalConfigValidator.top_p(
-                  e.currentTarget.valueAsNumber,
-                )),
-            );
-          }}
-        ></InputRange>
-      </ListItem>
-      <ListItem
-        title={Locale.Settings.MaxTokens.Title}
-        subTitle={Locale.Settings.MaxTokens.SubTitle}
+        title={Locale.Settings.InjectSystemPrompts.Title}
+        subTitle={Locale.Settings.InjectSystemPrompts.SubTitle}
       >
         <input
-          aria-label={Locale.Settings.MaxTokens.Title}
-          type="number"
-          min={1024}
-          max={512000}
-          value={props.modelConfig.max_tokens}
+          aria-label={Locale.Settings.InjectSystemPrompts.Title}
+          type="checkbox"
+          checked={props.modelConfig.enableInjectSystemPrompts}
           onChange={(e) =>
             props.updateConfig(
               (config) =>
-                (config.max_tokens = ModalConfigValidator.max_tokens(
-                  e.currentTarget.valueAsNumber,
-                )),
+                (config.enableInjectSystemPrompts = e.currentTarget.checked),
             )
           }
         ></input>
       </ListItem>
 
-      {!props.modelConfig.providerId &&
-      props.modelConfig?.providerName == ServiceProvider.Google ? null : (
-        <>
-          <ListItem
-            title={Locale.Settings.PresencePenalty.Title}
-            subTitle={Locale.Settings.PresencePenalty.SubTitle}
-          >
-            <InputRange
-              aria={Locale.Settings.PresencePenalty.Title}
-              value={props.modelConfig.presence_penalty?.toFixed(1)}
-              min="-2"
-              max="2"
-              step="0.1"
-              onChange={(e) => {
-                props.updateConfig(
-                  (config) =>
-                    (config.presence_penalty =
-                      ModalConfigValidator.presence_penalty(
-                        e.currentTarget.valueAsNumber,
-                      )),
-                );
-              }}
-            ></InputRange>
-          </ListItem>
-
-          <ListItem
-            title={Locale.Settings.FrequencyPenalty.Title}
-            subTitle={Locale.Settings.FrequencyPenalty.SubTitle}
-          >
-            <InputRange
-              aria={Locale.Settings.FrequencyPenalty.Title}
-              value={props.modelConfig.frequency_penalty?.toFixed(1)}
-              min="-2"
-              max="2"
-              step="0.1"
-              onChange={(e) => {
-                props.updateConfig(
-                  (config) =>
-                    (config.frequency_penalty =
-                      ModalConfigValidator.frequency_penalty(
-                        e.currentTarget.valueAsNumber,
-                      )),
-                );
-              }}
-            ></InputRange>
-          </ListItem>
-
-          <ListItem
-            title={Locale.Settings.InjectSystemPrompts.Title}
-            subTitle={Locale.Settings.InjectSystemPrompts.SubTitle}
-          >
-            <input
-              aria-label={Locale.Settings.InjectSystemPrompts.Title}
-              type="checkbox"
-              checked={props.modelConfig.enableInjectSystemPrompts}
-              onChange={(e) =>
-                props.updateConfig(
-                  (config) =>
-                    (config.enableInjectSystemPrompts =
-                      e.currentTarget.checked),
-                )
-              }
-            ></input>
-          </ListItem>
-
-          <ListItem
-            title={Locale.Settings.InputTemplate.Title}
-            subTitle={Locale.Settings.InputTemplate.SubTitle}
-          >
-            <input
-              aria-label={Locale.Settings.InputTemplate.Title}
-              type="text"
-              value={props.modelConfig.template}
-              onChange={(e) =>
-                props.updateConfig(
-                  (config) => (config.template = e.currentTarget.value),
-                )
-              }
-            ></input>
-          </ListItem>
-        </>
-      )}
+      <ListItem
+        title={Locale.Settings.InputTemplate.Title}
+        subTitle={Locale.Settings.InputTemplate.SubTitle}
+      >
+        <input
+          aria-label={Locale.Settings.InputTemplate.Title}
+          type="text"
+          value={props.modelConfig.template}
+          onChange={(e) =>
+            props.updateConfig(
+              (config) => (config.template = e.currentTarget.value),
+            )
+          }
+        ></input>
+      </ListItem>
       <ListItem
         title={Locale.Settings.HistoryCount.Title}
         subTitle={Locale.Settings.HistoryCount.SubTitle}
@@ -268,8 +226,9 @@ export function ModelConfigList(props: {
         <input
           aria-label={Locale.Settings.CompressThreshold.Title}
           type="number"
+          className={styles.compressThresholdInput}
           min={500}
-          max={4000}
+          max={512000}
           value={props.modelConfig.compressMessageLengthThreshold}
           onChange={(e) =>
             props.updateConfig(
@@ -296,81 +255,23 @@ export function ModelConfigList(props: {
         title={Locale.Settings.CompressModel.Title}
         subTitle={Locale.Settings.CompressModel.SubTitle}
       >
-        {desktop ? (
-          <IconButton
-            text={
-              !props.modelConfig.compressModel
-                ? Locale.ModelServices.Following
-                : (() => {
-                    const m = allModels.find(
-                      (m) => llmModelSelection(m) === compressModelValue,
-                    );
-                    return m
-                      ? `${m.displayName || m.name} · ${modelConnectionName(m)}`
-                      : props.modelConfig.compressModel;
-                  })()
-            }
-            onClick={() => setPicker("compress")}
-          />
-        ) : (
-          <Select
-            className={styles["select-compress-model"]}
-            aria-label={Locale.Settings.CompressModel.Title}
-            value={compressModelValue}
-            onChange={(e) => {
-              const { model, providerName, providerId } = parseModelSelection(
-                e.currentTarget.value,
-              );
-              const selected = allModels.find(
-                (m) => llmModelSelection(m) === e.currentTarget.value,
-              );
-              props.updateConfig((config) => {
-                config.compressModel = ModalConfigValidator.model(model);
-                config.compressProviderName =
-                  selected?.provider?.providerName || providerName;
-                config.compressProviderId = providerId;
-              });
-            }}
-          >
-            <option value="@">跟随当前模型</option>
-            {allModels
-              .filter((v) => v.available)
-              .map((v, i) => (
-                <option value={llmModelSelection(v)} key={i}>
-                  {v.displayName}({v.provider?.providerName})
-                </option>
-              ))}
-          </Select>
-        )}
-      </ListItem>
-      {picker && (
         <ModelPicker
-          current={picker === "model" ? value : compressModelValue}
-          allowFollow={picker === "compress"}
-          onClose={() => setPicker(undefined)}
+          current={props.modelConfig.compressModel ? compressModelValue : "@"}
+          currentLabel={props.modelConfig.compressModel}
+          ariaLabel={Locale.Settings.CompressModel.Title}
+          allowFollow
           onSelect={(model) =>
             props.updateConfig((config) => {
-              if (picker === "compress") {
-                config.compressModel = model?.name || "";
-                config.compressProviderName =
-                  model?.provider.providerName || "";
-                config.compressProviderId =
-                  model?.provider.providerType === "ai-sdk"
-                    ? model.provider.id
-                    : undefined;
-              } else if (model) {
-                config.model = model.name;
-                config.providerName = model.provider
-                  .providerName as ServiceProvider;
-                config.providerId =
-                  model.provider.providerType === "ai-sdk"
-                    ? model.provider.id
-                    : undefined;
-              }
+              config.compressModel = model?.name || "";
+              config.compressProviderName = model?.provider.providerName || "";
+              config.compressProviderId =
+                model?.provider.providerType === "ai-sdk"
+                  ? model.provider.id
+                  : undefined;
             })
           }
         />
-      )}
+      </ListItem>
     </>
   );
 }

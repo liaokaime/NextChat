@@ -10,7 +10,6 @@ fn main() {
             stream::stream_fetch,
             stream::cancel_stream
         ])
-        .plugin(tauri_plugin_window_state::Builder::default().build())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

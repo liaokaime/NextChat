@@ -52,7 +52,7 @@ export function Card(props: { children: JSX.Element[]; className?: string }) {
 }
 
 export function ListItem(props: {
-  title?: string;
+  title?: string | JSX.Element;
   subTitle?: string | JSX.Element;
   children?: JSX.Element | JSX.Element[];
   icon?: JSX.Element;
@@ -119,11 +119,19 @@ interface ModalProps {
   footer?: React.ReactNode;
   onClose?: () => void;
 }
+const modalStack: symbol[] = [];
+
 export function Modal(props: ModalProps) {
+  const onCloseRef = useRef(props.onClose);
+  onCloseRef.current = props.onClose;
   useEffect(() => {
+    const id = Symbol("modal");
+    modalStack.push(id);
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        props.onClose?.();
+      if (e.key === "Escape" && modalStack.at(-1) === id) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        onCloseRef.current?.();
       }
     };
 
@@ -131,14 +139,17 @@ export function Modal(props: ModalProps) {
 
     return () => {
       window.removeEventListener("keydown", onKeyDown);
+      modalStack.splice(modalStack.indexOf(id), 1);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const [isMax, setMax] = useState(!!props.defaultMax);
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={props.title}
       className={clsx(styles["modal-container"], {
         [styles["modal-container-max"]]: isMax,
       })}

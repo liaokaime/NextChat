@@ -27,6 +27,12 @@ const en: LocaleType = {
   ChatItem: {
     ChatItemCount: (count: number) => `${count} messages`,
   },
+  SessionSearch: {
+    Title: "Search Chats",
+    Placeholder: "Search titles or messages",
+    Empty: "No matching chats",
+    Close: "Close Search",
+  },
   Chat: {
     SubTitle: (count: number) => `${count} messages`,
     EditMessage: {
@@ -51,8 +57,6 @@ const en: LocaleType = {
       FullScreen: "FullScreen",
       RefreshTitle: "Refresh Title",
       RefreshToast: "Title refresh request sent",
-      Speech: "Play",
-      StopSpeech: "Stop",
     },
     Commands: {
       new: "Start a new chat",
@@ -87,8 +91,6 @@ const en: LocaleType = {
       return inputHints + ", / to search prompts, : to use commands";
     },
     Send: "Send",
-    StartSpeak: "Start Speak",
-    StopSpeak: "Stop Speak",
     Config: {
       Reset: "Reset to Default",
       SaveAs: "Save as Mask",
@@ -154,10 +156,21 @@ const en: LocaleType = {
     Revert: "Revert",
   },
   Settings: {
+    ClientVersion: {
+      Title: "Current Version",
+      SubTitle: "Custom Client",
+    },
     Title: "Settings",
     SubTitle: "All Settings",
     ShowPassword: "ShowPassword",
     Danger: {
+      DeleteChats: {
+        Title: "Delete All Chats",
+        SubTitle: "Delete chat history and keep settings and model providers",
+        Action: "Delete",
+        Confirm:
+          "Delete all chats? This cannot be undone. Settings and model providers will be kept.",
+      },
       Reset: {
         Title: "Reset All Settings",
         SubTitle: "Reset all setting items to default",
@@ -558,26 +571,10 @@ const en: LocaleType = {
       SubTitle:
         "A larger value decreasing the likelihood to repeat the same line",
     },
-    TTS: {
-      Enable: {
-        Title: "Enable TTS",
-        SubTitle: "Enable text-to-speech service",
-      },
-      Autoplay: {
-        Title: "Enable Autoplay",
-        SubTitle:
-          "Automatically generate speech and play, you need to enable the text-to-speech switch first",
-      },
-      Model: "Model",
-      Voice: {
-        Title: "Voice",
-        SubTitle: "The voice to use when generating the audio",
-      },
-      Speed: {
-        Title: "Speed",
-        SubTitle: "The speed of the generated audio",
-      },
-      Engine: "TTS Engine",
+    SdkParams: {
+      Title: "Generation parameters",
+      SubTitle:
+        "Temperature, max tokens and reasoning effort are set per model in Model Providers",
     },
   },
   Store: {
@@ -686,18 +683,18 @@ const en: LocaleType = {
     Config: "Config",
   },
   ModelServices: {
-    Title: "Model services",
+    Title: "Model Providers",
     Subtitle: "Manage model connections, accounts and local services",
-    Manage: "Manage connections",
+    Manage: "Configure",
     Add: "Add connection",
     Back: "Back",
     Connections: "My connections",
     Empty: "Add your first connection to start using models.",
     SelectConnection: "Select a connection to view its settings and models.",
-    Settings: "Connection settings",
+    Settings: "Provider settings",
     Models: "Models",
     Advanced: "Advanced settings",
-    Name: "Connection name",
+    Name: "Provider name",
     Endpoint: "API base URL",
     EndpointHint:
       "Include the version prefix, such as https://example.com/v1, without the full chat endpoint.",
@@ -707,11 +704,13 @@ const en: LocaleType = {
     Enabled: "Enabled",
     Disabled: "Disabled",
     Save: "Save",
+    Pending: "Unsaved changes",
     Cancel: "Cancel",
-    Copy: "Duplicate connection",
-    Delete: "Delete connection",
+    Copy: "Copy",
+    Edit: "Edit provider",
+    Delete: "Delete",
     CopySuffix: "Copy",
-    New: "New connection",
+    New: "New provider",
     Relay: "Compatible relay",
     Local: "Local Ollama",
     Other: "Other providers",
@@ -722,11 +721,39 @@ const en: LocaleType = {
     Fetching: "Fetching…",
     Fetched: "Models fetched. Existing settings were preserved.",
     Manual: "Add manually",
+    SelectModels: "Select models to add",
+    AddSelected: "Add selected",
+    NoFetchedModels: "No models were returned by the provider.",
+    NoMatchingModels: "No matching models.",
+    SearchModels: "Search model IDs",
     ModelId: "Model ID",
     DisplayName: "Display name",
+    Actions: "Actions",
+    Modify: "Modify",
     Remove: "Remove model",
     Vision: "Image input",
-    Sampling: "Send temperature and sampling parameters",
+    Params: "Parameters",
+    ParamsTitle: (model: string) => `Model parameters · ${model}`,
+    CustomValue: "Custom",
+    ProviderDefault: "Provider default",
+    TopPAnthropic: "Ignored by Claude when temperature is also set",
+    MaxOutputTokens:
+      "Includes reasoning tokens; too small a value truncates the answer",
+    Reasoning: {
+      Title: "Reasoning effort",
+      SubTitle:
+        "Mapped to each protocol's reasoning option; the model options below take precedence",
+      Levels: {
+        "provider-default": "Provider default",
+        none: "Off",
+        minimal: "Minimal",
+        low: "Low",
+        medium: "Medium",
+        high: "High",
+        xhigh: "Extra high",
+        max: "Max",
+      },
+    },
     Options: "Model options (JSON)",
     ModelHint:
       "If no model list endpoint is available, enter the actual model ID supplied by your provider.",

@@ -19,6 +19,7 @@ import { useRef, useEffect } from "react";
 import { showConfirm } from "./ui-lib";
 import { useMobileScreen } from "../utils";
 import clsx from "clsx";
+import { searchSessions } from "../utils/session-search";
 
 export function ChatItem(props: {
   onClick?: () => void;
@@ -30,6 +31,7 @@ export function ChatItem(props: {
   id: string;
   index: number;
   narrow?: boolean;
+  isDragDisabled?: boolean;
   mask: Mask;
 }) {
   const draggableRef = useRef<HTMLDivElement | null>(null);
@@ -43,7 +45,11 @@ export function ChatItem(props: {
 
   const { pathname: currentPath } = useLocation();
   return (
-    <Draggable draggableId={`${props.id}`} index={props.index}>
+    <Draggable
+      draggableId={`${props.id}`}
+      index={props.index}
+      isDragDisabled={props.isDragDisabled}
+    >
       {(provided) => (
         <div
           className={clsx(styles["chat-item"], {
@@ -102,7 +108,7 @@ export function ChatItem(props: {
   );
 }
 
-export function ChatList(props: { narrow?: boolean }) {
+export function ChatList(props: { narrow?: boolean; search?: string }) {
   const [sessions, selectedIndex, selectSession, moveSession] = useChatStore(
     (state) => [
       state.sessions,
@@ -114,8 +120,11 @@ export function ChatList(props: { narrow?: boolean }) {
   const chatStore = useChatStore();
   const navigate = useNavigate();
   const isMobileScreen = useMobileScreen();
+  const searching = !!props.search?.trim();
+  const entries = searchSessions(sessions, props.search || "");
 
   const onDragEnd: OnDragEndResponder = (result) => {
+    if (searching) return;
     const { destination, source } = result;
     if (!destination) {
       return;
@@ -140,31 +149,44 @@ export function ChatList(props: { narrow?: boolean }) {
             ref={provided.innerRef}
             {...provided.droppableProps}
           >
-            {sessions.map((item, i) => (
+            {entries.map(({ session: item, index: i }, visibleIndex) => (
               <ChatItem
                 title={item.topic}
                 time={new Date(item.lastUpdate).toLocaleString()}
                 count={item.messages.length}
                 key={item.id}
                 id={item.id}
-                index={i}
+                index={visibleIndex}
+                isDragDisabled={searching}
                 selected={i === selectedIndex}
                 onClick={() => {
+                  const index = useChatStore
+                    .getState()
+                    .sessions.findIndex((s) => s.id === item.id);
+                  if (index < 0) return;
                   navigate(Path.Chat);
-                  selectSession(i);
+                  selectSession(index);
                 }}
                 onDelete={async () => {
                   if (
                     (!props.narrow && !isMobileScreen) ||
                     (await showConfirm(Locale.Home.DeleteChat))
                   ) {
-                    chatStore.deleteSession(i);
+                    const index = useChatStore
+                      .getState()
+                      .sessions.findIndex((s) => s.id === item.id);
+                    if (index >= 0) chatStore.deleteSession(index);
                   }
                 }}
                 narrow={props.narrow}
                 mask={item.mask}
               />
             ))}
+            {!entries.length && (
+              <div role="status" className={styles["session-search-empty"]}>
+                {Locale.SessionSearch.Empty}
+              </div>
+            )}
             {provided.placeholder}
           </div>
         )}

@@ -3,7 +3,7 @@ import { isModelNotavailableInServer } from "../app/utils/model";
 describe("isModelNotavailableInServer", () => {
   test("test model will return false, which means the model is available", () => {
     const customModels = "";
-    const modelName = "gpt-4";
+    const modelName = "gpt-4.1-nano";
     const providerNames = "OpenAI";
     const result = isModelNotavailableInServer(
       customModels,
@@ -14,8 +14,8 @@ describe("isModelNotavailableInServer", () => {
   });
 
   test("test model will return true when model is not available in custom models", () => {
-    const customModels = "-all,gpt-4o-mini";
-    const modelName = "gpt-4";
+    const customModels = "-all,gpt-6-luna";
+    const modelName = "gpt-4.1-nano";
     const providerNames = "OpenAI";
     const result = isModelNotavailableInServer(
       customModels,
@@ -27,23 +27,31 @@ describe("isModelNotavailableInServer", () => {
 
   test("should respect DISABLE_GPT4 setting", () => {
     process.env.DISABLE_GPT4 = "1";
-    const result = isModelNotavailableInServer("", "gpt-4", "OpenAI");
+    const result = isModelNotavailableInServer("", "gpt-4.1-nano", "OpenAI");
     expect(result).toBe(true);
   });
 
   test("should handle empty provider names", () => {
-    const result = isModelNotavailableInServer("-all,gpt-4", "gpt-4", "");
+    const result = isModelNotavailableInServer(
+      "-all,gpt-4.1-nano",
+      "gpt-4.1-nano",
+      "",
+    );
     expect(result).toBe(true);
   });
 
   test("should be case insensitive for model names", () => {
-    const result = isModelNotavailableInServer("-all,GPT-4", "gpt-4", "OpenAI");
+    const result = isModelNotavailableInServer(
+      "-all,GPT-4.1-NANO",
+      "gpt-4.1-nano",
+      "OpenAI",
+    );
     expect(result).toBe(true);
   });
 
   test("support passing multiple providers, model unavailable on one of the providers will return true", () => {
-    const customModels = "-all,gpt-4@google";
-    const modelName = "gpt-4";
+    const customModels = "-all,gpt-4.1-nano@google";
+    const modelName = "gpt-4.1-nano";
     const providerNames = ["OpenAI", "Azure"];
     const result = isModelNotavailableInServer(
       customModels,
@@ -55,8 +63,8 @@ describe("isModelNotavailableInServer", () => {
 
   // FIXME: 这个测试用例有问题，需要修复
   //   test("support passing multiple providers, model available on one of the providers will return false", () => {
-  //     const customModels = "-all,gpt-4@google";
-  //     const modelName = "gpt-4";
+  //     const customModels = "-all,gpt-4.1-nano@google";
+  //     const modelName = "gpt-4.1-nano";
   //     const providerNames = ["OpenAI", "Google"];
   //     const result = isModelNotavailableInServer(
   //       customModels,

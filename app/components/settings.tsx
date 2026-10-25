@@ -14,6 +14,7 @@ import DownloadIcon from "../icons/download.svg";
 import UploadIcon from "../icons/upload.svg";
 import ConfigIcon from "../icons/config.svg";
 import ConfirmIcon from "../icons/confirm.svg";
+import InfoIcon from "../icons/info.svg";
 
 import ConnectionIcon from "../icons/connection.svg";
 import CloudSuccessIcon from "../icons/cloud-success.svg";
@@ -31,6 +32,7 @@ import {
 } from "./ui-lib";
 import { ModelConfigList } from "./model-config";
 import { ProviderSettings } from "./provider-settings";
+import { ShortcutKeyModal } from "./shortcut-key-modal";
 import { LegacyProviderFields } from "./legacy-provider-fields";
 
 import { IconButton } from "./button";
@@ -49,16 +51,13 @@ import Locale, {
   changeLang,
   getLang,
 } from "../locales";
-import { copyToClipboard, clientUpdate, semverCompare } from "../utils";
-import Link from "next/link";
+import { copyToClipboard } from "../utils";
 import {
   OPENAI_BASE_URL,
   Path,
-  RELEASE_URL,
   STORAGE_KEY,
   ServiceProvider,
   SlotID,
-  UPDATE_URL,
 } from "../constant";
 import { Prompt, SearchService, usePromptStore } from "../store/prompt";
 import { ErrorBoundary } from "./error";
@@ -70,7 +69,6 @@ import { useSyncStore } from "../store/sync";
 import { nanoid } from "nanoid";
 import { useMaskStore } from "../store/mask";
 import { ProviderType } from "../utils/cloud";
-import { TTSConfigList } from "./tts-config";
 
 function EditPromptModal(props: { id: string; onClose: () => void }) {
   const promptStore = usePromptStore();
@@ -242,6 +240,21 @@ function DangerItems() {
           onClick={async () => {
             if (await showConfirm(Locale.Settings.Danger.Reset.Confirm)) {
               appConfig.reset();
+            }
+          }}
+          type="danger"
+        />
+      </ListItem>
+      <ListItem
+        title={Locale.Settings.Danger.DeleteChats.Title}
+        subTitle={Locale.Settings.Danger.DeleteChats.SubTitle}
+      >
+        <IconButton
+          aria={Locale.Settings.Danger.DeleteChats.Title}
+          text={Locale.Settings.Danger.DeleteChats.Action}
+          onClick={async () => {
+            if (await showConfirm(Locale.Settings.Danger.DeleteChats.Confirm)) {
+              chatStore.clearSessions();
             }
           }}
           type="danger"
@@ -566,25 +579,11 @@ function SyncItems() {
 export function Settings() {
   const navigate = useNavigate();
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showShortcutKeyModal, setShowShortcutKeyModal] = useState(false);
   const config = useAppConfig();
   const updateConfig = config.update;
 
   const updateStore = useUpdateStore();
-  const [checkingUpdate, setCheckingUpdate] = useState(false);
-  const currentVersion = updateStore.formatVersion(updateStore.version);
-  const remoteId = updateStore.formatVersion(updateStore.remoteVersion);
-  const hasNewVersion = semverCompare(currentVersion, remoteId) === -1;
-  const updateUrl = getClientConfig()?.isApp ? RELEASE_URL : UPDATE_URL;
-
-  function checkUpdate(force = false) {
-    setCheckingUpdate(true);
-    updateStore.getLatestVersion(force).then(() => {
-      setCheckingUpdate(false);
-    });
-
-    console.log("[Update] local version ", updateStore.version);
-    console.log("[Update] remote version ", updateStore.remoteVersion);
-  }
 
   const accessStore = useAccessStore();
   const shouldHideBalanceQuery = useMemo(() => {
@@ -630,15 +629,13 @@ export function Settings() {
 
   const showUsage = accessStore.isAuthorized();
   useEffect(() => {
-    // checks per minutes
-    checkUpdate();
     showUsage && checkUsage();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     const keydownEvent = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+      if (e.key === "Escape" && !document.querySelector(".modal-mask")) {
         navigate(Path.Home);
       }
     };
@@ -748,43 +745,26 @@ export function Settings() {
           </ListItem>
 
           <ListItem
-            title={Locale.Settings.Update.Version(currentVersion ?? "unknown")}
-            subTitle={
-              clientConfig?.isApp && !clientConfig.desktopUpdatesEnabled
-                ? "自定义客户端：已关闭上游自动更新"
-                : checkingUpdate
-                ? Locale.Settings.Update.IsChecking
-                : hasNewVersion
-                ? Locale.Settings.Update.FoundUpdate(remoteId ?? "ERROR")
-                : Locale.Settings.Update.IsLatest
-            }
+            title={Locale.Settings.ClientVersion.Title}
+            subTitle={Locale.Settings.ClientVersion.SubTitle}
           >
-            {clientConfig?.isApp && !clientConfig.desktopUpdatesEnabled ? (
-              <span />
-            ) : checkingUpdate ? (
-              <LoadingIcon />
-            ) : hasNewVersion ? (
-              clientConfig?.isApp ? (
-                <IconButton
-                  icon={<ResetIcon></ResetIcon>}
-                  text={Locale.Settings.Update.GoToUpdate}
-                  onClick={() => clientUpdate()}
-                />
-              ) : (
-                <Link href={updateUrl} target="_blank" className="link">
-                  {Locale.Settings.Update.GoToUpdate}
-                </Link>
-              )
-            ) : (
-              <IconButton
-                icon={<ResetIcon></ResetIcon>}
-                text={Locale.Settings.Update.CheckUpdate}
-                onClick={() => checkUpdate(true)}
-              />
-            )}
+            <span />
           </ListItem>
 
-          <ListItem title={Locale.Settings.SendKey}>
+          <ListItem
+            title={
+              <span className={styles.sendKeyActions}>
+                {Locale.Settings.SendKey}
+                <IconButton
+                  className={styles.sendKeyInfo}
+                  icon={<InfoIcon />}
+                  title={Locale.Chat.ShortcutKey.Title}
+                  aria={Locale.Chat.ShortcutKey.Title}
+                  onClick={() => setShowShortcutKeyModal(true)}
+                />
+              </span>
+            }
+          >
             <Select
               aria-label={Locale.Settings.SendKey}
               value={config.submitKey}
@@ -962,23 +942,6 @@ export function Settings() {
               }
             ></input>
           </ListItem>
-
-          <ListItem
-            title={Locale.Settings.Mask.Builtin.Title}
-            subTitle={Locale.Settings.Mask.Builtin.SubTitle}
-          >
-            <input
-              aria-label={Locale.Settings.Mask.Builtin.Title}
-              type="checkbox"
-              checked={config.hideBuiltinMasks}
-              onChange={(e) =>
-                updateConfig(
-                  (config) =>
-                    (config.hideBuiltinMasks = e.currentTarget.checked),
-                )
-              }
-            ></input>
-          </ListItem>
         </List>
 
         <List>
@@ -1114,20 +1077,12 @@ export function Settings() {
           />
         </List>
 
+        {showShortcutKeyModal && (
+          <ShortcutKeyModal onClose={() => setShowShortcutKeyModal(false)} />
+        )}
         {shouldShowPromptModal && (
           <UserPromptModal onClose={() => setShowPromptModal(false)} />
         )}
-
-        <List>
-          <TTSConfigList
-            ttsConfig={config.ttsConfig}
-            updateConfig={(updater) => {
-              const ttsConfig = { ...config.ttsConfig };
-              updater(ttsConfig);
-              config.update((config) => (config.ttsConfig = ttsConfig));
-            }}
-          />
-        </List>
 
         <DangerItems />
       </div>

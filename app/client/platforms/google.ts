@@ -5,7 +5,6 @@ import {
   LLMApi,
   LLMModel,
   LLMUsage,
-  SpeechOptions,
 } from "../api";
 import { useAccessStore, useAppConfig, useChatStore } from "@/app/store";
 import { stream } from "@/app/utils/chat";
@@ -76,10 +75,6 @@ export class GeminiProApi implements LLMApi {
       ""
     );
   }
-  speech(options: SpeechOptions): Promise<ArrayBuffer> {
-    throw new Error("Method not implemented.");
-  }
-
   async chat(options: ChatOptions): Promise<void> {
     const apiClient = this;
     let multimodal = false;

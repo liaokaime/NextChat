@@ -9,7 +9,6 @@ import {
 import { VISION_MODEL_REGEXES, EXCLUDE_VISION_MODEL_REGEXES } from "./constant";
 import { useAccessStore } from "./store";
 import { ModelSize } from "./typing";
-import { getClientConfig } from "./config/client";
 
 export function trimTopic(topic: string) {
   // Fix an issue where double quotes still show in the Indonesian language
@@ -388,42 +387,4 @@ export function safeLocalStorage(): {
       }
     },
   };
-}
-
-export function clientUpdate() {
-  if (!getClientConfig()?.desktopUpdatesEnabled) {
-    showToast("自定义客户端已关闭上游自动更新。");
-    return;
-  }
-  // this a wild for updating client app
-  return window.__TAURI__?.updater
-    .checkUpdate()
-    .then((updateResult) => {
-      if (updateResult.shouldUpdate) {
-        window.__TAURI__?.updater
-          .installUpdate()
-          .then((result) => {
-            showToast(Locale.Settings.Update.Success);
-          })
-          .catch((e) => {
-            console.error("[Install Update Error]", e);
-            showToast(Locale.Settings.Update.Failed);
-          });
-      }
-    })
-    .catch((e) => {
-      console.error("[Check Update Error]", e);
-      showToast(Locale.Settings.Update.Failed);
-    });
-}
-
-// https://gist.github.com/iwill/a83038623ba4fef6abb9efca87ae9ccb
-export function semverCompare(a: string, b: string) {
-  if (a.startsWith(b + "-")) return -1;
-  if (b.startsWith(a + "-")) return 1;
-  return a.localeCompare(b, undefined, {
-    numeric: true,
-    sensitivity: "case",
-    caseFirst: "upper",
-  });
 }

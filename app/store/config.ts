@@ -4,22 +4,15 @@ import { getClientConfig } from "../config/client";
 import {
   DEFAULT_INPUT_TEMPLATE,
   DEFAULT_MODELS,
+  SUMMARIZE_MODEL,
   DEFAULT_SIDEBAR_WIDTH,
-  DEFAULT_TTS_ENGINE,
-  DEFAULT_TTS_ENGINES,
-  DEFAULT_TTS_MODEL,
-  DEFAULT_TTS_MODELS,
-  DEFAULT_TTS_VOICE,
-  DEFAULT_TTS_VOICES,
   StoreKey,
   ServiceProvider,
 } from "../constant";
 import { createPersistStore } from "../utils/store";
+import { mergeBuiltinModels } from "../utils/builtin-models";
 
 export type ModelType = (typeof DEFAULT_MODELS)[number]["name"];
-export type TTSModelType = (typeof DEFAULT_TTS_MODELS)[number];
-export type TTSVoiceType = (typeof DEFAULT_TTS_VOICES)[number];
-export type TTSEngineType = (typeof DEFAULT_TTS_ENGINES)[number];
 
 export enum SubmitKey {
   Enter = "Enter",
@@ -34,6 +27,11 @@ export enum Theme {
   Dark = "dark",
   Light = "light",
 }
+
+// Estimated token length at which unsummarized chat history is compacted.
+// Keep this aligned with the model context size selected by the application.
+export const DEFAULT_COMPRESS_MESSAGE_LENGTH_THRESHOLD = 192000;
+export const DEFAULT_HISTORY_MESSAGE_COUNT = 16;
 
 const config = getClientConfig();
 
@@ -57,14 +55,13 @@ export const DEFAULT_CONFIG = {
   disablePromptHint: false,
 
   dontShowMaskSplashScreen: false, // dont show splash screen when create chat
-  hideBuiltinMasks: false, // dont add builtin masks
 
   customModels: "",
   modelPicker: { favorites: [] as string[], recent: [] as string[] },
   models: DEFAULT_MODELS as any as LLMModel[],
 
   modelConfig: {
-    model: "gpt-4o-mini" as ModelType,
+    model: SUMMARIZE_MODEL as ModelType,
     providerName: "OpenAI" as ServiceProvider,
     providerId: undefined as string | undefined,
     temperature: 0.5,
@@ -73,8 +70,9 @@ export const DEFAULT_CONFIG = {
     presence_penalty: 0,
     frequency_penalty: 0,
     sendMemory: true,
-    historyMessageCount: 4,
-    compressMessageLengthThreshold: 1000,
+    historyMessageCount: DEFAULT_HISTORY_MESSAGE_COUNT,
+    compressMessageLengthThreshold:
+      DEFAULT_COMPRESS_MESSAGE_LENGTH_THRESHOLD,
     compressModel: "",
     compressProviderName: "",
     compressProviderId: undefined as string | undefined,
@@ -84,21 +82,11 @@ export const DEFAULT_CONFIG = {
     quality: "standard" as DalleQuality,
     style: "vivid" as DalleStyle,
   },
-
-  ttsConfig: {
-    enable: false,
-    autoplay: false,
-    engine: DEFAULT_TTS_ENGINE,
-    model: DEFAULT_TTS_MODEL,
-    voice: DEFAULT_TTS_VOICE,
-    speed: 1.0,
-  },
 };
 
 export type ChatConfig = typeof DEFAULT_CONFIG;
 
 export type ModelConfig = ChatConfig["modelConfig"];
-export type TTSConfig = ChatConfig["ttsConfig"];
 
 export function limitNumber(
   x: number,
@@ -112,21 +100,6 @@ export function limitNumber(
 
   return Math.min(max, Math.max(min, x));
 }
-
-export const TTSConfigValidator = {
-  engine(x: string) {
-    return x as TTSEngineType;
-  },
-  model(x: string) {
-    return x as TTSModelType;
-  },
-  voice(x: string) {
-    return x as TTSVoiceType;
-  },
-  speed(x: number) {
-    return limitNumber(x, 0.25, 4.0, 1.0);
-  },
-};
 
 export const ModalConfigValidator = {
   model(x: string) {
@@ -183,19 +156,12 @@ export const useAppConfig = createPersistStore(
   }),
   {
     name: StoreKey.Config,
-    version: 4.1,
+    version: 4.4,
 
     merge(persistedState, currentState) {
       const state = persistedState as ChatConfig | undefined;
       if (!state) return { ...currentState };
-      const models = currentState.models.slice();
-      state.models.forEach((pModel) => {
-        const idx = models.findIndex(
-          (v) => v.name === pModel.name && v.provider === pModel.provider,
-        );
-        if (idx !== -1) models[idx] = pModel;
-        else models.push(pModel);
-      });
+      const models = mergeBuiltinModels(currentState.models, state.models);
       return {
         ...currentState,
         ...state,
@@ -218,13 +184,13 @@ export const useAppConfig = createPersistStore(
 
       if (version < 3.4) {
         state.modelConfig.sendMemory = true;
-        state.modelConfig.historyMessageCount = 4;
-        state.modelConfig.compressMessageLengthThreshold = 1000;
+        state.modelConfig.historyMessageCount = DEFAULT_HISTORY_MESSAGE_COUNT;
+        state.modelConfig.compressMessageLengthThreshold =
+          DEFAULT_COMPRESS_MESSAGE_LENGTH_THRESHOLD;
         state.modelConfig.frequency_penalty = 0;
         state.modelConfig.top_p = 1;
         state.modelConfig.template = DEFAULT_INPUT_TEMPLATE;
         state.dontShowMaskSplashScreen = false;
-        state.hideBuiltinMasks = false;
       }
 
       if (version < 3.5) {
@@ -255,6 +221,32 @@ export const useAppConfig = createPersistStore(
           DEFAULT_CONFIG.modelConfig.compressModel;
         state.modelConfig.compressProviderName =
           DEFAULT_CONFIG.modelConfig.compressProviderName;
+      }
+
+      // Move the old built-in threshold to the larger context default while
+      // preserving users who explicitly chose another value.
+      if (
+        version < 4.2 &&
+        state.modelConfig.compressMessageLengthThreshold === 1000
+      ) {
+        state.modelConfig.compressMessageLengthThreshold =
+          DEFAULT_COMPRESS_MESSAGE_LENGTH_THRESHOLD;
+      }
+
+      // Move the old built-in recent-history count to the larger-context
+      // default while preserving users who explicitly chose another value.
+      if (version < 4.3 && state.modelConfig.historyMessageCount === 4) {
+        state.modelConfig.historyMessageCount = DEFAULT_HISTORY_MESSAGE_COUNT;
+      }
+
+      // The previous context-sized default was 256K; move it to the safer
+      // 192K budget while preserving other user-selected thresholds.
+      if (
+        version < 4.4 &&
+        state.modelConfig.compressMessageLengthThreshold === 256000
+      ) {
+        state.modelConfig.compressMessageLengthThreshold =
+          DEFAULT_COMPRESS_MESSAGE_LENGTH_THRESHOLD;
       }
 
       return state as any;

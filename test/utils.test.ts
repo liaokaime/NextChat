@@ -1,6 +1,5 @@
 import {
   trimTopic,
-  semverCompare,
   getMessageTextContent,
   getMessageTextContentWithoutThinking,
   getMessageImages,
@@ -30,21 +29,6 @@ describe("trimTopic", () => {
   });
 });
 
-describe("semverCompare", () => {
-  test("returns 0 for equal versions", () => {
-    expect(semverCompare("1.0.0", "1.0.0")).toBe(0);
-  });
-
-  test("compares numerically, not lexicographically", () => {
-    expect(semverCompare("1.10.0", "1.2.0")).toBeGreaterThan(0);
-    expect(semverCompare("1.2.0", "1.10.0")).toBeLessThan(0);
-  });
-
-  test("treats a prerelease as lower than its release", () => {
-    expect(semverCompare("1.0.0", "1.0.0-beta")).toBe(1);
-    expect(semverCompare("1.0.0-beta", "1.0.0")).toBe(-1);
-  });
-});
 
 describe("getMessageTextContent", () => {
   test("returns plain string content as-is", () => {

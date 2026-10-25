@@ -2,12 +2,12 @@ import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   UNSAFE_NavigationContext,
   useLocation,
-  useNavigate,
   useSearchParams,
 } from "react-router-dom";
+import { createPortal } from "react-dom";
 import { nanoid } from "nanoid";
 import Locale from "../locales";
-import { Path, ServiceProvider } from "../constant";
+import { ServiceProvider } from "../constant";
 import { useAccessStore } from "../store/access";
 import { useAppConfig } from "../store/config";
 import { useChatStore } from "../store/chat";
@@ -24,8 +24,10 @@ import {
 import {
   createProviderModel,
   normalizeBaseUrl,
+  normalizeModelParams,
   PROVIDER_PROTOCOLS,
   PROTOCOL_BASE_URLS,
+  type ModelParams,
   type ProviderInstance,
   type ProviderModel,
   type ProviderProtocol,
@@ -36,6 +38,7 @@ import { testConnection } from "../client/connection-test";
 import { fetch } from "../utils/stream";
 import { installUnsavedNavigation } from "../utils/unsaved-navigation";
 import { LegacyProviderFields } from "./legacy-provider-fields";
+import { ModelParamsEditor } from "./model-params";
 import { IconButton } from "./button";
 import {
   List,
@@ -46,10 +49,9 @@ import {
   showConfirm,
   showToast,
 } from "./ui-lib";
-import CloseIcon from "../icons/close.svg";
 import AddIcon from "../icons/add.svg";
-import CopyIcon from "../icons/copy.svg";
 import DeleteIcon from "../icons/clear.svg";
+import ConnectionIcon from "../icons/connection.svg";
 import styles from "./model-services.module.scss";
 
 type ModelDraft = ProviderModel & { optionsText: string };
@@ -63,13 +65,17 @@ type Draft = {
   protocol: ProviderProtocol;
   baseUrl: string;
   apiKey: string;
-  headersText: string;
   models: ModelDraft[];
   values: Record<string, unknown>;
 };
 const modelDraft = (model: ProviderModel): ModelDraft => ({
   ...structuredClone(model),
   optionsText: JSON.stringify(model.providerOptions || {}, null, 2),
+});
+const newModelDraft = (model: ProviderModel): ModelDraft => ({
+  ...modelDraft(model),
+  vision: true,
+  displayName: model.id.trim(),
 });
 function objectJson(text: string): Record<string, unknown> {
   try {
@@ -103,10 +109,6 @@ function validateModels(models: ModelDraft[]) {
   });
 }
 function instanceFrom(draft: Draft): ProviderInstance {
-  const headers = objectJson(draft.headersText);
-  if (Object.values(headers).some((value) => typeof value !== "string"))
-    throw new Error(Locale.ModelServices.InvalidHeaders);
-  new Headers(headers as Record<string, string>);
   let baseUrl: string;
   try {
     baseUrl = normalizeBaseUrl(draft.baseUrl);
@@ -120,8 +122,12 @@ function instanceFrom(draft: Draft): ProviderInstance {
     protocol: draft.protocol,
     baseUrl,
     apiKey: draft.apiKey,
-    headers: headers as Record<string, string>,
-    models: validateModels(draft.models),
+    headers: {},
+    // Drop parameters the (possibly changed) protocol cannot send.
+    models: validateModels(draft.models).map((model) => ({
+      ...model,
+      params: normalizeModelParams(model.params, draft.protocol),
+    })),
   };
 }
 
@@ -145,18 +151,24 @@ export function ModelServices() {
     config = useAppConfig(),
     chats = useChatStore(),
     masks = useMaskStore();
-  const navigate = useNavigate(),
-    location = useLocation();
+  const location = useLocation();
   const [params, setParams] = useSearchParams();
-  const [listOnly, setListOnly] = useState(!params.has("connection"));
-  const [selectedKey, setSelectedKey] = useState(
-    params.get("connection") || "",
-  );
+  const [selectedKey, setSelectedKey] = useState("");
+  const initialConnection = useRef(params.get("connection"));
+  const closing = useRef(false);
   const [draft, setDraft] = useState<Draft>();
   const [original, setOriginal] = useState("");
   const [templates, setTemplates] = useState(false);
+  const [optionsIndex, setOptionsIndex] = useState<number>();
+  const [optionsParams, setOptionsParams] = useState<ModelParams>({});
+  const [optionsText, setOptionsText] = useState("");
   const [error, setError] = useState("");
   const [fetching, setFetching] = useState(false);
+  const [fetchedModels, setFetchedModels] = useState<ModelDraft[]>();
+  const [fetchedSelection, setFetchedSelection] = useState<
+    Record<string, boolean>
+  >({});
+  const [fetchedSearch, setFetchedSearch] = useState("");
   const [testModel, setTestModel] = useState("");
   const [test, setTest] = useState<{
     status: "idle" | "running" | "success" | "error";
@@ -166,6 +178,12 @@ export function ModelServices() {
   const fetchVersion = useRef(0);
   const dirty = !!draft && JSON.stringify(draft) !== original;
   const dirtyRef = useUnsavedNavigation(dirty);
+  const visibleFetchedModels = useMemo(() => {
+    const query = fetchedSearch.trim().toLowerCase();
+    return (fetchedModels || []).filter((model) =>
+      model.id.toLowerCase().includes(query),
+    );
+  }, [fetchedModels, fetchedSearch]);
   const legacyModels = useMemo(
     () =>
       collectModels(
@@ -187,20 +205,14 @@ export function ModelServices() {
       connectionViews(
         access,
         legacyModels as LLMModel[],
-        refs
-          .flatMap((r) => [
-            ...(!r.providerId ? [r.providerName] : []),
-            ...(r.compressModel && !r.compressProviderId
-              ? [r.compressProviderName]
-              : []),
-          ])
-          .concat(
-            config.ttsConfig.enable && config.ttsConfig.engine === "OpenAI-TTS"
-              ? [ServiceProvider.OpenAI]
-              : [],
-          ),
+        refs.flatMap((r) => [
+          ...(!r.providerId ? [r.providerName] : []),
+          ...(r.compressModel && !r.compressProviderId
+            ? [r.compressProviderName]
+            : []),
+        ]),
       ),
-    [access, legacyModels, refs, config.ttsConfig],
+    [access, legacyModels, refs],
   );
   const selected = views.find((v) => v.key === selectedKey);
   const makeDraft = (view: ConnectionView): Draft => ({
@@ -216,11 +228,6 @@ export function ModelServices() {
     protocol: view.kind === "sdk" ? view.instance.protocol : "openai-chat",
     baseUrl: view.baseUrl,
     apiKey: view.kind === "sdk" ? view.instance.apiKey : "",
-    headersText: JSON.stringify(
-      view.kind === "sdk" ? view.instance.headers : {},
-      null,
-      2,
-    ),
     models: view.models.map(modelDraft),
     values:
       view.kind === "legacy"
@@ -237,30 +244,22 @@ export function ModelServices() {
     setDraft(next);
     setOriginal(JSON.stringify(next));
     setSelectedKey(view.key);
-    setListOnly(false);
     setError("");
     setFetching(false);
-    setParams(
-      { connection: view.key },
-      { replace: true, state: location.state },
-    );
   };
   useEffect(() => {
     if (!access._hasHydrated || !config._hasHydrated) return;
-    const view =
-      views.find((v) => v.key === (params.get("connection") || selectedKey)) ||
-      (!draft ? views[0] : undefined);
-    if (view && !dirtyRef.current) {
-      const next = makeDraft(view);
-      setDraft(next);
-      setOriginal(JSON.stringify(next));
-      setSelectedKey(view.key);
-    } else if (draft && !view && !dirtyRef.current) {
-      setDraft(undefined);
-      setSelectedKey("");
-    }
+    const key = initialConnection.current;
+    if (!key) return;
+    initialConnection.current = null;
+    const view = views.find((v) => v.key === key);
+    if (view) load(view);
+    const nextParams = new URLSearchParams(params);
+    nextParams.delete("connection");
+    setParams(nextParams, { replace: true, state: location.state });
+    // Only consume a connection link once, after persisted stores hydrate.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [access, config.models, config.customModels, params]);
+  }, [access._hasHydrated, config._hasHydrated, views]);
   const select = async (view: ConnectionView) => {
     if (dirty && !(await showConfirm(t.Unsaved))) return;
     fetchVersion.current++;
@@ -289,17 +288,35 @@ export function ModelServices() {
         view,
       ),
     ).length;
-    const global =
-      Number(referencesConnection(config.modelConfig, view)) +
-      Number(
-        view.key === legacyKey(ServiceProvider.OpenAI) &&
-          config.ttsConfig.enable &&
-          config.ttsConfig.engine === "OpenAI-TTS",
-      );
+    const global = Number(referencesConnection(config.modelConfig, view));
     return {
       count: sessions + countMasks + global,
       text: t.Affected(sessions, countMasks, global),
     };
+  };
+  const closeEditor = () => {
+    dirtyRef.current = false;
+    fetchVersion.current++;
+    testAbort.current?.abort();
+    setFetching(false);
+    setDraft(undefined);
+    setSelectedKey("");
+    setOriginal("");
+    setError("");
+    setOptionsIndex(undefined);
+    setFetchedModels(undefined);
+    setFetchedSelection({});
+    setFetchedSearch("");
+  };
+  const requestClose = async () => {
+    if (closing.current) return;
+    closing.current = true;
+    try {
+      if (!dirtyRef.current || !original || (await showConfirm(t.Unsaved)))
+        closeEditor();
+    } finally {
+      closing.current = false;
+    }
   };
   const save = async () => {
     if (!draft) return;
@@ -334,8 +351,7 @@ export function ModelServices() {
         }
         state.providerInstancesInitialized = true;
       });
-      setOriginal(JSON.stringify(draft));
-      setError("");
+      closeEditor();
       showToast(t.Saved);
     } catch (e) {
       setError((e as Error).message);
@@ -362,22 +378,14 @@ export function ModelServices() {
           .forEach((key) => Object.assign(state, { [key]: "" }));
       }
     });
-    setDraft(undefined);
-    setSelectedKey("");
-    setOriginal("");
-    setParams({}, { replace: true, state: location.state });
+    closeEditor();
   };
   const newDraft = (next: Draft) => {
     dirtyRef.current = false;
     fetchVersion.current++;
     setFetching(false);
-    setParams(
-      { connection: next.key },
-      { replace: true, state: location.state },
-    );
     setDraft(next);
     setSelectedKey(next.key);
-    setListOnly(false);
     setOriginal("");
     setTemplates(false);
     setError("");
@@ -401,8 +409,7 @@ export function ModelServices() {
       protocol,
       baseUrl,
       apiKey: "",
-      headersText: "{}",
-      models: modelIds.map((id) => modelDraft(createProviderModel(id))),
+      models: modelIds.map((id) => newModelDraft(createProviderModel(id))),
       values: {},
     });
   };
@@ -485,21 +492,44 @@ export function ModelServices() {
       setFetching(true);
       const models = await fetchProviderModels(instanceFrom(draft), fetch);
       if (version !== fetchVersion.current) return;
-      edit((next) => {
-        next.models.push(
-          ...models
-            .filter(
-              (m) => !next.models.some((existing) => existing.id === m.id),
-            )
-            .map(modelDraft),
-        );
-      });
+      const existingIds = new Set(draft.models.map((model) => model.id));
+      const fetched = models.map(modelDraft);
+      setFetchedModels(fetched);
+      setFetchedSearch("");
+      setFetchedSelection(
+        Object.fromEntries(
+          fetched.map((model) => [model.id, existingIds.has(model.id)]),
+        ),
+      );
       showToast(t.Fetched);
     } catch (e) {
       if (version === fetchVersion.current) setError((e as Error).message);
     } finally {
       if (version === fetchVersion.current) setFetching(false);
     }
+  };
+  const addFetchedModels = () => {
+    if (!fetchedModels?.length) {
+      setFetchedModels(undefined);
+      return;
+    }
+    const selectedIds = new Set(
+      fetchedModels
+        .filter((model) => fetchedSelection[model.id])
+        .map((model) => model.id),
+    );
+    edit((next) => {
+      const existingIds = new Set(next.models.map((model) => model.id));
+      next.models.push(
+        ...fetchedModels
+          .filter(
+            (model) => selectedIds.has(model.id) && !existingIds.has(model.id),
+          )
+          .map(newModelDraft),
+      );
+    });
+    setFetchedModels(undefined);
+    setFetchedSelection({});
   };
   const duplicate = () => {
     if (!draft || draft.kind !== "sdk") return;
@@ -511,52 +541,40 @@ export function ModelServices() {
       name: `${draft.name} ${t.CopySuffix}`,
     });
   };
-  const discard = () => {
-    fetchVersion.current++;
-    setFetching(false);
-    if (selected) load(selected);
-    else {
-      dirtyRef.current = false;
-      setDraft(undefined);
-      setOriginal("");
-      setSelectedKey("");
-      setParams({}, { replace: true, state: location.state });
-    }
+  const addConnection = () => setTemplates(true);
+  const openOptions = (index: number) => {
+    setOptionsIndex(index);
+    setOptionsParams(draft?.models[index]?.params || {});
+    setOptionsText(draft?.models[index]?.optionsText || "{}");
   };
-  const returnTo = (location.state as { returnTo?: string } | null)?.returnTo;
-  const back = () =>
-    navigate(
-      returnTo === Path.Chat || returnTo === Path.Home
-        ? returnTo
-        : Path.Settings,
-    );
+  const closeOptions = () => setOptionsIndex(undefined);
+  const saveOptions = () => {
+    if (optionsIndex === undefined) return;
+    edit((next) => {
+      next.models[optionsIndex].params = optionsParams;
+      next.models[optionsIndex].optionsText = optionsText;
+    });
+    closeOptions();
+  };
   return (
     <>
-      <div className="window-header" data-tauri-drag-region>
-        <div className="window-header-title">
-          <div className="window-header-main-title">{t.Title}</div>
-          <div className="window-header-sub-title">{t.Subtitle}</div>
-        </div>
-        <div className="window-actions">
-          <IconButton icon={<CloseIcon />} text={t.Back} onClick={back} />
-        </div>
-      </div>
-      <div className={styles.page} data-detail={!!draft && !listOnly}>
-        <aside className={styles.connections} aria-label={t.Connections}>
-          <div className={styles.sectionHeader}>
-            <h2>{t.Connections}</h2>
-            <IconButton
-              icon={<AddIcon />}
-              text={t.Add}
-              onClick={async () => {
-                if (!dirty || (await showConfirm(t.Unsaved))) {
-                  if (dirty) discard();
-                  setTemplates(true);
-                }
-              }}
-            />
+      <section className={styles.page} aria-label={t.Title}>
+        <div className={styles.sectionHeader}>
+          <div>
+            <h2>
+              {t.Title} <span className={styles.count}>{views.length}</span>
+            </h2>
+            <p className={styles.subtitle}>{t.Subtitle}</p>
           </div>
-          {!views.length && <p className={styles.hint}>{t.Empty}</p>}
+          <IconButton
+            text={t.Add}
+            icon={<AddIcon />}
+            bordered
+            onClick={addConnection}
+          />
+        </div>
+        <div className={styles.connections} aria-label={t.Connections}>
+          {!views.length && <p className={styles.empty}>{t.Empty}</p>}
           {views.map((view) => (
             <button
               key={view.key}
@@ -564,7 +582,12 @@ export function ModelServices() {
               aria-pressed={view.key === selectedKey}
               onClick={() => void select(view)}
             >
-              <strong>{view.name}</strong>
+              <span className={styles.connectionTitle}>
+                <span className={styles.connectionAvatar} aria-hidden="true">
+                  {view.name.slice(0, 1).toUpperCase()}
+                </span>
+                <strong>{view.name}</strong>
+              </span>
               <small>
                 {(() => {
                   try {
@@ -574,330 +597,95 @@ export function ModelServices() {
                   }
                 })()}
               </small>
-              <span>
+              <span
+                className={styles.connectionStatus}
+                data-enabled={view.enabled}
+              >
                 {view.enabled
                   ? t.Count(view.models.filter((m) => m.enabled).length)
                   : t.Disabled}
               </span>
             </button>
           ))}
-        </aside>
-        <main className={styles.detail}>
-          {!draft ? (
-            <p className={styles.empty}>{t.SelectConnection}</p>
-          ) : (
-            <>
-              <div className={styles.detailHeader}>
-                <button
-                  className={styles.mobileBack}
-                  onClick={async () => {
-                    if (!dirty || (await showConfirm(t.Unsaved))) {
-                      if (selected) load(selected);
-                      else {
-                        dirtyRef.current = false;
-                        setDraft(undefined);
-                        setOriginal("");
-                      }
-                      setListOnly(true);
-                    }
-                  }}
-                >
-                  {t.Connections}
-                </button>
-                <h2>{draft.name || t.New}</h2>
-                <div className={styles.actions}>
-                  {draft.kind === "sdk" && (
-                    <IconButton
-                      icon={<CopyIcon />}
-                      text={t.Copy}
-                      onClick={duplicate}
-                    />
-                  )}
+        </div>
+      </section>
+      {draft &&
+        createPortal(
+          <div className="modal-mask">
+            <Modal
+              title={original ? t.Edit : t.New}
+              onClose={() => void requestClose()}
+              footer={
+                <div className={styles.feedback} aria-live="polite">
                   {selected && (
                     <IconButton
-                      icon={<DeleteIcon />}
+                      className={styles.footerButton}
                       text={t.Delete}
                       type="danger"
+                      bordered
                       onClick={() => void remove()}
                     />
                   )}
-                  <IconButton
-                    text={t.Cancel}
-                    disabled={!dirty}
-                    onClick={discard}
-                  />
-                  <IconButton
-                    text={t.Save}
-                    type="primary"
-                    disabled={!dirty}
-                    onClick={() => void save()}
-                  />
-                </div>
-              </div>
-              {error && (
-                <p role="alert" className={styles.error}>
-                  {error}
-                </p>
-              )}
-              <h3>{t.Settings}</h3>
-              <List>
-                <ListItem title={t.Name}>
-                  <input
-                    aria-label={t.Name}
-                    value={draft.name}
-                    onChange={(e) =>
-                      edit((next) => {
-                        next.name = e.target.value;
-                      })
-                    }
-                  />
-                </ListItem>
-                <ListItem title={t.Enabled}>
-                  <input
-                    type="checkbox"
-                    aria-label={t.Enabled}
-                    checked={draft.enabled}
-                    onChange={(e) =>
-                      edit((next) => {
-                        next.enabled = e.target.checked;
-                      })
-                    }
-                  />
-                </ListItem>
-                {draft.kind === "sdk" ? (
-                  <>
-                    <ListItem
-                      title={t.Endpoint}
-                      subTitle={t.EndpointHint}
-                      vertical
-                    >
-                      <input
-                        className={styles.wide}
-                        aria-label={t.Endpoint}
-                        placeholder={PROTOCOL_BASE_URLS[draft.protocol]}
-                        value={draft.baseUrl}
-                        onChange={(e) =>
-                          edit((next) => {
-                            next.baseUrl = e.target.value;
-                          })
-                        }
-                      />
-                    </ListItem>
-                    <ListItem title={t.Key}>
-                      <PasswordInput
-                        aria-label={t.Key}
-                        value={draft.apiKey}
-                        onChange={(e) =>
-                          edit((next) => {
-                            next.apiKey = e.currentTarget.value;
-                          })
-                        }
-                      />
-                    </ListItem>
-                  </>
-                ) : (
-                  <LegacyProviderFields
-                    desktop
-                    provider={draft.service!}
-                    accessStore={{
-                      ...access,
-                      ...draft.values,
-                      update: (updater) =>
-                        edit((next) => {
-                          const values = { ...access, ...next.values };
-                          updater(values);
-                          next.values = Object.fromEntries(
-                            legacyFields(next.service!)
-                              .filter((key) => key in values)
-                              .map((key) => [
-                                key,
-                                values[key as keyof typeof values],
-                              ]),
-                          );
-                        }),
-                    }}
-                  />
-                )}
-              </List>
-              <section className={styles.testing}>
-                <h3>{t.Test}</h3>
-                <p className={styles.hint}>
-                  {dirty ? t.SaveBeforeTest : t.TestHint}
-                </p>
-                <div className={styles.actions}>
-                  <Select
-                    aria-label={t.TestModel}
-                    value={testModel}
-                    disabled={dirty || test.status === "running"}
-                    onChange={(e) => setTestModel(e.target.value)}
-                  >
-                    <option value="">{t.TestModel}</option>
-                    {draft.models
-                      .filter((m) => m.enabled)
-                      .map((m) => (
-                        <option value={m.id} key={m.id}>
-                          {m.displayName || m.id}
-                        </option>
-                      ))}
-                  </Select>
-                  <IconButton
-                    text={test.status === "running" ? t.Testing : t.Test}
-                    disabled={
-                      dirty ||
-                      !testModel ||
-                      !draft.enabled ||
-                      test.status === "running"
-                    }
-                    onClick={() => void runTest()}
-                  />
-                </div>
-                <p
-                  role="status"
-                  className={
-                    test.status === "error" ? styles.error : styles.hint
-                  }
-                >
-                  {test.status === "idle"
-                    ? t.Untested
-                    : test.status === "running"
-                    ? t.Testing
-                    : test.status === "success"
-                    ? t.Success
-                    : `${t.Failed}: ${test.message}`}
-                </p>
-              </section>
-              <div className={styles.sectionHeader}>
-                <h3>{t.Models}</h3>
-                <div className={styles.actions}>
-                  <IconButton
-                    text={t.Manual}
-                    icon={<AddIcon />}
-                    onClick={() =>
-                      edit((next) => {
-                        next.models.push(modelDraft(createProviderModel("")));
-                      })
-                    }
-                  />
                   {draft.kind === "sdk" && (
                     <IconButton
-                      disabled={fetching}
-                      text={fetching ? t.Fetching : t.Fetch}
-                      onClick={() => void fetchModels()}
+                      className={styles.footerButton}
+                      text={t.Copy}
+                      bordered
+                      onClick={duplicate}
                     />
                   )}
+                  {error && (
+                    <p role="alert" className={styles.error}>
+                      {error}
+                    </p>
+                  )}
                 </div>
-              </div>
-              <p className={styles.hint}>{t.ModelHint}</p>
-              {draft.models.map((model, index) => (
-                <div className={styles.model} key={index}>
-                  <div className={styles.modelFields}>
-                    <label>
-                      {t.ModelId}
-                      <input
-                        aria-label={`${t.ModelId} ${index + 1}`}
-                        value={model.id}
-                        onChange={(e) =>
-                          edit((next) => {
-                            next.models[index].id = e.target.value;
-                          })
-                        }
-                      />
-                    </label>
-                    <label>
-                      {t.DisplayName}
-                      <input
-                        aria-label={`${t.DisplayName} ${index + 1}`}
-                        value={model.displayName}
-                        onChange={(e) =>
-                          edit((next) => {
-                            next.models[index].displayName = e.target.value;
-                          })
-                        }
-                      />
-                    </label>
-                    <IconButton
-                      icon={<DeleteIcon />}
-                      title={t.Remove}
-                      onClick={() =>
+              }
+              actions={[
+                <IconButton
+                  key="cancel"
+                  className={`${styles.footerButton} ${styles.footerActionButton}`}
+                  text={t.Cancel}
+                  bordered
+                  onClick={() => void requestClose()}
+                />,
+                <IconButton
+                  key="save"
+                  className={`${styles.footerButton} ${styles.footerActionButton}`}
+                  text={t.Save}
+                  type="primary"
+                  disabled={!dirty}
+                  onClick={() => void save()}
+                />,
+              ]}
+            >
+              <div className={styles.editor}>
+                <List>
+                  <ListItem title={t.Name}>
+                    <input
+                      type="text"
+                      aria-label={t.Name}
+                      value={draft.name}
+                      onChange={(e) => {
+                        const value = e.currentTarget.value;
                         edit((next) => {
-                          next.models.splice(index, 1);
-                        })
-                      }
+                          next.name = value;
+                        });
+                      }}
                     />
-                  </div>
-                  <div className={styles.actions}>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={model.enabled}
-                        onChange={(e) =>
-                          edit((next) => {
-                            next.models[index].enabled = e.target.checked;
-                          })
-                        }
-                      />
-                      {t.Enabled}
-                    </label>
-                    {draft.kind === "sdk" && (
-                      <>
-                        <label>
-                          <input
-                            type="checkbox"
-                            checked={model.vision}
-                            onChange={(e) =>
-                              edit((next) => {
-                                next.models[index].vision = e.target.checked;
-                              })
-                            }
-                          />
-                          {t.Vision}
-                        </label>
-                        <label>
-                          <input
-                            type="checkbox"
-                            checked={model.sampling}
-                            onChange={(e) =>
-                              edit((next) => {
-                                next.models[index].sampling = e.target.checked;
-                              })
-                            }
-                          />
-                          {t.Sampling}
-                        </label>
-                      </>
-                    )}
-                  </div>
+                  </ListItem>
                   {draft.kind === "sdk" && (
-                    <details>
-                      <summary>{t.Options}</summary>
-                      <textarea
-                        className={styles.wide}
-                        aria-label={`${t.Options} ${index + 1}`}
-                        rows={3}
-                        value={model.optionsText}
-                        onChange={(e) =>
-                          edit((next) => {
-                            next.models[index].optionsText = e.target.value;
-                          })
-                        }
-                      />
-                    </details>
-                  )}
-                </div>
-              ))}
-              {draft.kind === "sdk" && (
-                <details className={styles.advanced}>
-                  <summary>{t.Advanced}</summary>
-                  <List>
                     <ListItem title={t.Protocol}>
                       <Select
                         aria-label={t.Protocol}
                         value={draft.protocol}
-                        onChange={(e) =>
+                        onChange={(e) => {
+                          const value = e.currentTarget
+                            .value as ProviderProtocol;
                           edit((next) => {
-                            next.protocol = e.target.value as ProviderProtocol;
-                          })
-                        }
+                            next.protocol = value;
+                          });
+                        }}
                       >
                         {Object.entries(PROVIDER_PROTOCOLS).map(
                           ([id, name]) => (
@@ -908,105 +696,472 @@ export function ModelServices() {
                         )}
                       </Select>
                     </ListItem>
-                    <ListItem title={t.Headers} vertical>
-                      <textarea
-                        className={styles.wide}
-                        aria-label={t.Headers}
-                        rows={3}
-                        value={draft.headersText}
-                        onChange={(e) =>
+                  )}
+                  <ListItem title={t.Enabled}>
+                    <input
+                      type="checkbox"
+                      aria-label={t.Enabled}
+                      checked={draft.enabled}
+                      onChange={(e) => {
+                        const checked = e.currentTarget.checked;
+                        edit((next) => {
+                          next.enabled = checked;
+                        });
+                      }}
+                    />
+                  </ListItem>
+                  {draft.kind === "sdk" ? (
+                    <>
+                      <ListItem
+                        title={t.Endpoint}
+                        subTitle={t.EndpointHint}
+                        vertical
+                      >
+                        <input
+                          type="text"
+                          className={styles.wide}
+                          aria-label={t.Endpoint}
+                          placeholder={PROTOCOL_BASE_URLS[draft.protocol]}
+                          value={draft.baseUrl}
+                          onChange={(e) => {
+                            const value = e.currentTarget.value;
+                            edit((next) => {
+                              next.baseUrl = value;
+                            });
+                          }}
+                        />
+                      </ListItem>
+                      <ListItem title={t.Key}>
+                        <PasswordInput
+                          aria-label={t.Key}
+                          value={draft.apiKey}
+                          onChange={(e) => {
+                            const value = e.currentTarget.value;
+                            edit((next) => {
+                              next.apiKey = value;
+                            });
+                          }}
+                        />
+                      </ListItem>
+                    </>
+                  ) : (
+                    <LegacyProviderFields
+                      desktop
+                      provider={draft.service!}
+                      accessStore={{
+                        ...access,
+                        ...draft.values,
+                        update: (updater) =>
                           edit((next) => {
-                            next.headersText = e.target.value;
-                          })
-                        }
+                            const values = { ...access, ...next.values };
+                            updater(values);
+                            next.values = Object.fromEntries(
+                              legacyFields(next.service!)
+                                .filter((key) => key in values)
+                                .map((key) => [
+                                  key,
+                                  values[key as keyof typeof values],
+                                ]),
+                            );
+                          }),
+                      }}
+                    />
+                  )}
+                  <ListItem title={t.Test} className={styles.testing}>
+                    <div className={styles.testControls}>
+                      <div className={styles.actions}>
+                        {test.status !== "idle" && (
+                          <p
+                            role="status"
+                            data-status={test.status}
+                            className={
+                              test.status === "error"
+                                ? styles.error
+                                : styles.hint
+                            }
+                          >
+                            {test.status === "running"
+                              ? t.Testing
+                              : test.status === "success"
+                              ? t.Success
+                              : `${t.Failed}: ${test.message}`}
+                          </p>
+                        )}
+                        <IconButton
+                          icon={<ConnectionIcon />}
+                          aria={test.status === "running" ? t.Testing : t.Test}
+                          text={test.status === "running" ? t.Testing : t.Test}
+                          disabled={
+                            dirty ||
+                            !testModel ||
+                            !draft.enabled ||
+                            test.status === "running"
+                          }
+                          onClick={() => void runTest()}
+                        />
+                        <Select
+                          aria-label={t.TestModel}
+                          value={testModel}
+                          disabled={dirty || test.status === "running"}
+                          onChange={(e) => setTestModel(e.currentTarget.value)}
+                        >
+                          <option value="">{t.TestModel}</option>
+                          {draft.models
+                            .filter((m) => m.enabled)
+                            .map((m) => (
+                              <option value={m.id} key={m.id}>
+                                {m.displayName || m.id}
+                              </option>
+                            ))}
+                        </Select>
+                      </div>
+                    </div>
+                  </ListItem>
+                </List>
+                <div className={styles.sectionHeader}>
+                  <h3>{t.Models}</h3>
+                  <div className={styles.actions}>
+                    <IconButton
+                      text={t.Manual}
+                      icon={<AddIcon />}
+                      onClick={() => {
+                        edit((next) => {
+                          next.models.push(newModelDraft(createProviderModel("")));
+                        });
+                      }}
+                    />
+                    {draft.kind === "sdk" && (
+                      <IconButton
+                        disabled={fetching}
+                        text={fetching ? t.Fetching : t.Fetch}
+                        onClick={() => void fetchModels()}
                       />
-                    </ListItem>
-                  </List>
-                </details>
-              )}
-            </>
-          )}
-        </main>
-      </div>
-      {templates && (
-        <div className="modal-mask">
-          <Modal
-            title={t.Template}
-            onClose={() => setTemplates(false)}
-            actions={[
-              <IconButton
-                key="cancel"
-                text={t.Cancel}
-                onClick={() => setTemplates(false)}
-              />,
-            ]}
-          >
-            <div className={styles.templates}>
-              <button
-                onClick={() =>
-                  beginSdk(
-                    "OpenAI",
-                    "openai-chat",
-                    PROTOCOL_BASE_URLS["openai-chat"],
-                  )
-                }
-              >
-                OpenAI
-              </button>
-              <button
-                onClick={() =>
-                  beginSdk(
-                    "DeepSeek",
-                    "openai-chat",
-                    "https://api.deepseek.com",
-                    ["deepseek-chat", "deepseek-reasoner"],
-                  )
-                }
-              >
-                DeepSeek
-              </button>
-              <button
-                onClick={() =>
-                  beginSdk(
-                    "Anthropic",
-                    "anthropic",
-                    PROTOCOL_BASE_URLS.anthropic,
-                  )
-                }
-              >
-                Anthropic
-              </button>
-              <button
-                onClick={() =>
-                  beginSdk("Gemini", "google", PROTOCOL_BASE_URLS.google)
-                }
-              >
-                Gemini
-              </button>
-              <button onClick={() => beginSdk(t.Relay, "openai-chat", "")}>
-                {t.Relay}
-              </button>
-              <button
-                onClick={() =>
-                  beginSdk(t.Local, "openai-chat", "http://localhost:11434/v1")
-                }
-              >
-                {t.Local}
-              </button>
-            </div>
-            <details className={styles.advanced}>
-              <summary>{t.Other}</summary>
-              <div className={styles.templates}>
-                {Object.values(ServiceProvider).map((service) => (
-                  <button key={service} onClick={() => beginLegacy(service)}>
-                    {service}
-                  </button>
-                ))}
+                    )}
+                  </div>
+                </div>
+                {!draft.models.length && (
+                  <p className={styles.empty}>{t.NoModel}</p>
+                )}
+                {!!draft.models.length && (
+                  <div className={styles.modelsTableWrap}>
+                    <table className={styles.modelsTable}>
+                      <thead>
+                        <tr>
+                          <th scope="col">{t.ModelId}</th>
+                          <th scope="col">{t.DisplayName}</th>
+                          <th scope="col">{t.Enabled}</th>
+                          {draft.kind === "sdk" && (
+                            <>
+                              <th scope="col">{t.Vision}</th>
+                              <th scope="col">{t.Params}</th>
+                            </>
+                          )}
+                          <th scope="col">{t.Actions}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {draft.models.map((model, index) => (
+                          <tr key={index}>
+                            <td>
+                              <input
+                                type="text"
+                                aria-label={`${t.ModelId} ${index + 1}`}
+                                value={model.id}
+                                onChange={(e) => {
+                                  const value = e.currentTarget.value;
+                                  edit((next) => {
+                                    const current = next.models[index];
+                                    if (
+                                      current.displayName.trim() ===
+                                      current.id.trim()
+                                    )
+                                      current.displayName = value;
+                                    current.id = value;
+                                  });
+                                }}
+                              />
+                            </td>
+                            <td>
+                              <input
+                                type="text"
+                                aria-label={`${t.DisplayName} ${index + 1}`}
+                                value={model.displayName}
+                                onChange={(e) => {
+                                  const value = e.currentTarget.value;
+                                  edit((next) => {
+                                    next.models[index].displayName = value;
+                                  });
+                                }}
+                              />
+                            </td>
+                            <td>
+                              <input
+                                type="checkbox"
+                                aria-label={`${t.Enabled} ${index + 1}`}
+                                checked={model.enabled}
+                                onChange={(e) => {
+                                  const checked = e.currentTarget.checked;
+                                  edit((next) => {
+                                    next.models[index].enabled = checked;
+                                  });
+                                }}
+                              />
+                            </td>
+                            {draft.kind === "sdk" && (
+                              <>
+                                <td>
+                                  <input
+                                    type="checkbox"
+                                    aria-label={`${t.Vision} ${index + 1}`}
+                                    checked={model.vision}
+                                    onChange={(e) => {
+                                      const checked = e.currentTarget.checked;
+                                      edit((next) => {
+                                        next.models[index].vision = checked;
+                                      });
+                                    }}
+                                  />
+                                </td>
+                                <td className={styles.tableAction}>
+                                  <IconButton
+                                    text={t.Modify}
+                                    aria={`${t.Params} ${index + 1}`}
+                                    onClick={() => openOptions(index)}
+                                  />
+                                </td>
+                              </>
+                            )}
+                            <td className={styles.tableAction}>
+                              <IconButton
+                                icon={<DeleteIcon />}
+                                title={t.Remove}
+                                aria={`${t.Remove} ${
+                                  model.displayName || model.id
+                                }`}
+                                onClick={() =>
+                                  edit((next) => {
+                                    next.models.splice(index, 1);
+                                  })
+                                }
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
-            </details>
-          </Modal>
-        </div>
-      )}
+            </Modal>
+          </div>,
+          document.body,
+        )}
+      {draft &&
+        optionsIndex !== undefined &&
+        createPortal(
+          <div className="modal-mask">
+            <Modal
+              title={t.ParamsTitle(
+                draft.models[optionsIndex]?.displayName ||
+                  draft.models[optionsIndex]?.id ||
+                  "",
+              )}
+              onClose={closeOptions}
+              actions={[
+                <IconButton
+                  key="cancel"
+                  className={styles.footerButton}
+                  text={t.Cancel}
+                  bordered
+                  onClick={closeOptions}
+                />,
+                <IconButton
+                  key="save"
+                  className={styles.footerButton}
+                  text={t.Save}
+                  type="primary"
+                  onClick={saveOptions}
+                />,
+              ]}
+            >
+              <List>
+                <ModelParamsEditor
+                  protocol={draft.protocol}
+                  params={optionsParams}
+                  onChange={setOptionsParams}
+                />
+                <ListItem title={t.Options} vertical>
+                  <textarea
+                    className={styles.wide}
+                    aria-label={t.Options}
+                    rows={8}
+                    value={optionsText}
+                    onChange={(e) => setOptionsText(e.currentTarget.value)}
+                  />
+                </ListItem>
+              </List>
+            </Modal>
+          </div>,
+          document.body,
+        )}
+      {draft &&
+        fetchedModels &&
+        createPortal(
+          <div className="modal-mask">
+            <Modal
+              title={t.SelectModels}
+              onClose={() => {
+                setFetchedModels(undefined);
+                setFetchedSelection({});
+                setFetchedSearch("");
+              }}
+              actions={[
+                <IconButton
+                  key="cancel"
+                  className={styles.footerButton}
+                  text={t.Cancel}
+                  onClick={() => {
+                    setFetchedModels(undefined);
+                    setFetchedSelection({});
+                    setFetchedSearch("");
+                  }}
+                />,
+                <IconButton
+                  key="add"
+                  className={styles.footerButton}
+                  text={t.AddSelected}
+                  type="primary"
+                  onClick={addFetchedModels}
+                />,
+              ]}
+            >
+              <div className={styles.fetchedModels}>
+                <input
+                  type="search"
+                  className={styles.fetchedSearch}
+                  aria-label={t.SearchModels}
+                  placeholder={t.SearchModels}
+                  value={fetchedSearch}
+                  onChange={(event) => setFetchedSearch(event.currentTarget.value)}
+                />
+                {visibleFetchedModels.length ? (
+                  visibleFetchedModels.map((model) => {
+                    const existing = draft.models.some(
+                      (current) => current.id === model.id,
+                    );
+                    return (
+                      <label className={styles.fetchedModel} key={model.id}>
+                        <input
+                          type="checkbox"
+                          disabled={existing}
+                          checked={existing || !!fetchedSelection[model.id]}
+                          onChange={(event) =>
+                            setFetchedSelection((current) => ({
+                              ...current,
+                              [model.id]: event.currentTarget.checked,
+                            }))
+                          }
+                        />
+                        <span>{model.id}</span>
+                      </label>
+                    );
+                  })
+                ) : (
+                  <p className={styles.empty}>
+                    {fetchedModels.length ? t.NoMatchingModels : t.NoFetchedModels}
+                  </p>
+                )}
+              </div>
+            </Modal>
+          </div>,
+          document.body,
+        )}
+      {templates &&
+        createPortal(
+          <div className="modal-mask">
+            <Modal
+              title={t.Template}
+              onClose={() => setTemplates(false)}
+              actions={[
+                <IconButton
+                  key="cancel"
+                  className={styles.footerButton}
+                  text={t.Cancel}
+                  onClick={() => setTemplates(false)}
+                />,
+              ]}
+            >
+              <div className={styles.templates}>
+                <button
+                  onClick={() =>
+                    beginSdk(
+                      "OpenAI",
+                      "openai-chat",
+                      PROTOCOL_BASE_URLS["openai-chat"],
+                    )
+                  }
+                >
+                  OpenAI
+                </button>
+                <button
+                  onClick={() =>
+                    beginSdk(
+                      "DeepSeek",
+                      "openai-chat",
+                      "https://api.deepseek.com",
+                      ["deepseek-flash", "deepseek-v4-pro"],
+                    )
+                  }
+                >
+                  DeepSeek
+                </button>
+                <button
+                  onClick={() =>
+                    beginSdk(
+                      "Anthropic",
+                      "anthropic",
+                      PROTOCOL_BASE_URLS.anthropic,
+                    )
+                  }
+                >
+                  Anthropic
+                </button>
+                <button
+                  onClick={() =>
+                    beginSdk("Gemini", "google", PROTOCOL_BASE_URLS.google)
+                  }
+                >
+                  Gemini
+                </button>
+                <button onClick={() => beginSdk(t.Relay, "openai-chat", "")}>
+                  {t.Relay}
+                </button>
+                <button
+                  onClick={() =>
+                    beginSdk(
+                      t.Local,
+                      "openai-chat",
+                      "http://localhost:11434/v1",
+                    )
+                  }
+                >
+                  {t.Local}
+                </button>
+              </div>
+              <details className={styles.advanced}>
+                <summary>{t.Other}</summary>
+                <div className={styles.templates}>
+                  {Object.values(ServiceProvider).map((service) => (
+                    <button key={service} onClick={() => beginLegacy(service)}>
+                      {service}
+                    </button>
+                  ))}
+                </div>
+              </details>
+            </Modal>
+          </div>,
+          document.body,
+        )}
     </>
   );
 }

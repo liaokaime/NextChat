@@ -1,5 +1,4 @@
 import { ModelPicker } from "./model-picker";
-import { modelConnectionName } from "../client/connections";
 import { useDebouncedCallback } from "use-debounce";
 import React, {
   Fragment,
@@ -18,12 +17,9 @@ import EditIcon from "../icons/rename.svg";
 import ExportIcon from "../icons/share.svg";
 import ReturnIcon from "../icons/return.svg";
 import CopyIcon from "../icons/copy.svg";
-import SpeakIcon from "../icons/speak.svg";
-import SpeakStopIcon from "../icons/speak-stop.svg";
 import LoadingIcon from "../icons/three-dots.svg";
 import LoadingButtonIcon from "../icons/loading.svg";
 import PromptIcon from "../icons/prompt.svg";
-import MaskIcon from "../icons/mask.svg";
 import MaxIcon from "../icons/max.svg";
 import MinIcon from "../icons/min.svg";
 import ResetIcon from "../icons/reload.svg";
@@ -36,25 +32,19 @@ import ConfirmIcon from "../icons/confirm.svg";
 import CancelIcon from "../icons/cancel.svg";
 import ImageIcon from "../icons/image.svg";
 
-import LightIcon from "../icons/light.svg";
-import DarkIcon from "../icons/dark.svg";
-import AutoIcon from "../icons/auto.svg";
 import BottomIcon from "../icons/bottom.svg";
 import StopIcon from "../icons/pause.svg";
-import RobotIcon from "../icons/robot.svg";
 import SizeIcon from "../icons/size.svg";
 import QualityIcon from "../icons/hd.svg";
 import StyleIcon from "../icons/palette.svg";
-import ShortcutkeyIcon from "../icons/shortcutkey.svg";
+import { ShortcutKeyModal } from "./shortcut-key-modal";
 import McpToolIcon from "../icons/tool.svg";
 import {
   BOT_HELLO,
   ChatMessage,
   createMessage,
   DEFAULT_TOPIC,
-  ModelType,
   SubmitKey,
-  Theme,
   useAccessStore,
   useAppConfig,
   useChatStore,
@@ -98,8 +88,6 @@ import {
 import { useNavigate } from "react-router-dom";
 import {
   CHAT_PAGE_SIZE,
-  DEFAULT_TTS_ENGINE,
-  ModelProvider,
   Path,
   REQUEST_TIMEOUT_MS,
   ServiceProvider,
@@ -113,23 +101,14 @@ import { prettyObject } from "../utils/format";
 import { ExportMessageModal } from "./exporter";
 import { getClientConfig } from "../config/client";
 import { useAllModels } from "../utils/hooks";
-import { ClientApi, MultimodalContent } from "../client/api";
-import { createTTSPlayer } from "../utils/audio";
-import { MsEdgeTTS, OUTPUT_FORMAT } from "../utils/ms_edge_tts";
+import { MultimodalContent } from "../client/api";
 
 import { isEmpty } from "lodash-es";
-import {
-  llmModelSelection,
-  modelSelection,
-  parseModelSelection,
-  instanceSupportsImages,
-} from "../client/providers";
+import { modelSelection, instanceSupportsImages } from "../client/providers";
 import clsx from "clsx";
 import { getAvailableClientsCount, isMcpEnabled } from "../mcp/actions";
 
 const localStorage = safeLocalStorage();
-
-const ttsPlayer = createTTSPlayer();
 
 const Markdown = dynamic(async () => (await import("./markdown")).Markdown, {
   loading: () => <LoadingIcon />,
@@ -502,31 +481,16 @@ export function ChatActions(props: {
   showPromptHints: () => void;
   hitBottom: boolean;
   uploading: boolean;
-  setShowShortcutKeyModal: React.Dispatch<React.SetStateAction<boolean>>;
   setUserInput: (input: string) => void;
 }) {
-  const config = useAppConfig();
-  const navigate = useNavigate();
   const chatStore = useChatStore();
   const session = chatStore.currentSession();
-
-  // switch themes
-  const theme = config.theme;
-
-  function nextTheme() {
-    const themes = [Theme.Auto, Theme.Light, Theme.Dark];
-    const themeIndex = themes.indexOf(theme);
-    const nextIndex = (themeIndex + 1) % themes.length;
-    const nextTheme = themes[nextIndex];
-    config.update((config) => (config.theme = nextTheme));
-  }
 
   // stop all responses
   const couldStop = ChatControllerPool.hasPending();
   const stopAll = () => ChatControllerPool.stopAll();
 
   // switch model
-  const desktopModels = !!getClientConfig()?.isApp;
   const currentModel = session.mask.modelConfig.model;
   const currentProviderId = session.mask.modelConfig.providerId;
   const currentProviderName =
@@ -546,25 +510,6 @@ export function ChatActions(props: {
       return filteredModels;
     }
   }, [allModels]);
-  const currentModelName = useMemo(() => {
-    const model = models.find(
-      (m) =>
-        llmModelSelection(m) ===
-        modelSelection(currentModel, currentProviderName, currentProviderId),
-    );
-    return model?.displayName ?? currentModel;
-  }, [models, currentModel, currentProviderName, currentProviderId]);
-  const currentConnectionName =
-    modelConnectionName(
-      models.find(
-        (m) =>
-          llmModelSelection(m) ===
-          modelSelection(currentModel, currentProviderName, currentProviderId),
-      ) || {},
-    ) ||
-    useAccessStore.getState().legacyConnections[currentProviderName]?.name ||
-    currentProviderName;
-  const [showModelSelector, setShowModelSelector] = useState(false);
   const [showUploadImage, setShowUploadImage] = useState(false);
 
   const [showSizeSelector, setShowSizeSelector] = useState(false);
@@ -594,40 +539,12 @@ export function ChatActions(props: {
       setAttachImages([]);
       setUploading(false);
     }
-
-    // if current model is not available
-    // switch to first available model
-    const isUnavailableModel = !models.some((m) => m.name === currentModel);
-    if (
-      !desktopModels &&
-      !currentProviderId &&
-      isUnavailableModel &&
-      models.length > 0
-    ) {
-      // show next model to default model if exist
-      let nextModel = models.find((model) => model.isDefault) || models[0];
-      chatStore.updateTargetSession(session, (session) => {
-        session.mask.modelConfig.model = nextModel.name;
-        session.mask.modelConfig.providerName = nextModel?.provider
-          ?.providerName as ServiceProvider;
-        session.mask.modelConfig.providerId =
-          nextModel.provider?.providerType === "ai-sdk"
-            ? nextModel.provider.id
-            : undefined;
-      });
-      showToast(
-        nextModel?.provider?.providerName == "ByteDance"
-          ? nextModel.displayName || nextModel.name
-          : nextModel.name,
-      );
-    }
   }, [
     chatStore,
     currentModel,
     currentProviderId,
     models,
     session,
-    desktopModels,
     setAttachImages,
     setUploading,
   ]);
@@ -665,33 +582,9 @@ export function ChatActions(props: {
           />
         )}
         <ChatAction
-          onClick={nextTheme}
-          text={Locale.Chat.InputActions.Theme[theme]}
-          icon={
-            <>
-              {theme === Theme.Auto ? (
-                <AutoIcon />
-              ) : theme === Theme.Light ? (
-                <LightIcon />
-              ) : theme === Theme.Dark ? (
-                <DarkIcon />
-              ) : null}
-            </>
-          }
-        />
-
-        <ChatAction
           onClick={props.showPromptHints}
           text={Locale.Chat.InputActions.Prompt}
           icon={<PromptIcon />}
-        />
-
-        <ChatAction
-          onClick={() => {
-            navigate(Path.Masks);
-          }}
-          text={Locale.Chat.InputActions.Masks}
-          icon={<MaskIcon />}
         />
 
         <ChatAction
@@ -709,112 +602,29 @@ export function ChatActions(props: {
           }}
         />
 
-        {desktopModels ? (
-          <button
-            className={styles["model-service-action"]}
-            title={`${currentModelName} · ${currentConnectionName}`}
-            aria-label={Locale.ModelServices.ChooseModel}
-            onClick={() => setShowModelSelector(true)}
-          >
-            <RobotIcon />
-            <span>
-              {currentModelName} · {currentConnectionName}
-            </span>
-          </button>
-        ) : (
-          <ChatAction
-            onClick={() => setShowModelSelector(true)}
-            text={currentModelName}
-            icon={<RobotIcon />}
-          />
-        )}
-
-        {desktopModels &&
-          !models.some(
-            (m) =>
-              llmModelSelection(m) ===
-              modelSelection(
-                currentModel,
-                currentProviderName,
-                currentProviderId,
-              ),
-          ) && (
-            <button
-              className={styles["model-service-action"]}
-              title={Locale.ModelServices.Unavailable}
-              onClick={() => setShowModelSelector(true)}
-            >
-              {Locale.ModelServices.ChooseAgain}
-            </button>
+        <ModelPicker
+          current={modelSelection(
+            currentModel,
+            currentProviderName,
+            currentProviderId,
           )}
-        {showModelSelector &&
-          (desktopModels ? (
-            <ModelPicker
-              current={modelSelection(
-                currentModel,
-                currentProviderName,
-                currentProviderId,
-              )}
-              onClose={() => setShowModelSelector(false)}
-              onSelect={(model) => {
-                if (!model) return;
-                chatStore.updateTargetSession(session, (session) => {
-                  session.mask.modelConfig.model = model.name;
-                  session.mask.modelConfig.providerName = model.provider
-                    .providerName as ServiceProvider;
-                  session.mask.modelConfig.providerId =
-                    model.provider.providerType === "ai-sdk"
-                      ? model.provider.id
-                      : undefined;
-                  session.mask.syncGlobalConfig = false;
-                });
-              }}
-            />
-          ) : (
-            <Selector
-              defaultSelectedValue={modelSelection(
-                currentModel,
-                currentProviderName,
-                currentProviderId,
-              )}
-              items={models.map((m) => ({
-                title: `${m.displayName}${
-                  m?.provider?.providerName
-                    ? " (" + m?.provider?.providerName + ")"
-                    : ""
-                }`,
-                value: llmModelSelection(m),
-              }))}
-              onClose={() => setShowModelSelector(false)}
-              onSelection={(s) => {
-                if (s.length === 0) return;
-                const { model, providerName, providerId } = parseModelSelection(
-                  s[0],
-                );
-                const selectedModel = models.find(
-                  (m) => llmModelSelection(m) === s[0],
-                );
-                chatStore.updateTargetSession(session, (session) => {
-                  session.mask.modelConfig.model = model as ModelType;
-                  session.mask.modelConfig.providerName = (selectedModel
-                    ?.provider?.providerName ||
-                    providerName) as ServiceProvider;
-                  session.mask.modelConfig.providerId = providerId;
-                  session.mask.syncGlobalConfig = false;
-                });
-                if (providerName == "ByteDance") {
-                  const selectedModel = models.find(
-                    (m) =>
-                      m.name == model &&
-                      m?.provider?.providerName == providerName,
-                  );
-                  showToast(selectedModel?.displayName ?? "");
-                } else {
-                  showToast(model);
-                }
-              }}
-            />
-          ))}
+          currentLabel={`${currentModel} · ${currentProviderName}`}
+          models={models}
+          className={styles["model-service-action"]}
+          onSelect={(model) => {
+            if (!model) return;
+            chatStore.updateTargetSession(session, (session) => {
+              session.mask.modelConfig.model = model.name;
+              session.mask.modelConfig.providerName = model.provider
+                .providerName as ServiceProvider;
+              session.mask.modelConfig.providerId =
+                model.provider.providerType === "ai-sdk"
+                  ? model.provider.id
+                  : undefined;
+              session.mask.syncGlobalConfig = false;
+            });
+          }}
+        />
 
         {supportsCustomSize(currentModel) && (
           <ChatAction
@@ -897,13 +707,6 @@ export function ChatActions(props: {
           />
         )}
 
-        {!isMobileScreen && (
-          <ChatAction
-            onClick={() => props.setShowShortcutKeyModal(true)}
-            text={Locale.Chat.ShortcutKey.Title}
-            icon={<ShortcutkeyIcon />}
-          />
-        )}
         {!isMobileScreen && <MCPAction />}
       </>
     </div>
@@ -978,73 +781,6 @@ export function DeleteImageButton(props: { deleteImage: () => void }) {
   return (
     <div className={styles["delete-image"]} onClick={props.deleteImage}>
       <DeleteIcon />
-    </div>
-  );
-}
-
-export function ShortcutKeyModal(props: { onClose: () => void }) {
-  const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
-  const shortcuts = [
-    {
-      title: Locale.Chat.ShortcutKey.newChat,
-      keys: isMac ? ["⌘", "Shift", "O"] : ["Ctrl", "Shift", "O"],
-    },
-    { title: Locale.Chat.ShortcutKey.focusInput, keys: ["Shift", "Esc"] },
-    {
-      title: Locale.Chat.ShortcutKey.copyLastCode,
-      keys: isMac ? ["⌘", "Shift", ";"] : ["Ctrl", "Shift", ";"],
-    },
-    {
-      title: Locale.Chat.ShortcutKey.copyLastMessage,
-      keys: isMac ? ["⌘", "Shift", "C"] : ["Ctrl", "Shift", "C"],
-    },
-    {
-      title: Locale.Chat.ShortcutKey.showShortcutKey,
-      keys: isMac ? ["⌘", "/"] : ["Ctrl", "/"],
-    },
-    {
-      title: Locale.Chat.ShortcutKey.clearContext,
-      keys: isMac
-        ? ["⌘", "Shift", "backspace"]
-        : ["Ctrl", "Shift", "backspace"],
-    },
-  ];
-  return (
-    <div className="modal-mask">
-      <Modal
-        title={Locale.Chat.ShortcutKey.Title}
-        onClose={props.onClose}
-        actions={[
-          <IconButton
-            type="primary"
-            text={Locale.UI.Confirm}
-            icon={<ConfirmIcon />}
-            key="ok"
-            onClick={() => {
-              props.onClose();
-            }}
-          />,
-        ]}
-      >
-        <div className={styles["shortcut-key-container"]}>
-          <div className={styles["shortcut-key-grid"]}>
-            {shortcuts.map((shortcut, index) => (
-              <div key={index} className={styles["shortcut-key-item"]}>
-                <div className={styles["shortcut-key-title"]}>
-                  {shortcut.title}
-                </div>
-                <div className={styles["shortcut-key-keys"]}>
-                  {shortcut.keys.map((key, i) => (
-                    <div key={i} className={styles["shortcut-key"]}>
-                      <span>{key}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </Modal>
     </div>
   );
 }
@@ -1347,51 +1083,6 @@ function _Chat() {
   };
 
   const accessStore = useAccessStore();
-  const [speechStatus, setSpeechStatus] = useState(false);
-  const [speechLoading, setSpeechLoading] = useState(false);
-
-  async function openaiSpeech(text: string) {
-    if (speechStatus) {
-      ttsPlayer.stop();
-      setSpeechStatus(false);
-    } else {
-      var api: ClientApi;
-      api = new ClientApi(ModelProvider.GPT);
-      const config = useAppConfig.getState();
-      setSpeechLoading(true);
-      ttsPlayer.init();
-      let audioBuffer: ArrayBuffer;
-      const { markdownToTxt } = require("markdown-to-txt");
-      const textContent = markdownToTxt(text);
-      if (config.ttsConfig.engine !== DEFAULT_TTS_ENGINE) {
-        const edgeVoiceName = accessStore.edgeVoiceName();
-        const tts = new MsEdgeTTS();
-        await tts.setMetadata(
-          edgeVoiceName,
-          OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3,
-        );
-        audioBuffer = await tts.toArrayBuffer(textContent);
-      } else {
-        audioBuffer = await api.llm.speech({
-          model: config.ttsConfig.model,
-          input: textContent,
-          voice: config.ttsConfig.voice,
-          speed: config.ttsConfig.speed,
-        });
-      }
-      setSpeechStatus(true);
-      ttsPlayer
-        .play(audioBuffer, () => {
-          setSpeechStatus(false);
-        })
-        .catch((e) => {
-          console.error("[OpenAI Speech]", e);
-          showToast(prettyObject(e));
-          setSpeechStatus(false);
-        })
-        .finally(() => setSpeechLoading(false));
-    }
-  }
 
   const context: RenderMessage[] = useMemo(() => {
     return session.mask.hideContext ? [] : session.mask.context.slice();
@@ -1981,27 +1672,6 @@ function _Chat() {
                                           )
                                         }
                                       />
-                                      {config.ttsConfig.enable && (
-                                        <ChatAction
-                                          text={
-                                            speechStatus
-                                              ? Locale.Chat.Actions.StopSpeech
-                                              : Locale.Chat.Actions.Speech
-                                          }
-                                          icon={
-                                            speechStatus ? (
-                                              <SpeakStopIcon />
-                                            ) : (
-                                              <SpeakIcon />
-                                            )
-                                          }
-                                          onClick={() =>
-                                            openaiSpeech(
-                                              getMessageTextContent(message),
-                                            )
-                                          }
-                                        />
-                                      )}
                                     </>
                                   )}
                                 </div>
@@ -2122,7 +1792,6 @@ function _Chat() {
                   setUserInput("/");
                   onSearch("");
                 }}
-                setShowShortcutKeyModal={setShowShortcutKeyModal}
                 setUserInput={setUserInput}
               />
               <label

@@ -98,7 +98,7 @@ test("untouched automatic copies are pruned only when no main or compression ref
       { compressProviderId: "legacy-openai", compressModel: "same-model" },
     ]),
   ).toHaveLength(1);
-  state.providers[0].models[0].sampling = true;
+  state.providers[0].models[0].params = { temperature: 0.7 };
   expect(pruneUnusedImportedProviders(state, models, "", [])).toHaveLength(1);
 });
 

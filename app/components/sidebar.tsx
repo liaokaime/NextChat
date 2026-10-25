@@ -8,6 +8,8 @@ import NextChatIcon from "../icons/logo.svg";
 import AddIcon from "../icons/add.svg";
 import DeleteIcon from "../icons/delete.svg";
 import MaskIcon from "../icons/mask.svg";
+import SearchIcon from "../icons/zoom.svg";
+import CloseIcon from "../icons/close.svg";
 import McpIcon from "../icons/mcp.svg";
 import DragIcon from "../icons/drag.svg";
 
@@ -222,6 +224,20 @@ export function SideBar(props: { className?: string }) {
   const config = useAppConfig();
   const chatStore = useChatStore();
   const [mcpEnabled, setMcpEnabled] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const closeSearch = () => {
+    setShowSearch(false);
+    setSearch("");
+  };
+
+  useEffect(() => {
+    if (shouldNarrow) {
+      setShowSearch(false);
+      setSearch("");
+    }
+  }, [shouldNarrow]);
 
   useEffect(() => {
     // 检查 MCP 是否启用
@@ -245,20 +261,60 @@ export function SideBar(props: { className?: string }) {
         logo={<NextChatIcon />}
         shouldNarrow={shouldNarrow}
       >
-        <div className={styles["sidebar-header-bar"]}>
-          <IconButton
-            icon={<MaskIcon />}
-            text={shouldNarrow ? undefined : Locale.Mask.Name}
-            className={styles["sidebar-bar-button"]}
-            onClick={() => {
-              if (config.dontShowMaskSplashScreen !== true) {
-                navigate(Path.NewChat, { state: { fromHome: true } });
-              } else {
-                navigate(Path.Masks, { state: { fromHome: true } });
-              }
-            }}
-            shadow
-          />
+        {showSearch && !shouldNarrow ? (
+          <div className={styles["session-search"]}>
+            <input
+              type="search"
+              autoFocus
+              aria-label={Locale.SessionSearch.Title}
+              placeholder={Locale.SessionSearch.Placeholder}
+              value={search}
+              onChange={(event) => setSearch(event.currentTarget.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") closeSearch();
+              }}
+            />
+            <IconButton
+              icon={<CloseIcon />}
+              aria={Locale.SessionSearch.Close}
+              title={Locale.SessionSearch.Close}
+              onClick={closeSearch}
+            />
+          </div>
+        ) : (
+          <div className={styles["sidebar-header-bar"]}>
+            <IconButton
+              icon={<MaskIcon />}
+              text={shouldNarrow ? undefined : Locale.Mask.Name}
+              className={styles["sidebar-bar-button"]}
+              onClick={() => {
+                if (config.dontShowMaskSplashScreen !== true) {
+                  navigate(Path.NewChat, { state: { fromHome: true } });
+                } else {
+                  navigate(Path.Masks, { state: { fromHome: true } });
+                }
+              }}
+              shadow
+            />
+            <IconButton
+              icon={<SearchIcon />}
+              text={shouldNarrow ? undefined : Locale.SessionSearch.Title}
+              aria={Locale.SessionSearch.Title}
+              title={Locale.SessionSearch.Title}
+              className={styles["sidebar-bar-button"]}
+              onClick={() => {
+                if (shouldNarrow) {
+                  config.update((state) => {
+                    state.sidebarWidth = DEFAULT_SIDEBAR_WIDTH;
+                  });
+                }
+                setShowSearch(true);
+              }}
+              shadow
+            />
+          </div>
+        )}
+        <div className={styles["sidebar-header-bar"]} hidden={!mcpEnabled}>
           {mcpEnabled && (
             <IconButton
               icon={<McpIcon />}
@@ -279,7 +335,7 @@ export function SideBar(props: { className?: string }) {
           }
         }}
       >
-        <ChatList narrow={shouldNarrow} />
+        <ChatList narrow={shouldNarrow} search={search} />
       </SideBarBody>
       <SideBarTail
         primaryAction={

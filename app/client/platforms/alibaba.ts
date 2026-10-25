@@ -10,7 +10,6 @@ import {
   getHeaders,
   LLMApi,
   LLMModel,
-  SpeechOptions,
   MultimodalContent,
   MultimodalContentForAlibaba,
 } from "../api";
@@ -81,10 +80,6 @@ export class QwenApi implements LLMApi {
 
   extractMessage(res: any) {
     return res?.output?.choices?.at(0)?.message?.content ?? "";
-  }
-
-  speech(options: SpeechOptions): Promise<ArrayBuffer> {
-    throw new Error("Method not implemented.");
   }
 
   async chat(options: ChatOptions) {
