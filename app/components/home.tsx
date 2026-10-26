@@ -3,12 +3,13 @@
 require("../polyfill");
 
 import { useEffect, useState } from "react";
-import styles from "./home.module.scss";
+import styles from "./home.styles";
 
 import BotIcon from "../icons/nextchat-bot.svg";
 import LoadingIcon from "../icons/three-dots.svg";
 
-import { getCSSVar, useMobileScreen } from "../utils";
+import { useMobileScreen } from "../utils";
+import { watchTheme } from "../utils/theme";
 
 import dynamic from "next/dynamic";
 import { Path, SlotID } from "../constant";
@@ -65,34 +66,9 @@ const MaskPage = dynamic(async () => (await import("./mask")).MaskPage, {
 });
 
 export function useSwitchTheme() {
-  const config = useAppConfig();
+  const theme = useAppConfig((state) => state.theme);
 
-  useEffect(() => {
-    document.body.classList.remove("light");
-    document.body.classList.remove("dark");
-
-    if (config.theme === "dark") {
-      document.body.classList.add("dark");
-    } else if (config.theme === "light") {
-      document.body.classList.add("light");
-    }
-
-    const metaDescriptionDark = document.querySelector(
-      'meta[name="theme-color"][media*="dark"]',
-    );
-    const metaDescriptionLight = document.querySelector(
-      'meta[name="theme-color"][media*="light"]',
-    );
-
-    if (config.theme === "auto") {
-      metaDescriptionDark?.setAttribute("content", "#151515");
-      metaDescriptionLight?.setAttribute("content", "#fafafa");
-    } else {
-      const themeColor = getCSSVar("--theme-color");
-      metaDescriptionDark?.setAttribute("content", themeColor);
-      metaDescriptionLight?.setAttribute("content", themeColor);
-    }
-  }, [config.theme]);
+  useEffect(() => watchTheme(theme), [theme]);
 }
 
 function useHtmlLang() {

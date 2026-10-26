@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 
-import styles from "./settings.module.scss";
+import styles from "./settings.styles";
 
 import ResetIcon from "../icons/reload.svg";
 import AddIcon from "../icons/add.svg";
@@ -75,7 +75,7 @@ function EditPromptModal(props: { id: string; onClose: () => void }) {
   const prompt = promptStore.get(props.id);
 
   return prompt ? (
-    <div className="modal-mask">
+    <div className="modal-mask" data-modal-mask>
       <Modal
         title={Locale.Settings.Prompt.EditModal.Title}
         onClose={props.onClose}
@@ -140,7 +140,7 @@ function UserPromptModal(props: { onClose?: () => void }) {
   }, [searchInput]);
 
   return (
-    <div className="modal-mask">
+    <div className="modal-mask" data-modal-mask>
       <Modal
         title={Locale.Settings.Prompt.Modal.Title}
         onClose={() => props.onClose?.()}
@@ -324,7 +324,7 @@ function SyncConfigModal(props: { onClose?: () => void }) {
   const syncStore = useSyncStore();
 
   return (
-    <div className="modal-mask">
+    <div className="modal-mask" data-modal-mask>
       <Modal
         title={Locale.Settings.Sync.Config.Modal.Title}
         onClose={() => props.onClose?.()}
@@ -635,7 +635,7 @@ export function Settings() {
 
   useEffect(() => {
     const keydownEvent = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !document.querySelector(".modal-mask")) {
+      if (e.key === "Escape" && !document.querySelector("[data-modal-mask]")) {
         navigate(Path.Home);
       }
     };

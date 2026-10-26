@@ -1,4 +1,4 @@
-import styles from "./auth.module.scss";
+import styles from "./auth.styles";
 import { IconButton } from "./button";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";

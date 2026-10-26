@@ -7,7 +7,7 @@ import Locale from "../locales";
 import { InputRange } from "./input-range";
 import { ListItem } from "./ui-lib";
 import { modelSelection } from "../client/providers";
-import styles from "./settings.module.scss";
+import styles from "./settings.styles";
 
 export function ModelConfigList(props: {
   modelConfig: ModelConfig;

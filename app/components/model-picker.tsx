@@ -5,7 +5,7 @@ import { llmModelSelection } from "../client/providers";
 import { modelConnectionName, rememberModel } from "../client/connections";
 import type { LLMModel } from "../client/api";
 import { Select } from "./ui-lib";
-import styles from "./model-services.module.scss";
+import styles from "./model-services.styles";
 
 export function ModelPicker(props: {
   current: string;

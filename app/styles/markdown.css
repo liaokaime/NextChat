@@ -1,0 +1,301 @@
+/* Markdown is generated HTML: keep its typography in one scoped Tailwind layer. */
+.markdown-body {
+  @apply m-0 break-words;
+  color: var(--color-fg-default);
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  &::before,
+  &::after {
+    display: table;
+    content: "";
+  }
+  &::after {
+    clear: both;
+  }
+  & > :first-child,
+  & .markdown-content > :first-child,
+  & .markdown-content > :first-child > :first-child {
+    margin-top: 0;
+  }
+  & > :last-child,
+  & .markdown-content > :last-child,
+  & .markdown-content > :last-child > :last-child {
+    margin-bottom: 0;
+  }
+  & a {
+    color: var(--color-accent-fg);
+    text-decoration: none;
+  }
+  & a:hover {
+    text-decoration: underline;
+  }
+  & b,
+  & strong {
+    font-weight: 600;
+  }
+  & h1,
+  & h2,
+  & h3,
+  & h4,
+  & h5,
+  & h6 {
+    margin-top: 24px;
+    margin-bottom: 16px;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+  & h1 {
+    font-size: 2em;
+    padding-bottom: 0.3em;
+    border-bottom: 1px solid var(--color-border-muted);
+  }
+  & h2 {
+    font-size: 1.5em;
+    padding-bottom: 0.3em;
+    border-bottom: 1px solid var(--color-border-muted);
+  }
+  & h3 {
+    font-size: 1.25em;
+  }
+  & h4 {
+    font-size: 1em;
+  }
+  & h5 {
+    font-size: 0.875em;
+  }
+  & h6 {
+    font-size: 0.85em;
+    color: var(--color-fg-muted);
+  }
+  & p {
+    margin-top: 0;
+    margin-bottom: 10px;
+  }
+  & blockquote {
+    margin: 0 0 16px;
+    padding: 0 1em;
+    color: var(--color-fg-muted);
+    border-left: 0.25em solid var(--color-border-default);
+  }
+  & blockquote > :first-child {
+    margin-top: 0;
+  }
+  & blockquote > :last-child {
+    margin-bottom: 0;
+  }
+  & ul,
+  & ol {
+    margin-top: 0;
+    margin-bottom: 16px;
+    padding-left: 2em;
+  }
+  & ul ul,
+  & ul ol,
+  & ol ol,
+  & ol ul {
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+  & ol ol,
+  & ul ol {
+    list-style-type: lower-roman;
+  }
+  & ul ul ol,
+  & ul ol ol,
+  & ol ul ol,
+  & ol ol ol {
+    list-style-type: lower-alpha;
+  }
+  & li > p {
+    margin-top: 16px;
+  }
+  & li + li {
+    margin-top: 0.25em;
+  }
+  & dl {
+    padding: 0;
+  }
+  & dt {
+    padding: 0;
+    margin-top: 16px;
+    font-size: 1em;
+    font-style: italic;
+    font-weight: 600;
+  }
+  & dd {
+    padding: 0 16px;
+    margin: 0 0 16px;
+  }
+  & hr {
+    height: 0.25em;
+    padding: 0;
+    margin: 24px 0;
+    background: var(--color-border-default);
+    border: 0;
+  }
+  & img {
+    max-width: 100%;
+    box-sizing: content-box;
+    background-color: transparent;
+  }
+  & figure {
+    margin: 1em 0;
+  }
+  & audio,
+  & video {
+    max-width: 100%;
+  }
+  & table {
+    border-spacing: 0;
+    border-collapse: collapse;
+    display: block;
+    width: max-content;
+    max-width: 100%;
+    overflow: auto;
+    margin-bottom: 16px;
+  }
+  & th {
+    font-weight: 600;
+  }
+  & th,
+  & td {
+    padding: 6px 13px;
+    border: 1px solid var(--color-border-default);
+  }
+  & tr {
+    background: transparent;
+    border-top: 1px solid var(--color-border-muted);
+  }
+  & tr:nth-child(2n) {
+    background: var(--color-canvas-subtle);
+  }
+  & code,
+  & pre,
+  & samp {
+    font-family: Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace;
+    font-size: 12px;
+  }
+  & code {
+    padding: 3px 5px;
+    margin: 0;
+    border-radius: 6px;
+    background: var(--color-neutral-muted);
+  }
+  & pre {
+    position: relative;
+    padding: 16px;
+    margin: 0 0 16px;
+    overflow: auto;
+    line-height: 1.45;
+    border-radius: 6px;
+    direction: ltr;
+    background: #1a1b26;
+    color: #cbd2ea;
+  }
+  & pre code {
+    display: block;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    border: 0;
+    line-height: inherit;
+    white-space: pre;
+    word-break: normal;
+    overflow-x: auto;
+  }
+  & .katex {
+    font-size: 1.21em;
+  }
+  & .katex-display,
+  & .math {
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  & .katex-error {
+    color: var(--color-danger-fg);
+  }
+  & kbd {
+    display: inline-block;
+    padding: 3px 5px;
+    font: 11px monospace;
+    line-height: 10px;
+    color: var(--color-fg-default);
+    vertical-align: middle;
+    background: var(--color-canvas-subtle);
+    border: 1px solid var(--color-border-muted);
+    border-radius: 6px;
+    box-shadow: inset 0 -1px 0 var(--color-border-muted);
+  }
+  & mark {
+    background: var(--color-attention-subtle);
+    color: var(--color-fg-default);
+  }
+  & sub,
+  & sup {
+    font-size: 75%;
+    line-height: 0;
+    position: relative;
+    vertical-align: baseline;
+  }
+  & sub {
+    bottom: -0.25em;
+  }
+  & sup {
+    top: -0.5em;
+  }
+  & details {
+    margin-bottom: 16px;
+  }
+  & summary {
+    display: list-item;
+    cursor: pointer;
+  }
+  & .task-list-item {
+    list-style-type: none;
+  }
+  & .task-list-item-checkbox {
+    margin: 0 0.2em 0.25em -1.4em;
+    vertical-align: middle;
+  }
+  & .footnotes {
+    font-size: 12px;
+    color: var(--color-fg-muted);
+    border-top: 1px solid var(--color-border-default);
+  }
+  & .footnotes ol {
+    padding-left: 16px;
+  }
+  & [data-footnote-ref]::before {
+    content: "[";
+  }
+  & [data-footnote-ref]::after {
+    content: "]";
+  }
+  & .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  & .mermaid {
+    border: var(--border-in-light);
+    margin-bottom: 10px;
+    border-radius: 4px;
+    padding: 10px;
+    background: var(--white);
+  }
+}
+
+[data-exporting="true"] [data-export-control] {
+  display: none !important;
+}
+[data-exporting="true"] [data-code-block] pre {
+  max-height: none !important;
+}
+#dmermaid {
+  display: none;
+}

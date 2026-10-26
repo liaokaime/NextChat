@@ -19,7 +19,7 @@ import { Modal, showToast } from "./ui-lib";
 import { copyToClipboard, downloadAs } from "../utils";
 import { Path, ApiPath } from "@/app/constant";
 import { Loading } from "./home";
-import styles from "./artifacts.module.scss";
+import styles from "./artifacts.styles";
 
 type HTMLPreviewProps = {
   code: string;
@@ -162,7 +162,7 @@ export function ArtifactsShareButton({
         />
       </div>
       {show && (
-        <div className="modal-mask">
+        <div className="modal-mask" data-modal-mask>
           <Modal
             title={Locale.Export.Artifacts.Title}
             onClose={() => setShow(false)}

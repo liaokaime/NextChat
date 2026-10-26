@@ -9,7 +9,7 @@ import {
   type ProviderProtocol,
   type ReasoningLevel,
 } from "../client/providers";
-import styles from "./model-services.module.scss";
+import styles from "./model-services.styles";
 
 type NumericParam = Exclude<keyof ModelParams, "reasoning">;
 

@@ -1,5 +1,5 @@
 /* eslint-disable @next/next/no-img-element */
-import styles from "./ui-lib.module.scss";
+import styles from "./ui-lib.styles";
 import LoadingIcon from "../icons/three-dots.svg";
 import CloseIcon from "../icons/close.svg";
 import EyeIcon from "../icons/eye.svg";
@@ -195,6 +195,7 @@ export function Modal(props: ModalProps) {
 export function showModal(props: ModalProps) {
   const div = document.createElement("div");
   div.className = "modal-mask";
+  div.dataset.modalMask = "true";
   document.body.appendChild(div);
 
   const root = createRoot(div);
@@ -254,7 +255,7 @@ export function showToast(
 
   const root = createRoot(div);
   const close = () => {
-    div.classList.add(styles.hide);
+    div.dataset.state = "closed";
 
     setTimeout(() => {
       root.unmount();
@@ -338,6 +339,7 @@ export function Select(
 export function showConfirm(content: any) {
   const div = document.createElement("div");
   div.className = "modal-mask";
+  div.dataset.modalMask = "true";
   document.body.appendChild(div);
 
   const root = createRoot(div);
@@ -414,6 +416,7 @@ function PromptInput(props: {
 export function showPrompt(content: any, value = "", rows = 3) {
   const div = document.createElement("div");
   div.className = "modal-mask";
+  div.dataset.modalMask = "true";
   document.body.appendChild(div);
 
   const root = createRoot(div);
@@ -593,7 +596,7 @@ export function FullScreen(props: any) {
   }, []);
   return (
     <div ref={ref} style={{ position: "relative" }} {...rest}>
-      <div style={{ position: "absolute", right, top }}>
+      <div style={{ position: "absolute", right, top }} data-export-control>
         <IconButton
           icon={fullScreen ? <MinIcon /> : <MaxIcon />}
           onClick={toggleFullscreen}

@@ -73,7 +73,7 @@ import { Prompt, usePromptStore } from "../store/prompt";
 import Locale from "../locales";
 
 import { IconButton } from "./button";
-import styles from "./chat.module.scss";
+import styles from "./chat.styles";
 
 import {
   List,
@@ -119,7 +119,7 @@ export function SessionConfigModel(props: { onClose: () => void }) {
   const navigate = useNavigate();
 
   return (
-    <div className="modal-mask">
+    <div className="modal-mask" data-modal-mask>
       <Modal
         title={Locale.Context.Edit}
         onClose={() => props.onClose()}
@@ -684,7 +684,7 @@ export function EditMessageModal(props: { onClose: () => void }) {
   const [messages, setMessages] = useState(session.messages.slice());
 
   return (
-    <div className="modal-mask">
+    <div className="modal-mask" data-modal-mask>
       <Modal
         title={Locale.Chat.EditMessage.Title}
         onClose={props.onClose}
@@ -1353,7 +1353,7 @@ function ChatContent() {
       ) {
         event.preventDefault();
         const copyCodeButton =
-          document.querySelectorAll<HTMLElement>(".copy-code-button");
+          document.querySelectorAll<HTMLElement>("[data-copy-code]");
         if (copyCodeButton.length > 0) {
           copyCodeButton[copyCodeButton.length - 1].click();
         }
@@ -1656,6 +1656,8 @@ function ChatContent() {
                                 </summary>
                                 <Markdown
                                   content={message.reasoning}
+                                  mode="streaming"
+                                  isStreaming={!!message.streaming}
                                   loading={false}
                                   fontSize={fontSize}
                                   fontFamily={fontFamily}
@@ -1665,7 +1667,8 @@ function ChatContent() {
                               </details>
                             )}
                             <Markdown
-                              key={message.streaming ? "loading" : "done"}
+                              mode="streaming"
+                              isStreaming={!!message.streaming}
                               content={getMessageTextContent(message)}
                               loading={
                                 (message.preview || message.streaming) &&

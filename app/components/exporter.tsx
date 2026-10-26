@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import { ChatMessage, useAppConfig, useChatStore } from "../store";
 import Locale from "../locales";
-import styles from "./exporter.module.scss";
+import styles from "./exporter.styles";
 import {
   List,
   ListItem,
@@ -43,14 +43,19 @@ import clsx from "clsx";
 import { isTauri } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeFile } from "@tauri-apps/plugin-fs";
+import { waitForMarkdown } from "../utils/markdown";
 
 const Markdown = dynamic(async () => (await import("./markdown")).Markdown, {
-  loading: () => <LoadingIcon />,
+  loading: () => (
+    <div data-render-pending="true">
+      <LoadingIcon />
+    </div>
+  ),
 });
 
 export function ExportMessageModal(props: { onClose: () => void }) {
   return (
-    <div className="modal-mask">
+    <div className="modal-mask" data-modal-mask>
       <Modal
         title={Locale.Export.Title}
         onClose={props.onClose}
@@ -261,6 +266,7 @@ export function MessageExporter() {
 export function RenderExport(props: {
   messages: ChatMessage[];
   onRender: (messages: ChatMessage[]) => void;
+  onError: (error: unknown) => void;
 }) {
   const domRef = useRef<HTMLDivElement>(null);
 
@@ -275,22 +281,42 @@ export function RenderExport(props: {
       return;
     }
 
-    const renderMsgs = messages.map((v, i) => {
-      const [role, _] = v.id.split(":");
-      return {
-        id: i.toString(),
-        role: role as any,
-        content: role === "user" ? (v.textContent ?? "") : v.innerHTML,
-        date: "",
-      };
-    });
-
-    props.onRender(renderMsgs);
+    let cancelled = false;
+    waitForMarkdown(dom)
+      .then(() => {
+        if (cancelled) return;
+        const renderMsgs = messages.map((element, i) => {
+          const role = props.messages[i].role;
+          const clone = element.cloneNode(true) as HTMLElement;
+          clone
+            .querySelectorAll("[data-export-control]")
+            .forEach((control) => control.remove());
+          clone
+            .querySelectorAll<HTMLElement>("[data-code-block] pre")
+            .forEach((code) => {
+              code.style.maxHeight = "none";
+            });
+          return {
+            id: i.toString(),
+            role,
+            content:
+              role === "user" ? (clone.textContent ?? "") : clone.innerHTML,
+            date: "",
+          };
+        });
+        props.onRender(renderMsgs);
+      })
+      .catch((error) => {
+        if (!cancelled) props.onError(error);
+      });
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
-    <div ref={domRef}>
+    <div ref={domRef} data-exporting="true">
       {props.messages.map((m, i) => (
         <div
           key={i}
@@ -402,6 +428,11 @@ export function PreviewActions(props: {
           <RenderExport
             messages={props.messages ?? []}
             onRender={onRenderMsgs}
+            onError={(error) => {
+              setLoading(false);
+              setShouldExport(false);
+              showToast(prettyObject(error));
+            }}
           />
         )}
       </div>
@@ -420,28 +451,27 @@ export function ImagePreviewer(props: {
 
   const previewRef = useRef<HTMLDivElement>(null);
 
-  const copy = () => {
+  const copy = async () => {
     showToast(Locale.Export.Image.Toast);
     const dom = previewRef.current;
     if (!dom) return;
-    toBlob(dom).then((blob) => {
+    try {
+      await waitForMarkdown(dom);
+      const blob = await toBlob(dom);
       if (!blob) return;
-      try {
-        navigator.clipboard
-          .write([
-            new ClipboardItem({
-              "image/png": blob,
-            }),
-          ])
-          .then(() => {
-            showToast(Locale.Copy.Success);
-            refreshPreview();
-          });
-      } catch (e) {
-        console.error("[Copy Image] ", e);
-        showToast(Locale.Copy.Failed);
-      }
-    });
+      await navigator.clipboard
+        .write([
+          new ClipboardItem({
+            "image/png": blob,
+          }),
+        ])
+        .then(() => {
+          showToast(Locale.Copy.Success);
+        });
+    } catch (e) {
+      console.error("[Copy Image] ", e);
+      showToast(Locale.Copy.Failed);
+    }
   };
 
   const isMobile = useMobileScreen();
@@ -454,6 +484,7 @@ export function ImagePreviewer(props: {
     const isApp = getClientConfig()?.isApp;
 
     try {
+      await waitForMarkdown(dom);
       const blob = await toPng(dom);
       if (!blob) return;
 
@@ -490,17 +521,9 @@ export function ImagePreviewer(props: {
         link.download = `${props.topic}.png`;
         link.href = blob;
         link.click();
-        refreshPreview();
       }
     } catch (error) {
       showToast(Locale.Download.Failed);
-    }
-  };
-
-  const refreshPreview = () => {
-    const dom = previewRef.current;
-    if (dom) {
-      dom.innerHTML = dom.innerHTML; // Refresh the content of the preview by resetting its HTML for fix a bug glitching
     }
   };
 
@@ -515,6 +538,7 @@ export function ImagePreviewer(props: {
       <div
         className={clsx(styles["preview-body"], styles["default-theme"])}
         ref={previewRef}
+        data-exporting="true"
       >
         <div className={styles["chat-info"]}>
           <div className={clsx(styles["logo"], "no-dark")}>

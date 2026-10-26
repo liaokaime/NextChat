@@ -53,7 +53,7 @@ import {
 import AddIcon from "../icons/add.svg";
 import DeleteIcon from "../icons/clear.svg";
 import ConnectionIcon from "../icons/connection.svg";
-import styles from "./model-services.module.scss";
+import styles from "./model-services.styles";
 
 type ModelDraft = ProviderModel & { optionsText: string };
 type Draft = {
@@ -606,7 +606,7 @@ export function ModelServices() {
       </section>
       {draft &&
         createPortal(
-          <div className="modal-mask">
+          <div className="modal-mask" data-modal-mask>
             <Modal
               title={selected ? t.Edit : t.New}
               onClose={() => void requestClose()}
@@ -981,7 +981,7 @@ export function ModelServices() {
       {draft &&
         optionsIndex !== undefined &&
         createPortal(
-          <div className="modal-mask">
+          <div className="modal-mask" data-modal-mask>
             <Modal
               title={t.ParamsTitle(
                 draft.models[optionsIndex]?.displayName ||
@@ -1029,7 +1029,7 @@ export function ModelServices() {
       {draft &&
         fetchedModels &&
         createPortal(
-          <div className="modal-mask">
+          <div className="modal-mask" data-modal-mask>
             <Modal
               title={t.SelectModels}
               onClose={() => {
@@ -1105,7 +1105,7 @@ export function ModelServices() {
       {draft?.kind === "sdk" &&
         platformPicker &&
         createPortal(
-          <div className={`modal-mask ${styles.platformMask}`}>
+          <div className={`modal-mask ${styles.platformMask}`} data-modal-mask>
             <ProviderPlatformPicker
               onSelect={selectPlatform}
               onClose={() => setPlatformPicker(false)}

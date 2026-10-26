@@ -6,7 +6,7 @@ import { Avatar } from "./emoji";
 import { MaskAvatar } from "./mask";
 import Locale from "../locales";
 
-import styles from "./message-selector.module.scss";
+import styles from "./message-selector.styles";
 import { getMessageTextContent } from "../utils";
 import clsx from "clsx";
 

@@ -6,7 +6,7 @@ import {
 import Locale from "../locales";
 import { IconButton } from "./button";
 import { Modal } from "./ui-lib";
-import styles from "./model-services.module.scss";
+import styles from "./model-services.styles";
 
 export function ProviderPlatformPicker(props: {
   onSelect: (platform: ProviderPlatform) => void;

@@ -1,7 +1,7 @@
 import { IconButton } from "./button";
 import { ErrorBoundary } from "./error";
 
-import styles from "./mask.module.scss";
+import styles from "./mask.styles";
 
 import DownloadIcon from "../icons/download.svg";
 import UploadIcon from "../icons/upload.svg";
@@ -36,7 +36,7 @@ import { Avatar, AvatarPicker } from "./emoji";
 import Locale, { AllLangs, ALL_LANG_OPTIONS, Lang } from "../locales";
 import { useNavigate } from "react-router-dom";
 
-import chatStyle from "./chat.module.scss";
+import chatStyle from "./chat.styles";
 import { useState } from "react";
 import {
   copyToClipboard,
@@ -635,7 +635,7 @@ export function MaskPage() {
       </div>
 
       {editingMask && (
-        <div className="modal-mask">
+        <div className="modal-mask" data-modal-mask>
           <Modal
             title={Locale.Mask.EditModal.Title(editingMask?.builtin)}
             onClose={closeMaskModal}

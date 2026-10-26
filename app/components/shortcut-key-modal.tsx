@@ -2,7 +2,7 @@ import Locale from "../locales";
 import ConfirmIcon from "../icons/confirm.svg";
 import { IconButton } from "./button";
 import { Modal } from "./ui-lib";
-import styles from "./shortcut-key-modal.module.scss";
+import styles from "./shortcut-key-modal.styles";
 
 export function ShortcutKeyModal(props: { onClose: () => void }) {
   const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
@@ -32,7 +32,7 @@ export function ShortcutKeyModal(props: { onClose: () => void }) {
     },
   ];
   return (
-    <div className="modal-mask">
+    <div className="modal-mask" data-modal-mask>
       <Modal
         title={Locale.Chat.ShortcutKey.Title}
         onClose={props.onClose}
