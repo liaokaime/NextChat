@@ -1,4 +1,3 @@
-import webpack from "webpack";
 import { fileURLToPath } from "node:url";
 
 const mode = process.env.BUILD_MODE ?? "standalone";
@@ -9,7 +8,7 @@ console.log("[Next] build with chunk: ", !disableChunk);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  webpack(config) {
+  webpack(config, { webpack }) {
     if (mode === "export") {
       config.plugins.push(
         new webpack.NormalModuleReplacementPlugin(

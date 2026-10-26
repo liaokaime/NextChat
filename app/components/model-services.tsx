@@ -16,7 +16,6 @@ import { collectModels } from "../utils/model";
 import {
   connectionViews,
   legacyFields,
-  legacyKey,
   referencesConnection,
   sdkKey,
   type ConnectionView,
@@ -33,12 +32,14 @@ import {
   type ProviderProtocol,
 } from "../client/providers";
 import { fetchProviderModels } from "../client/provider-http";
+import type { ProviderPlatform } from "../client/provider-platforms";
 import { getClientApi, type LLMModel } from "../client/api";
 import { testConnection } from "../client/connection-test";
 import { fetch } from "../utils/stream";
 import { installUnsavedNavigation } from "../utils/unsaved-navigation";
 import { LegacyProviderFields } from "./legacy-provider-fields";
 import { ModelParamsEditor } from "./model-params";
+import { ProviderPlatformPicker } from "./provider-platform-picker";
 import { IconButton } from "./button";
 import {
   List,
@@ -158,7 +159,11 @@ export function ModelServices() {
   const closing = useRef(false);
   const [draft, setDraft] = useState<Draft>();
   const [original, setOriginal] = useState("");
-  const [templates, setTemplates] = useState(false);
+  const [platformPicker, setPlatformPicker] = useState(false);
+  const [platformSelection, setPlatformSelection] = useState<{
+    platform: ProviderPlatform;
+    baseUrl: string;
+  }>();
   const [optionsIndex, setOptionsIndex] = useState<number>();
   const [optionsParams, setOptionsParams] = useState<ModelParams>({});
   const [optionsText, setOptionsText] = useState("");
@@ -246,6 +251,8 @@ export function ModelServices() {
     setSelectedKey(view.key);
     setError("");
     setFetching(false);
+    setPlatformPicker(false);
+    setPlatformSelection(undefined);
   };
   useEffect(() => {
     if (!access._hasHydrated || !config._hasHydrated) return;
@@ -307,12 +314,14 @@ export function ModelServices() {
     setFetchedModels(undefined);
     setFetchedSelection({});
     setFetchedSearch("");
+    setPlatformPicker(false);
+    setPlatformSelection(undefined);
   };
   const requestClose = async () => {
     if (closing.current) return;
     closing.current = true;
     try {
-      if (!dirtyRef.current || !original || (await showConfirm(t.Unsaved)))
+      if (!selected || !dirtyRef.current || (await showConfirm(t.Unsaved)))
         closeEditor();
     } finally {
       closing.current = false;
@@ -386,61 +395,25 @@ export function ModelServices() {
     setFetching(false);
     setDraft(next);
     setSelectedKey(next.key);
-    setOriginal("");
-    setTemplates(false);
+    setOriginal(JSON.stringify(next));
+    setPlatformPicker(false);
+    setPlatformSelection(undefined);
     setError("");
   };
-  const beginSdk = (
-    name: string,
-    protocol: ProviderProtocol,
-    baseUrl: string,
-    modelIds: string[] = [],
-  ) => {
+  const beginSdk = () => {
     const id = nanoid();
-    const nameCount = views.filter(
-      (v) => v.name === name || v.name.startsWith(`${name} (`),
-    ).length;
     newDraft({
       key: sdkKey(id),
       kind: "sdk",
       id,
-      name: nameCount ? `${name} (${nameCount + 1})` : name,
+      name: "",
       enabled: true,
-      protocol,
-      baseUrl,
+      protocol: "openai-chat",
+      baseUrl: "",
       apiKey: "",
-      models: modelIds.map((id) => newModelDraft(createProviderModel(id))),
+      models: [],
       values: {},
     });
-  };
-  const beginLegacy = (service: ServiceProvider) => {
-    const existing = views.find(
-      (v) => v.kind === "legacy" && v.service === service,
-    );
-    if (existing) {
-      load(existing);
-      setTemplates(false);
-      return;
-    }
-    const view: ConnectionView = {
-      key: legacyKey(service),
-      kind: "legacy",
-      service,
-      name: service,
-      baseUrl: "",
-      enabled: true,
-      models: legacyModels
-        .filter(
-          (m) =>
-            m.provider?.providerName.toLowerCase() === service.toLowerCase(),
-        )
-        .map((m) => ({
-          ...createProviderModel(m.name),
-          displayName: m.displayName,
-          enabled: m.available,
-        })),
-    };
-    newDraft(makeDraft(view));
   };
   useEffect(() => {
     testAbort.current?.abort();
@@ -458,7 +431,7 @@ export function ModelServices() {
     [],
   );
   const runTest = async () => {
-    if (!draft || dirty || !testModel || !draft.enabled) return;
+    if (!draft || !selected || dirty || !testModel || !draft.enabled) return;
     const controller = new AbortController();
     testAbort.current = controller;
     setTest({ status: "running" });
@@ -541,7 +514,28 @@ export function ModelServices() {
       name: `${draft.name} ${t.CopySuffix}`,
     });
   };
-  const addConnection = () => setTemplates(true);
+  const selectPlatform = (platform: ProviderPlatform) => {
+    const baseUrl = platform.baseUrls[platform.defaultProtocol];
+    if (!draft || !baseUrl) return;
+    edit((next) => {
+      next.name = platform.name;
+      next.protocol = platform.defaultProtocol;
+      next.baseUrl = baseUrl;
+    });
+    setPlatformSelection({ platform, baseUrl });
+    setPlatformPicker(false);
+  };
+  const changeProtocol = (protocol: ProviderProtocol) => {
+    const baseUrl = platformSelection?.platform.baseUrls[protocol];
+    const followsPlatform =
+      !!platformSelection && draft?.baseUrl === platformSelection.baseUrl;
+    edit((next) => {
+      next.protocol = protocol;
+      if (followsPlatform && baseUrl) next.baseUrl = baseUrl;
+    });
+    if (followsPlatform && baseUrl && platformSelection)
+      setPlatformSelection({ ...platformSelection, baseUrl });
+  };
   const openOptions = (index: number) => {
     setOptionsIndex(index);
     setOptionsParams(draft?.models[index]?.params || {});
@@ -566,12 +560,14 @@ export function ModelServices() {
             </h2>
             <p className={styles.subtitle}>{t.Subtitle}</p>
           </div>
-          <IconButton
-            text={t.Add}
-            icon={<AddIcon />}
-            bordered
-            onClick={addConnection}
-          />
+          <div className={styles.actions}>
+            <IconButton
+              text={t.Add}
+              icon={<AddIcon />}
+              bordered
+              onClick={beginSdk}
+            />
+          </div>
         </div>
         <div className={styles.connections} aria-label={t.Connections}>
           {!views.length && <p className={styles.empty}>{t.Empty}</p>}
@@ -613,7 +609,7 @@ export function ModelServices() {
         createPortal(
           <div className="modal-mask">
             <Modal
-              title={original ? t.Edit : t.New}
+              title={selected ? t.Edit : t.New}
               onClose={() => void requestClose()}
               footer={
                 <div className={styles.feedback} aria-live="polite">
@@ -654,25 +650,36 @@ export function ModelServices() {
                   className={`${styles.footerButton} ${styles.footerActionButton}`}
                   text={t.Save}
                   type="primary"
-                  disabled={!dirty}
+                  disabled={!dirty && !!selected}
                   onClick={() => void save()}
                 />,
               ]}
             >
               <div className={styles.editor}>
                 <List>
-                  <ListItem title={t.Name}>
-                    <input
-                      type="text"
-                      aria-label={t.Name}
-                      value={draft.name}
-                      onChange={(e) => {
-                        const value = e.currentTarget.value;
-                        edit((next) => {
-                          next.name = value;
-                        });
-                      }}
-                    />
+                  <ListItem title={t.Name} className={styles.nameRow}>
+                    <div className={styles.nameControls}>
+                      {draft.kind === "sdk" && (
+                        <IconButton
+                          text={t.ChoosePlatform}
+                          bordered
+                          onClick={() => setPlatformPicker(true)}
+                        />
+                      )}
+                      <input
+                        type="text"
+                        className={styles.wide}
+                        aria-label={t.Name}
+                        placeholder={t.NamePlaceholder}
+                        value={draft.name}
+                        onChange={(e) => {
+                          const value = e.currentTarget.value;
+                          edit((next) => {
+                            next.name = value;
+                          });
+                        }}
+                      />
+                    </div>
                   </ListItem>
                   {draft.kind === "sdk" && (
                     <ListItem title={t.Protocol}>
@@ -682,9 +689,7 @@ export function ModelServices() {
                         onChange={(e) => {
                           const value = e.currentTarget
                             .value as ProviderProtocol;
-                          edit((next) => {
-                            next.protocol = value;
-                          });
+                          changeProtocol(value);
                         }}
                       >
                         {Object.entries(PROVIDER_PROTOCOLS).map(
@@ -717,23 +722,36 @@ export function ModelServices() {
                         subTitle={t.EndpointHint}
                         vertical
                       >
-                        <input
-                          type="text"
-                          className={styles.wide}
-                          aria-label={t.Endpoint}
-                          placeholder={PROTOCOL_BASE_URLS[draft.protocol]}
-                          value={draft.baseUrl}
-                          onChange={(e) => {
-                            const value = e.currentTarget.value;
-                            edit((next) => {
-                              next.baseUrl = value;
-                            });
-                          }}
-                        />
+                        <div className={styles.endpointField}>
+                          <input
+                            type="text"
+                            className={styles.wide}
+                            aria-label={t.Endpoint}
+                            placeholder={PROTOCOL_BASE_URLS[draft.protocol]}
+                            value={draft.baseUrl}
+                            onChange={(e) => {
+                              const value = e.currentTarget.value;
+                              if (value !== platformSelection?.baseUrl)
+                                setPlatformSelection(undefined);
+                              edit((next) => {
+                                next.baseUrl = value;
+                              });
+                            }}
+                          />
+                          {platformSelection &&
+                            !platformSelection.platform.baseUrls[
+                              draft.protocol
+                            ] && (
+                              <p className={styles.hint} role="status">
+                                {t.PlatformProtocolHint}
+                              </p>
+                            )}
+                        </div>
                       </ListItem>
                       <ListItem title={t.Key}>
                         <PasswordInput
                           aria-label={t.Key}
+                          placeholder={t.KeyPlaceholder}
                           value={draft.apiKey}
                           onChange={(e) => {
                             const value = e.currentTarget.value;
@@ -783,8 +801,8 @@ export function ModelServices() {
                             {test.status === "running"
                               ? t.Testing
                               : test.status === "success"
-                              ? t.Success
-                              : `${t.Failed}: ${test.message}`}
+                                ? t.Success
+                                : `${t.Failed}: ${test.message}`}
                           </p>
                         )}
                         <IconButton
@@ -792,6 +810,7 @@ export function ModelServices() {
                           aria={test.status === "running" ? t.Testing : t.Test}
                           text={test.status === "running" ? t.Testing : t.Test}
                           disabled={
+                            !selected ||
                             dirty ||
                             !testModel ||
                             !draft.enabled ||
@@ -802,7 +821,9 @@ export function ModelServices() {
                         <Select
                           aria-label={t.TestModel}
                           value={testModel}
-                          disabled={dirty || test.status === "running"}
+                          disabled={
+                            !selected || dirty || test.status === "running"
+                          }
                           onChange={(e) => setTestModel(e.currentTarget.value)}
                         >
                           <option value="">{t.TestModel}</option>
@@ -826,7 +847,9 @@ export function ModelServices() {
                       icon={<AddIcon />}
                       onClick={() => {
                         edit((next) => {
-                          next.models.push(newModelDraft(createProviderModel("")));
+                          next.models.push(
+                            newModelDraft(createProviderModel("")),
+                          );
                         });
                       }}
                     />
@@ -1042,7 +1065,9 @@ export function ModelServices() {
                   aria-label={t.SearchModels}
                   placeholder={t.SearchModels}
                   value={fetchedSearch}
-                  onChange={(event) => setFetchedSearch(event.currentTarget.value)}
+                  onChange={(event) =>
+                    setFetchedSearch(event.currentTarget.value)
+                  }
                 />
                 {visibleFetchedModels.length ? (
                   visibleFetchedModels.map((model) => {
@@ -1068,7 +1093,9 @@ export function ModelServices() {
                   })
                 ) : (
                   <p className={styles.empty}>
-                    {fetchedModels.length ? t.NoMatchingModels : t.NoFetchedModels}
+                    {fetchedModels.length
+                      ? t.NoMatchingModels
+                      : t.NoFetchedModels}
                   </p>
                 )}
               </div>
@@ -1076,89 +1103,14 @@ export function ModelServices() {
           </div>,
           document.body,
         )}
-      {templates &&
+      {draft?.kind === "sdk" &&
+        platformPicker &&
         createPortal(
-          <div className="modal-mask">
-            <Modal
-              title={t.Template}
-              onClose={() => setTemplates(false)}
-              actions={[
-                <IconButton
-                  key="cancel"
-                  className={styles.footerButton}
-                  text={t.Cancel}
-                  onClick={() => setTemplates(false)}
-                />,
-              ]}
-            >
-              <div className={styles.templates}>
-                <button
-                  onClick={() =>
-                    beginSdk(
-                      "OpenAI",
-                      "openai-chat",
-                      PROTOCOL_BASE_URLS["openai-chat"],
-                    )
-                  }
-                >
-                  OpenAI
-                </button>
-                <button
-                  onClick={() =>
-                    beginSdk(
-                      "DeepSeek",
-                      "openai-chat",
-                      "https://api.deepseek.com",
-                      ["deepseek-flash", "deepseek-v4-pro"],
-                    )
-                  }
-                >
-                  DeepSeek
-                </button>
-                <button
-                  onClick={() =>
-                    beginSdk(
-                      "Anthropic",
-                      "anthropic",
-                      PROTOCOL_BASE_URLS.anthropic,
-                    )
-                  }
-                >
-                  Anthropic
-                </button>
-                <button
-                  onClick={() =>
-                    beginSdk("Gemini", "google", PROTOCOL_BASE_URLS.google)
-                  }
-                >
-                  Gemini
-                </button>
-                <button onClick={() => beginSdk(t.Relay, "openai-chat", "")}>
-                  {t.Relay}
-                </button>
-                <button
-                  onClick={() =>
-                    beginSdk(
-                      t.Local,
-                      "openai-chat",
-                      "http://localhost:11434/v1",
-                    )
-                  }
-                >
-                  {t.Local}
-                </button>
-              </div>
-              <details className={styles.advanced}>
-                <summary>{t.Other}</summary>
-                <div className={styles.templates}>
-                  {Object.values(ServiceProvider).map((service) => (
-                    <button key={service} onClick={() => beginLegacy(service)}>
-                      {service}
-                    </button>
-                  ))}
-                </div>
-              </details>
-            </Modal>
+          <div className={`modal-mask ${styles.platformMask}`}>
+            <ProviderPlatformPicker
+              onSelect={selectPlatform}
+              onClose={() => setPlatformPicker(false)}
+            />
           </div>,
           document.body,
         )}
