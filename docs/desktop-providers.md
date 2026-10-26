@@ -65,7 +65,7 @@ API 返回的独立 reasoning/thinking 内容显示在回复的「思考过程�
 
 ## 本地构建
 
-使用 Node.js 24+、Yarn 1、Rust/MSVC 与 Windows WebView2 构建环境：
+使用 Node.js 24+、Yarn 1、MSVC 与 Windows WebView2 构建环境。安装 rustup 后，项目的 `rust-toolchain.toml` 会自动选择 Rust 1.99.1。Tauri 2 的其他平台依赖、权限设计、验证结果及回退步骤见 [Tauri 升级记录](tauri-upgrade.md)。
 
 ```powershell
 yarn install --frozen-lockfile
@@ -74,4 +74,4 @@ yarn test:ci --runInBand
 yarn app:build --bundles nsis
 ```
 
-安装包输出到 `src-tauri/target/release/bundle/nsis/`，可执行文件为 `src-tauri/target/release/nextchat.exe`。`yarn export` 可单独验证桌面静态页面构建。
+安装包输出到 `src-tauri/target/release/bundle/nsis/`，可执行文件为 `src-tauri/target/release/NextChat.exe`。`app:build` 包装脚本自动向 Cargo 传递 `--locked`；同时构建 MSI 可使用 `yarn app:build --bundles 'nsis,msi'`。`yarn export` 可单独验证桌面静态页面构建。

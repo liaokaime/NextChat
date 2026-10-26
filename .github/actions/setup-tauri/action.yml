@@ -1,0 +1,30 @@
+name: Set up desktop build
+description: Install the pinned Node, Rust and native dependencies for Tauri 2
+inputs:
+  rust-targets:
+    description: Comma separated Rust compilation targets
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v7.1.0
+      with:
+        node-version: 24
+        cache: yarn
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: 1.99.1
+        components: rustfmt, clippy
+        targets: ${{ inputs.rust-targets }}
+    - uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: src-tauri -> target
+    - name: Install Linux dependencies
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential curl wget file libgtk-3-dev libwebkit2gtk-4.1-dev libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+    - name: Install frontend dependencies
+      shell: bash
+      run: yarn install --frozen-lockfile

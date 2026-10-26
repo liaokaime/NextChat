@@ -1,0 +1,85 @@
+name: Check Desktop App
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "app/**"
+      - "public/**"
+      - "src-tauri/**"
+      - "test/**"
+      - ".github/actions/setup-tauri/**"
+      - ".github/workflows/tauri-check.yml"
+      - ".github/workflows/app.yml"
+      - "package.json"
+      - "yarn.lock"
+      - "rust-toolchain.toml"
+      - "scripts/build-app.cjs"
+      - "next.config.mjs"
+      - "tsconfig.json"
+      - "jest*"
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+      - "public/**"
+      - "src-tauri/**"
+      - "test/**"
+      - ".github/actions/setup-tauri/**"
+      - ".github/workflows/tauri-check.yml"
+      - ".github/workflows/app.yml"
+      - "package.json"
+      - "yarn.lock"
+      - "rust-toolchain.toml"
+      - "scripts/build-app.cjs"
+      - "next.config.mjs"
+      - "tsconfig.json"
+      - "jest*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            rust_targets: x86_64-unknown-linux-gnu
+            args: -- --locked
+          - os: macos-latest
+            rust_targets: x86_64-apple-darwin,aarch64-apple-darwin
+            args: --target universal-apple-darwin -- --locked
+          - os: windows-latest
+            rust_targets: x86_64-pc-windows-msvc
+            args: -- --locked
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: ./.github/actions/setup-tauri
+        with:
+          rust-targets: ${{ matrix.rust_targets }}
+      - name: Check frontend
+        if: runner.os == 'Linux'
+        run: |
+          yarn typecheck
+          yarn test:ci --runInBand
+      - name: Check Rust
+        run: |
+          cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
+          cargo check --manifest-path src-tauri/Cargo.toml --locked --all-targets
+          cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings
+          cargo test --manifest-path src-tauri/Cargo.toml --locked
+      - name: Build unsigned validation packages
+        uses: tauri-apps/tauri-action@action-v1.0.0
+        with:
+          tauriScript: node node_modules/@tauri-apps/cli/tauri.js
+          args: ${{ matrix.args }}
+          uploadWorkflowArtifacts: true
+          uploadUpdaterJson: false
+          uploadUpdaterSignatures: false

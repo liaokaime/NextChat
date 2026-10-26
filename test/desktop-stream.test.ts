@@ -1,6 +1,27 @@
 /** @jest-environment node */
 import { jest } from "@jest/globals";
-import { fetch as desktopFetch } from "../app/utils/stream";
+
+const invokeMock =
+  jest.fn<
+    (command: string, args?: Record<string, unknown>) => Promise<unknown>
+  >();
+const listenMock =
+  jest.fn<
+    (
+      event: string,
+      callback: (event: { payload: any }) => void,
+      options?: unknown,
+    ) => Promise<() => void>
+  >();
+const isTauriMock = jest.fn(() => false);
+jest.unstable_mockModule("@tauri-apps/api/core", () => ({
+  invoke: invokeMock,
+  isTauri: isTauriMock,
+}));
+jest.unstable_mockModule("@tauri-apps/api/event", () => ({
+  listen: listenMock,
+}));
+const { fetch: desktopFetch } = await import("../app/utils/stream");
 
 let handler: (event: { payload: any }) => void;
 let unlisten: ReturnType<typeof jest.fn>;
@@ -8,22 +29,21 @@ function bridge(
   invoke: (command: string, args?: Record<string, unknown>) => Promise<unknown>,
 ) {
   unlisten = jest.fn();
+  isTauriMock.mockReturnValue(true);
+  invokeMock.mockImplementation(invoke);
+  listenMock.mockImplementation(async (_name, callback) => {
+    handler = callback;
+    return unlisten;
+  });
   Object.defineProperty(globalThis, "window", {
     configurable: true,
-    value: {
-      __TAURI__: {
-        invoke,
-        event: {
-          listen: async (_name: string, callback: typeof handler) => {
-            handler = callback;
-            return unlisten;
-          },
-        },
-      },
-    },
+    value: {},
   });
 }
 afterEach(() => {
+  invokeMock.mockReset();
+  listenMock.mockReset();
+  isTauriMock.mockReset().mockReturnValue(false);
   Reflect.deleteProperty(globalThis, "window");
 });
 
@@ -54,9 +74,51 @@ test("subscribes before dispatch, keeps early bytes and preserves complete error
     }),
   );
   expect(response.status).toBe(401);
+  expect(listenMock).toHaveBeenCalledWith(
+    "stream-response",
+    expect.any(Function),
+    { target: { kind: "WebviewWindow", label: "main" } },
+  );
   expect(await response.text()).toBe(body);
   expect(unlisten).toHaveBeenCalledTimes(1);
 });
+
+test("web and server calls use native fetch without any desktop IPC", async () => {
+  const options = { headers: { "X-Test": "web" } };
+  await desktopFetch("https://example.test", options);
+  expect(globalThis.fetch).toHaveBeenCalledWith(
+    "https://example.test",
+    options,
+  );
+  expect(invokeMock).not.toHaveBeenCalled();
+  expect(listenMock).not.toHaveBeenCalled();
+});
+
+test("cancelling the body stops Rust and removes the listener exactly once", async () => {
+  bridge(async () => ({ status: 200, status_text: "OK", headers: {} }));
+  const response = await desktopFetch("https://example.test");
+  await response.body!.cancel();
+  expect(invokeMock.mock.calls.map(([command]) => command)).toEqual([
+    "stream_fetch",
+    "cancel_stream",
+  ]);
+  expect(unlisten).toHaveBeenCalledTimes(1);
+});
+
+test.each([204, 205, 304])(
+  "bodyless HTTP %i responses release their native request",
+  async (status) => {
+    bridge(async () => ({ status, status_text: "", headers: {} }));
+    const response = await desktopFetch("https://example.test");
+    expect(response.body).toBeNull();
+    expect(response.status).toBe(status);
+    expect(unlisten).toHaveBeenCalledTimes(1);
+    expect(invokeMock).toHaveBeenCalledWith(
+      "cancel_stream",
+      expect.any(Object),
+    );
+  },
+);
 
 test("abort before response headers cancels the actual Rust request and rejects promptly", async () => {
   const calls: string[] = [];
@@ -85,6 +147,33 @@ test("stream errors propagate to the reader and release the listener", async () 
   const reading = response.text();
   handler({ payload: { request_id: id, error: "socket closed" } });
   await expect(reading).rejects.toThrow("socket closed");
+  expect(unlisten).toHaveBeenCalledTimes(1);
+});
+
+test("concurrent requests keep their response bytes isolated", async () => {
+  bridge(async () => ({ status: 200, status_text: "OK", headers: {} }));
+  const [first, second] = await Promise.all([
+    desktopFetch("https://first.test"),
+    desktopFetch("https://second.test"),
+  ]);
+  const ids = invokeMock.mock.calls.map(([, args]) => args!.requestId);
+  for (const [, callback] of listenMock.mock.calls) {
+    for (const [index, request_id] of ids.entries()) {
+      callback({ payload: { request_id, chunk: [65 + index] } });
+      callback({ payload: { request_id, status: 0 } });
+    }
+  }
+  expect(await first.text()).toBe("A");
+  expect(await second.text()).toBe("B");
+});
+
+test("an IPC failure rejects the request and releases its listener", async () => {
+  bridge(async () => {
+    throw new Error("command denied");
+  });
+  await expect(desktopFetch("https://example.test")).rejects.toThrow(
+    "command denied",
+  );
   expect(unlisten).toHaveBeenCalledTimes(1);
 });
 

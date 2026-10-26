@@ -9,6 +9,10 @@ import {
 import { VISION_MODEL_REGEXES, EXCLUDE_VISION_MODEL_REGEXES } from "./constant";
 import { useAccessStore } from "./store";
 import { ModelSize } from "./typing";
+import { isTauri } from "@tauri-apps/api/core";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { save } from "@tauri-apps/plugin-dialog";
+import { writeTextFile } from "@tauri-apps/plugin-fs";
 
 export function trimTopic(topic: string) {
   // Fix an issue where double quotes still show in the Indonesian language
@@ -24,8 +28,8 @@ export function trimTopic(topic: string) {
 
 export async function copyToClipboard(text: string) {
   try {
-    if (window.__TAURI__) {
-      window.__TAURI__.writeText(text);
+    if (isTauri()) {
+      await writeText(text);
     } else {
       await navigator.clipboard.writeText(text);
     }
@@ -38,8 +42,8 @@ export async function copyToClipboard(text: string) {
     textArea.focus();
     textArea.select();
     try {
-      document.execCommand("copy");
-      showToast(Locale.Copy.Success);
+      const copied = document.execCommand("copy");
+      showToast(copied ? Locale.Copy.Success : Locale.Copy.Failed);
     } catch (error) {
       showToast(Locale.Copy.Failed);
     }
@@ -48,29 +52,29 @@ export async function copyToClipboard(text: string) {
 }
 
 export async function downloadAs(text: string, filename: string) {
-  if (window.__TAURI__) {
-    const result = await window.__TAURI__.dialog.save({
-      defaultPath: `${filename}`,
-      filters: [
-        {
-          name: `${filename.split(".").pop()} files`,
-          extensions: [`${filename.split(".").pop()}`],
-        },
-        {
-          name: "All Files",
-          extensions: ["*"],
-        },
-      ],
-    });
+  if (isTauri()) {
+    try {
+      const result = await save({
+        defaultPath: `${filename}`,
+        filters: [
+          {
+            name: `${filename.split(".").pop()} files`,
+            extensions: [`${filename.split(".").pop()}`],
+          },
+          {
+            name: "All Files",
+            extensions: ["*"],
+          },
+        ],
+      });
 
-    if (result !== null) {
-      try {
-        await window.__TAURI__.fs.writeTextFile(result, text);
+      if (result !== null) {
+        await writeTextFile(result, text);
         showToast(Locale.Download.Success);
-      } catch (error) {
+      } else {
         showToast(Locale.Download.Failed);
       }
-    } else {
+    } catch (error) {
       showToast(Locale.Download.Failed);
     }
   } else {

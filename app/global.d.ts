@@ -9,29 +9,3 @@ declare module "*.scss" {
 }
 
 declare module "*.svg";
-
-declare interface Window {
-  __TAURI__?: {
-    event: {
-      listen<T>(
-        event: string,
-        handler: (event: { payload: T }) => void,
-      ): Promise<() => void>;
-    };
-    writeText(text: string): Promise<void>;
-    invoke(command: string, payload?: Record<string, unknown>): Promise<any>;
-    dialog: {
-      save(options?: Record<string, unknown>): Promise<string | null>;
-    };
-    fs: {
-      writeBinaryFile(path: string, data: Uint8Array): Promise<void>;
-      writeTextFile(path: string, data: string): Promise<void>;
-    };
-    http: {
-      fetch<T>(
-        url: string,
-        options?: Record<string, unknown>,
-      ): Promise<Response<T>>;
-    };
-  };
-}

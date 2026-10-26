@@ -11,6 +11,7 @@ use std::{
     sync::{Arc, Mutex},
     time::Duration,
 };
+use tauri::{Emitter, EventTarget};
 
 #[derive(Clone, Default)]
 pub struct Requests(Arc<Mutex<HashMap<String, AbortHandle>>>);
@@ -42,8 +43,8 @@ pub fn cancel_stream(request_id: String, requests: tauri::State<'_, Requests>) {
 }
 
 #[tauri::command]
-pub async fn stream_fetch(
-    window: tauri::Window,
+pub async fn stream_fetch<R: tauri::Runtime>(
+    window: tauri::WebviewWindow<R>,
     requests: tauri::State<'_, Requests>,
     request_id: String,
     method: String,
@@ -59,6 +60,7 @@ pub async fn stream_fetch(
         );
     }
     let client = Client::builder()
+        .use_native_tls()
         .redirect(reqwest::redirect::Policy::limited(3))
         .connect_timeout(Duration::from_secs(30))
         .build()
@@ -120,7 +122,8 @@ pub async fn stream_fetch(
                         error: None,
                     },
                     Err(error) => {
-                        let _ = window.emit(
+                        let _ = window.emit_to(
+                            EventTarget::webview_window(window.label()),
                             "stream-response",
                             StreamEvent {
                                 request_id: id.clone(),
@@ -132,11 +135,19 @@ pub async fn stream_fetch(
                         return;
                     }
                 };
-                if window.emit("stream-response", event).is_err() {
+                if window
+                    .emit_to(
+                        EventTarget::webview_window(window.label()),
+                        "stream-response",
+                        event,
+                    )
+                    .is_err()
+                {
                     return;
                 }
             }
-            let _ = window.emit(
+            let _ = window.emit_to(
+                EventTarget::webview_window(window.label()),
                 "stream-response",
                 StreamEvent {
                     request_id: id,
