@@ -53,12 +53,6 @@
 
 ![Github iOS Image](https://github.com/user-attachments/assets/e0aa334f-4c13-4dc9-8310-e3b09fa4b9f3)
 
-## 🫣 NextChat, MCP 지원!
-
-> 빌드 전 환경 변수(env) `ENABLE_MCP=true` 설정 필요
-
-<img src="./docs/images/mcp-market.png" alt="NextChat MCP Market" />
-
 ## 엔터프라이즈 버전
 
 회사 내부 시스템에 맞춘 프라이빗 배포 및 맞춤형 커스터마이징 지원:
@@ -361,11 +355,6 @@ Stability API 키입니다.
 
 Stability API URL을 커스터마이징합니다.
 
-### `ENABLE_MCP` (선택 사항)
-
-MCP (Model Context Protocol) 기능을 활성화합니다. 보안을 위해 MCP를 사용할 때는
-`CODE`도 설정해야 하며 모든 MCP Server Action이 이 접근 코드를 확인합니다.
-
 ### `SILICONFLOW_API_KEY` (선택 사항)
 
 SiliconFlow API 키입니다.
@@ -436,16 +425,6 @@ docker run -d -p 3000:3000 \
 
 ```shell
 -e PROXY_URL="http://127.0.0.1:7890 user pass"
-```
-
-MCP를 활성화하려면:
-
-```
-docker run -d -p 3000:3000 \
-   -e OPENAI_API_KEY=sk-xxxx \
-   -e CODE=your-password \
-   -e ENABLE_MCP=true \
-   yidadaa/chatgpt-next-web
 ```
 
 ### 로컬 배포

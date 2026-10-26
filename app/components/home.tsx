@@ -34,7 +34,6 @@ import { installBrowserNavigationGuard } from "../utils/unsaved-navigation";
 import { useChatStore } from "../store/chat";
 import { useMaskStore } from "../store/mask";
 import clsx from "clsx";
-import { initializeMcpSystem, isMcpEnabled } from "../mcp/actions";
 
 export function Loading(props: { noLogo?: boolean }) {
   return (
@@ -64,13 +63,6 @@ const NewChat = dynamic(async () => (await import("./new-chat")).NewChat, {
 const MaskPage = dynamic(async () => (await import("./mask")).MaskPage, {
   loading: () => <Loading noLogo />,
 });
-
-const McpMarketPage = dynamic(
-  async () => (await import("./mcp-market")).McpMarketPage,
-  {
-    loading: () => <Loading noLogo />,
-  },
-);
 
 export function useSwitchTheme() {
   const config = useAppConfig();
@@ -198,7 +190,6 @@ function Screen() {
                 }
               />
             )}
-            <Route path={Path.McpMarket} element={<McpMarketPage />} />
             <Route path="*" element={<Chat />} />
           </Routes>
         </WindowContent>
@@ -267,20 +258,6 @@ export function Home() {
   useEffect(() => {
     console.log("[Config] got config from build time", getClientConfig());
     useAccessStore.getState().fetch();
-
-    const initMcp = async () => {
-      try {
-        const enabled = await isMcpEnabled();
-        if (enabled) {
-          console.log("[MCP] initializing...");
-          await initializeMcpSystem(useAccessStore.getState().accessCode);
-          console.log("[MCP] initialized");
-        }
-      } catch (err) {
-        console.error("[MCP] failed to initialize:", err);
-      }
-    };
-    initMcp();
   }, []);
 
   if (!useHasHydrated()) {

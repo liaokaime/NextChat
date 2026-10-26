@@ -17,8 +17,9 @@ import { handle as ai302Handler } from "../../302ai";
 
 async function handle(
   req: NextRequest,
-  { params }: { params: { provider: string; path: string[] } },
+  context: { params: Promise<{ provider: string; path: string[] }> },
 ) {
+  const params = await context.params;
   const apiPath = `/api/${params.provider}`;
   console.log(`[${params.provider} Route] params `, params);
   switch (apiPath) {

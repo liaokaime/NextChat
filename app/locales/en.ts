@@ -605,9 +605,6 @@ const en: LocaleType = {
     Clear: "Context Cleared",
     Revert: "Revert",
   },
-  Mcp: {
-    Name: "MCP",
-  },
   FineTuned: {
     Sysmessage: "You are an assistant that",
   },

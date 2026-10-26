@@ -20,8 +20,6 @@ import {
   DEFAULT_MODELS,
   DEFAULT_SYSTEM_TEMPLATE,
   KnowledgeCutOffDate,
-  MCP_SYSTEM_TEMPLATE,
-  MCP_TOOLS_TEMPLATE,
   ServiceProvider,
   StoreKey,
 } from "../constant";
@@ -36,10 +34,7 @@ import {
   ModelType,
   useAppConfig,
 } from "./config";
-import { useAccessStore } from "./access";
 import { createEmptyMask, Mask } from "./mask";
-import { executeMcpAction, getAllTools, isMcpEnabled } from "../mcp/actions";
-import { extractMcpJson, isMcpJson } from "../mcp/utils";
 import { summaryTarget } from "../client/providers";
 
 const localStorage = safeLocalStorage();
@@ -51,7 +46,6 @@ export type ChatMessage = RequestMessage & {
   id: string;
   model?: ModelType;
   reasoning?: string;
-  isMcpResponse?: boolean;
 };
 
 export function createMessage(override: Partial<ChatMessage>): ChatMessage {
@@ -157,27 +151,6 @@ function fillTemplateWith(input: string, modelConfig: ModelConfig) {
   });
 
   return output;
-}
-
-async function getMcpSystemPrompt(accessCode: string): Promise<string> {
-  const tools = await getAllTools(accessCode);
-
-  let toolsStr = "";
-
-  tools.forEach((i) => {
-    // error client has no tools
-    if (!i.tools) return;
-
-    toolsStr += MCP_TOOLS_TEMPLATE.replace(
-      "{{ clientId }}",
-      i.clientId,
-    ).replace(
-      "{{ tools }}",
-      i.tools.tools.map((p: object) => JSON.stringify(p, null, 2)).join("\n"),
-    );
-  });
-
-  return MCP_SYSTEM_TEMPLATE.replace("{{ MCP_TOOLS }}", toolsStr);
 }
 
 const DEFAULT_CHAT_STATE = {
@@ -365,26 +338,19 @@ export const useChatStore = createPersistStore(
 
         get().updateStat(message, targetSession);
 
-        if (!targetSession.mask.modelConfig.providerId)
-          void get().checkMcpJson(message);
-
         get().summarizeSession(false, targetSession);
       },
 
-      async onUserInput(
-        content: string,
-        attachImages?: string[],
-        isMcpResponse?: boolean,
-      ) {
+      async onUserInput(content: string, attachImages?: string[]) {
         const session = get().currentSession();
         const modelConfig = session.mask.modelConfig;
 
-        // MCP Response no need to fill template
-        let mContent: string | MultimodalContent[] = isMcpResponse
-          ? content
-          : fillTemplateWith(content, modelConfig);
+        let mContent: string | MultimodalContent[] = fillTemplateWith(
+          content,
+          modelConfig,
+        );
 
-        if (!isMcpResponse && attachImages && attachImages.length > 0) {
+        if (attachImages && attachImages.length > 0) {
           mContent = [
             ...(content ? [{ type: "text" as const, text: content }] : []),
             ...attachImages.map((url) => ({
@@ -397,7 +363,6 @@ export const useChatStore = createPersistStore(
         let userMessage: ChatMessage = createMessage({
           role: "user",
           content: mContent,
-          isMcpResponse,
         });
 
         const botMessage: ChatMessage = createMessage({
@@ -518,34 +483,18 @@ export const useChatStore = createPersistStore(
           (session.mask.modelConfig.model.startsWith("gpt-") ||
             session.mask.modelConfig.model.startsWith("chatgpt-"));
 
-        const mcpEnabled = await isMcpEnabled();
-        const mcpSystemPrompt = mcpEnabled
-          ? await getMcpSystemPrompt(useAccessStore.getState().accessCode)
-          : "";
-
         var systemPrompts: ChatMessage[] = [];
 
         if (shouldInjectSystemPrompts) {
           systemPrompts = [
             createMessage({
               role: "system",
-              content:
-                fillTemplateWith("", {
-                  ...modelConfig,
-                  template: DEFAULT_SYSTEM_TEMPLATE,
-                }) + mcpSystemPrompt,
+              content: fillTemplateWith("", {
+                ...modelConfig,
+                template: DEFAULT_SYSTEM_TEMPLATE,
+              }),
             }),
           ];
-        } else if (mcpEnabled) {
-          systemPrompts = [
-            createMessage({
-              role: "system",
-              content: mcpSystemPrompt,
-            }),
-          ];
-        }
-
-        if (shouldInjectSystemPrompts || mcpEnabled) {
           console.log(
             "[Global System Prompt] ",
             systemPrompts.at(0)?.content ?? "empty",
@@ -796,42 +745,6 @@ export const useChatStore = createPersistStore(
         set({
           lastInput,
         });
-      },
-
-      /** check if the message contains MCP JSON and execute the MCP action */
-      async checkMcpJson(message: ChatMessage) {
-        const mcpEnabled = await isMcpEnabled();
-        if (!mcpEnabled) return;
-        const content = getMessageTextContent(message);
-        if (isMcpJson(content)) {
-          try {
-            const mcpRequest = extractMcpJson(content);
-            if (mcpRequest) {
-              console.debug("[MCP Request]", mcpRequest);
-
-              executeMcpAction(
-                mcpRequest.clientId,
-                mcpRequest.mcp,
-                useAccessStore.getState().accessCode,
-              )
-                .then((result) => {
-                  console.log("[MCP Response]", result);
-                  const mcpResponse =
-                    typeof result === "object"
-                      ? JSON.stringify(result)
-                      : String(result);
-                  get().onUserInput(
-                    `\`\`\`json:mcp-response:${mcpRequest.clientId}\n${mcpResponse}\n\`\`\``,
-                    [],
-                    true,
-                  );
-                })
-                .catch((error) => showToast("MCP execution failed", error));
-            }
-          } catch (error) {
-            console.error("[Check MCP JSON]", error);
-          }
-        }
       },
     };
 

@@ -274,11 +274,6 @@ Stability API密钥
 
 自定义的Stability API请求地址
 
-### `ENABLE_MCP` (optional)
-
-启用 MCP（Model Context Protocol）功能。出于安全考虑，启用 MCP 时必须同时配置
-`CODE`，所有 MCP Server Action 都会校验该访问密码。
-
 ### `SILICONFLOW_API_KEY` (optional)
 
 SiliconFlow API Key.
@@ -345,16 +340,6 @@ docker run -d -p 3000:3000 \
    -e CODE=页面访问密码 \
    --net=host \
    -e PROXY_URL=http://127.0.0.1:7890 \
-   yidadaa/chatgpt-next-web
-```
-
-如需启用 MCP 功能，可以使用：
-
-```shell
-docker run -d -p 3000:3000 \
-   -e OPENAI_API_KEY=sk-xxxx \
-   -e CODE=页面访问密码 \
-   -e ENABLE_MCP=true \
    yidadaa/chatgpt-next-web
 ```
 

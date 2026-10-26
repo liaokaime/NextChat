@@ -179,7 +179,7 @@ export function ModelServices() {
     status: "idle" | "running" | "success" | "error";
     message?: string;
   }>({ status: "idle" });
-  const testAbort = useRef<AbortController>();
+  const testAbort = useRef<AbortController | undefined>(undefined);
   const fetchVersion = useRef(0);
   const dirty = !!draft && JSON.stringify(draft) !== original;
   const dirtyRef = useUnsavedNavigation(dirty);
@@ -422,7 +422,6 @@ export function ModelServices() {
     if (!enabled.some((m) => m.id === testModel))
       setTestModel(enabled[0]?.id || "");
     return () => testAbort.current?.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft, testModel]);
   useEffect(
     () => () => {

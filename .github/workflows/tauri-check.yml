@@ -14,7 +14,8 @@ on:
       - "package.json"
       - "yarn.lock"
       - "rust-toolchain.toml"
-      - "scripts/build-app.cjs"
+      - "scripts/**"
+      - "eslint.config.mjs"
       - "next.config.mjs"
       - "tsconfig.json"
       - "jest*"
@@ -31,7 +32,8 @@ on:
       - "package.json"
       - "yarn.lock"
       - "rust-toolchain.toml"
-      - "scripts/build-app.cjs"
+      - "scripts/**"
+      - "eslint.config.mjs"
       - "next.config.mjs"
       - "tsconfig.json"
       - "jest*"
@@ -67,6 +69,7 @@ jobs:
       - name: Check frontend
         if: runner.os == 'Linux'
         run: |
+          yarn lint
           yarn typecheck
           yarn test:ci --runInBand
       - name: Check Rust
@@ -83,3 +86,5 @@ jobs:
           uploadWorkflowArtifacts: true
           uploadUpdaterJson: false
           uploadUpdaterSignatures: false
+      - name: Verify desktop frontend artifacts
+        run: yarn verify:export

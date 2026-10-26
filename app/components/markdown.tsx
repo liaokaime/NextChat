@@ -41,7 +41,6 @@ export function Mermaid(props: { code: string }) {
           console.error("[Mermaid] ", e.message);
         });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.code]);
 
   function viewSvgInNewWindow() {
@@ -267,7 +266,7 @@ function tryWrapHtmlCode(text: string) {
     );
 }
 
-function _MarkDownContent(props: { content: string }) {
+function MarkdownContentInner(props: { content: string }) {
   const escapedContent = useMemo(() => {
     return tryWrapHtmlCode(escapeBrackets(props.content));
   }, [props.content]);
@@ -306,7 +305,7 @@ function _MarkDownContent(props: { content: string }) {
             );
           }
           const isInternal = /^\/#/i.test(href);
-          const target = isInternal ? "_self" : aProps.target ?? "_blank";
+          const target = isInternal ? "_self" : (aProps.target ?? "_blank");
           return <a {...aProps} target={target} />;
         },
       }}
@@ -316,7 +315,7 @@ function _MarkDownContent(props: { content: string }) {
   );
 }
 
-export const MarkdownContent = React.memo(_MarkDownContent);
+export const MarkdownContent = React.memo(MarkdownContentInner);
 
 export function Markdown(
   props: {
@@ -324,7 +323,7 @@ export function Markdown(
     loading?: boolean;
     fontSize?: number;
     fontFamily?: string;
-    parentRef?: RefObject<HTMLDivElement>;
+    parentRef?: RefObject<HTMLDivElement | null>;
     defaultShow?: boolean;
   } & React.DOMAttributes<HTMLDivElement>,
 ) {

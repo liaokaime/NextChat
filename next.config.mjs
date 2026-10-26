@@ -1,47 +1,48 @@
 import { fileURLToPath } from "node:url";
+import { execFileSync } from "node:child_process";
 
 const mode = process.env.BUILD_MODE ?? "standalone";
 console.log("[Next] build mode", mode);
 
-const disableChunk = !!process.env.DISABLE_CHUNK || mode === "export";
-console.log("[Next] build with chunk: ", !disableChunk);
+// Only these public Git identifiers enter the client bundle. Never expose the
+// server environment or import Node APIs from app/config/build.ts.
+let commitDate = "unknown";
+let commitHash = "unknown";
+try {
+  const cwd = fileURLToPath(new URL(".", import.meta.url));
+  const git = (...args) =>
+    execFileSync(
+      "git",
+      [
+        "-c",
+        `safe.directory=${cwd.replaceAll("\\", "/").replace(/\/$/, "")}`,
+        ...args,
+      ],
+      { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+    ).trim();
+  commitDate = git("log", "-1", "--format=%at000");
+  commitHash = git("log", "-1", "--format=%H");
+} catch {
+  console.warn("[Build Config] Git metadata unavailable.");
+}
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  webpack(config, { webpack }) {
-    if (mode === "export") {
-      config.plugins.push(
-        new webpack.NormalModuleReplacementPlugin(
-          /(?:^|[\\/])mcp[\\/]actions(?:\.ts)?$/,
-          fileURLToPath(
-            new URL("./app/mcp/desktop-actions.ts", import.meta.url),
-          ),
-        ),
-      );
-    }
-    config.module.rules.push({
-      test: /\.svg$/,
-      use: ["@svgr/webpack"],
-    });
-
-    if (disableChunk) {
-      config.plugins.push(
-        new webpack.optimize.LimitChunkCountPlugin({ maxChunks: 1 }),
-      );
-    }
-
-    config.resolve.fallback = {
-      child_process: false,
-    };
-
-    return config;
+  turbopack: {
+    rules: {
+      "*.svg": { loaders: ["@svgr/webpack"], as: "*.js" },
+    },
   },
+  env: {
+    NEXT_PUBLIC_COMMIT_DATE: commitDate,
+    NEXT_PUBLIC_COMMIT_HASH: commitHash,
+  },
+  // Desktop runs from static files: no API routes or server actions are valid.
+  // All page/layout entrypoints are .tsx; all API route entrypoints are .ts.
+  ...(mode === "export" ? { pageExtensions: ["tsx"] } : {}),
   output: mode,
   images: {
     unoptimized: mode === "export",
-  },
-  experimental: {
-    forceSwcTransforms: true,
   },
 };
 

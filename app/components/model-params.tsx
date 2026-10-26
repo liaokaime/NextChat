@@ -20,7 +20,7 @@ function ParamRow(props: {
   value?: number;
   initial: number;
   onChange: (value?: number) => void;
-  children: (value: number) => JSX.Element;
+  children: (value: number) => React.JSX.Element;
 }) {
   const t = Locale.ModelServices;
   return (

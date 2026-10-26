@@ -10,7 +10,6 @@ import DeleteIcon from "../icons/delete.svg";
 import MaskIcon from "../icons/mask.svg";
 import SearchIcon from "../icons/zoom.svg";
 import CloseIcon from "../icons/close.svg";
-import McpIcon from "../icons/mcp.svg";
 import DragIcon from "../icons/drag.svg";
 
 import Locale from "../locales";
@@ -30,7 +29,6 @@ import { isIOS, useMobileScreen } from "../utils";
 import dynamic from "next/dynamic";
 import { showConfirm } from "./ui-lib";
 import clsx from "clsx";
-import { isMcpEnabled } from "../mcp/actions";
 
 const ChatList = dynamic(async () => (await import("./chat-list")).ChatList, {
   loading: () => null,
@@ -223,7 +221,6 @@ export function SideBar(props: { className?: string }) {
   const navigate = useNavigate();
   const config = useAppConfig();
   const chatStore = useChatStore();
-  const [mcpEnabled, setMcpEnabled] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -238,16 +235,6 @@ export function SideBar(props: { className?: string }) {
       setSearch("");
     }
   }, [shouldNarrow]);
-
-  useEffect(() => {
-    // 检查 MCP 是否启用
-    const checkMcpStatus = async () => {
-      const enabled = await isMcpEnabled();
-      setMcpEnabled(enabled);
-      console.log("[SideBar] MCP enabled:", enabled);
-    };
-    checkMcpStatus();
-  }, []);
 
   return (
     <SideBarContainer
@@ -314,19 +301,6 @@ export function SideBar(props: { className?: string }) {
             />
           </div>
         )}
-        <div className={styles["sidebar-header-bar"]} hidden={!mcpEnabled}>
-          {mcpEnabled && (
-            <IconButton
-              icon={<McpIcon />}
-              text={shouldNarrow ? undefined : Locale.Mcp.Name}
-              className={styles["sidebar-bar-button"]}
-              onClick={() => {
-                navigate(Path.McpMarket, { state: { fromHome: true } });
-              }}
-              shadow
-            />
-          )}
-        </div>
       </SideBarHeader>
       <SideBarBody
         onClick={(e) => {

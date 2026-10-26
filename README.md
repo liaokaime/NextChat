@@ -51,12 +51,6 @@ English / [简体中文](./README_CN.md)
 
 ![Github iOS Image](https://github.com/user-attachments/assets/e0aa334f-4c13-4dc9-8310-e3b09fa4b9f3)
 
-## 🫣 NextChat Support MCP !
-
-> Before build, please set env ENABLE_MCP=true
-
-<img src="./docs/images/mcp-market.png" alt="NextChat MCP Market" />
-
 ## Enterprise Edition
 
 Meeting Your Company's Privatization and Customization Deployment Requirements:
@@ -355,11 +349,6 @@ Stability API key.
 
 Customize Stability API url.
 
-### `ENABLE_MCP` (optional)
-
-Enable MCP（Model Context Protocol）Feature. For security, MCP also requires
-`CODE` to be configured; all MCP server actions verify that access code.
-
 ### `SILICONFLOW_API_KEY` (optional)
 
 SiliconFlow API Key.
@@ -430,16 +419,6 @@ If your proxy needs password, use:
 
 ```shell
 -e PROXY_URL="http://127.0.0.1:7890 user pass"
-```
-
-If enable MCP, use：
-
-```
-docker run -d -p 3000:3000 \
-   -e OPENAI_API_KEY=sk-xxxx \
-   -e CODE=your-password \
-   -e ENABLE_MCP=true \
-   yidadaa/chatgpt-next-web
 ```
 
 ### Shell

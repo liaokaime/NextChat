@@ -62,24 +62,13 @@ netlify でデプロイしている場合、この問題はまだ解決待ちで
 - サーバーへのルートは問題ありませんか？
 - ドメイン名は正しく解決されていますか？
 
-## "Error: Loading CSS chunk xxx failed..." と表示されることがあります。
+## "Error: Loading CSS chunk xxx failed..." と表示される場合
 
-Next.js では、最初のホワイトスクリーンの時間を短縮するために、デフォルトでチャンキングを有効にしています。技術的な詳細はこちらをご覧ください:
+Next.js 16 の通常の分割読み込みを使用します。デスクトップの WebView を含め、Chrome / Edge / Firefox 111+ または Safari 16.4+ が必要です。
 
-- https://nextjs.org/docs/app/building-your-application/optimizing/lazy-loading
-- https://stackoverflow.com/questions/55993890/how-can-i-disable-chunkcode-splitting-with-webpack4
-- https://github.com/vercel/next.js/issues/38507
-- https://stackoverflow.com/questions/55993890/how-can-i-disable-chunkcode-splitting-with-webpack4
+ブラウザや WebView を更新して再読み込みしてください。改善しない場合は、ネットワーク、CDN、リバースプロキシが同じビルドの `/_next/static/` をすべて配信しているか確認してください。デプロイ時には、開いているページ用に以前のビルドのリソースも保持してください。Service Worker のキャッシュ更新が必要な場合は、先にローカルデータをバックアップしてください。
 
-ただし、Next.js は古いブラウザとの互換性に制限があるため、このエラーが発生することがあります。
-
-ビルド時にチャンキングを無効にすることができます。
-
-Vercel プラットフォームの場合は、環境変数に `DISABLE_CHUNK=1` を追加して再デプロイします。
-セルフデプロイのプロジェクトでは、ビルド時に `DISABLE_CHUNK=1 yarn build` を使用することができます。
-Docker ユーザーの場合、ビルドはパッケージング時にすでに完了しているため、この機能を無効にすることは現在サポートされていません。
-
-この機能を無効にすると、ユーザーの最初の訪問時にすべてのリソースがロードされることに注意してください。その結果、ユーザーのネットワーク接続が悪い場合、ホワイト・スクリーンの時間が長くなり、ユーザーエクスペリエンスに影響を与える可能性があります。この点を考慮の上、ご判断ください。
+参考：[ブラウザ要件](https://nextjs.org/docs/app/getting-started/installation#browser-support)、[バージョンの不一致](https://nextjs.org/docs/app/guides/self-hosting#version-skew)。
 
 # 使用法に関する質問
 

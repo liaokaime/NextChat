@@ -564,9 +564,6 @@ const da: PartialLocaleType = {
     Clear: "Kontekst ryddet",
     Revert: "Fortryd",
   },
-  Mcp: {
-    Name: "MCP",
-  },
   FineTuned: {
     Sysmessage: "Du er en hjælper, der skal...",
   },

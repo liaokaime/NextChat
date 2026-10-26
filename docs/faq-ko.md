@@ -105,22 +105,13 @@ https://github.com/Yidadaa/ChatGPT-Next-Web/issues/1569 에서 토론을 참조�
 
 API 키에 문제가 있습니다. 잔액이 부족합니다.
 
-## "오류: CSS 청크 xxx를 로드하지 못했습니다..."와 함께 사용.
+## "오류: CSS 청크 xxx를 로드하지 못했습니다..."
 
-첫 번째 화이트 스크린 시간을 줄이기 위해 청크 컴파일이 기본적으로 활성화되어 있으며, 기술 원칙은 아래를 참조하세요:
+Next.js 16의 기본 청크 로딩을 사용합니다. 데스크톱 WebView를 포함하여 Chrome / Edge / Firefox 111+ 또는 Safari 16.4+가 필요합니다.
 
-- https://nextjs.org/docs/app/building-your-application/optimizing/lazy-loading
-- https://stackoverflow.com/questions/55993890/how-can-i-disable-chunkcode-splitting-with-webpack4
-- https://github.com/vercel/next.js/issues/38507
-- https://stackoverflow.com/questions/55993890/how-can-i-disable-chunkcode-splitting-with-webpack4
+브라우저나 WebView를 업데이트하고 새로고침하세요. 계속 실패하면 네트워크, CDN 및 리버스 프록시가 동일한 빌드의 `/_next/static/` 리소스를 모두 제공하는지 확인하세요. 배포 시 이미 열린 페이지를 위해 이전 빌드 리소스도 유지하세요. Service Worker 캐시를 갱신해야 한다면 먼저 로컬 데이터를 백업하세요.
 
-그러나 NextJS는 호환성이 좋지 않아 구형 브라우저에서 이 오류가 발생할 수 있으므로 컴파일 시 청크 컴파일을 비활성화할 수 있습니다.
-
-버셀 플랫폼의 경우 환경 변수에 `DISABLE_CHUNK=1`을 추가하고 다시 배포합니다;
-자체 컴파일 및 배포한 프로젝트의 경우, 빌드 시 `DISABLE_CHUNK=1 yarn build`를 사용하여 빌드합니다;
-Docker 사용자의 경우, Docker가 프로젝트를 패키징할 때 이미 빌드하기 때문에 이 기능을 해제하는 것은 지원되지 않습니다.
-
-이 기능을 끄면 사용자가 웹사이트를 처음 방문할 때 모든 리소스를 로드하므로 인터넷 연결 상태가 좋지 않은 경우 흰색 화면이 길게 표시되어 사용자 경험에 영향을 줄 수 있으므로 사용자가 직접 고려하시기 바랍니다.
+참고: [브라우저 요구 사항](https://nextjs.org/docs/app/getting-started/installation#browser-support), [배포 버전 차이](https://nextjs.org/docs/app/guides/self-hosting#version-skew).
 
 "## NotFoundError: '노드': 노드....에서 'removeChild'를 실행하지 못했습니다." 오류가 발생했습니다.
 브라우저의 자체 자동 번역 기능을 비활성화하고 모든 자동 번역 플러그인을 닫아주세요.

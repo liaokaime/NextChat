@@ -7,8 +7,11 @@ on:
     tags:
       - "!*"
   pull_request:
-    types:
-      - review_requested
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   test:
@@ -33,7 +36,20 @@ jobs:
             ${{ runner.os }}-node_modules-
 
       - name: Install dependencies
-        run: yarn install
+        run: yarn install --frozen-lockfile
+
+      - name: Lint and typecheck
+        run: |
+          yarn lint
+          yarn typecheck
 
       - name: Run Jest tests
-        run: yarn test:ci
+        run: yarn test:ci --runInBand
+
+      - name: Build standalone web app
+        run: yarn build
+
+      - name: Build and verify desktop frontend
+        run: |
+          yarn export
+          yarn verify:export

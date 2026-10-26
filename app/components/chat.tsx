@@ -38,7 +38,6 @@ import SizeIcon from "../icons/size.svg";
 import QualityIcon from "../icons/hd.svg";
 import StyleIcon from "../icons/palette.svg";
 import { ShortcutKeyModal } from "./shortcut-key-modal";
-import McpToolIcon from "../icons/tool.svg";
 import {
   BOT_HELLO,
   ChatMessage,
@@ -106,42 +105,12 @@ import { MultimodalContent } from "../client/api";
 import { isEmpty } from "lodash-es";
 import { modelSelection, instanceSupportsImages } from "../client/providers";
 import clsx from "clsx";
-import { getAvailableClientsCount, isMcpEnabled } from "../mcp/actions";
 
 const localStorage = safeLocalStorage();
 
 const Markdown = dynamic(async () => (await import("./markdown")).Markdown, {
   loading: () => <LoadingIcon />,
 });
-
-const MCPAction = () => {
-  const navigate = useNavigate();
-  const accessCode = useAccessStore((state) => state.accessCode);
-  const [count, setCount] = useState<number>(0);
-  const [mcpEnabled, setMcpEnabled] = useState(false);
-
-  useEffect(() => {
-    const checkMcpStatus = async () => {
-      const enabled = await isMcpEnabled();
-      setMcpEnabled(enabled);
-      if (enabled) {
-        const count = await getAvailableClientsCount(accessCode);
-        setCount(count);
-      }
-    };
-    checkMcpStatus();
-  }, [accessCode]);
-
-  if (!mcpEnabled) return null;
-
-  return (
-    <ChatAction
-      onClick={() => navigate(Path.McpMarket)}
-      text={`MCP${count ? ` (${count})` : ""}`}
-      icon={<McpToolIcon />}
-    />
-  );
-};
 
 export function SessionConfigModel(props: { onClose: () => void }) {
   const chatStore = useChatStore();
@@ -384,7 +353,7 @@ function ClearContextDivider() {
 
 export function ChatAction(props: {
   text: string;
-  icon: JSX.Element;
+  icon: React.JSX.Element;
   onClick: () => void;
 }) {
   const iconRef = useRef<HTMLDivElement>(null);
@@ -432,7 +401,7 @@ export function ChatAction(props: {
 }
 
 function useScrollToBottom(
-  scrollRef: RefObject<HTMLDivElement>,
+  scrollRef: RefObject<HTMLDivElement | null>,
   detach: boolean = false,
   messages: ChatMessage[],
 ) {
@@ -522,8 +491,6 @@ export function ChatActions(props: {
     session.mask.modelConfig?.size ?? ("1024x1024" as ModelSize);
   const currentQuality = session.mask.modelConfig?.quality ?? "standard";
   const currentStyle = session.mask.modelConfig?.style ?? "vivid";
-
-  const isMobileScreen = useMobileScreen();
 
   const { setAttachImages, setUploading } = props;
   useEffect(() => {
@@ -706,8 +673,6 @@ export function ChatActions(props: {
             }}
           />
         )}
-
-        {!isMobileScreen && <MCPAction />}
       </>
     </div>
   );
@@ -785,7 +750,7 @@ export function DeleteImageButton(props: { deleteImage: () => void }) {
   );
 }
 
-function _Chat() {
+function ChatContent() {
   type RenderMessage = ChatMessage & { preview?: boolean };
 
   const chatStore = useChatStore();
@@ -1541,7 +1506,6 @@ function _Chat() {
             >
               {messages
                 // TODO
-                // .filter((m) => !m.isMcpResponse)
                 .map((message, i) => {
                   const isUser = message.role === "user";
                   const isContext = i < context.length;
@@ -1577,8 +1541,7 @@ function _Chat() {
                                       10,
                                     );
                                     let newContent:
-                                      | string
-                                      | MultimodalContent[] = newMessage;
+                                      string | MultimodalContent[] = newMessage;
                                     const images = getMessageImages(message);
                                     if (images.length > 0) {
                                       newContent = [
@@ -1876,5 +1839,5 @@ function _Chat() {
 export function Chat() {
   const chatStore = useChatStore();
   const session = chatStore.currentSession();
-  return <_Chat key={session.id}></_Chat>;
+  return <ChatContent key={session.id}></ChatContent>;
 }
