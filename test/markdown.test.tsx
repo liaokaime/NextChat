@@ -8,6 +8,7 @@ jest.unstable_mockModule("@/app/locales", () => ({
 }));
 jest.unstable_mockModule("@/app/utils", () => ({
   copyToClipboard: copy,
+  downloadAs: jest.fn(),
   useWindowSize: () => ({ height: 900 }),
 }));
 jest.unstable_mockModule("@/app/components/ui-lib", () => ({

@@ -803,6 +803,19 @@ const en: LocaleType = {
     ChooseAgain: "Choose another model",
     Count: (n: number) => `${n} available models`,
   },
+  Markdown: {
+    Table: "Table",
+    CopyTable: "Copy table",
+    Fullscreen: "Fullscreen",
+    ExitFullscreen: "Exit fullscreen",
+    Diagram: "Diagram",
+    ZoomIn: "Zoom in",
+    ZoomOut: "Zoom out",
+    Reset: "Reset",
+    DownloadSVG: "Download SVG",
+    Retry: "Retry",
+    DiagramError: "Diagram rendering failed. Retry or view the source above.",
+  },
   Exporter: {
     Description: {
       Title: "Only messages after clearing the context will be displayed",

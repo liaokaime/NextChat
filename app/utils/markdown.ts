@@ -24,18 +24,12 @@ function normalizeMath(text: string) {
 
 /** Normalize legacy delimiters without rewriting fenced or inline code. */
 export function prepareMarkdown(content: string) {
-  if (
-    !/^ {0,3}(`{3,}|~{3,})/m.test(content) &&
-    /<!DOCTYPE html>[\s\S]*<\/html>\s*$/i.test(content)
-  ) {
-    content = content
-      .replace(/<!DOCTYPE html>/i, "\n```html\n$&")
-      .replace(/<\/html>\s*$/i, "$&\n```\n");
-  }
   let fence: { character: string; length: number } | undefined;
   let prose = "";
   let result = "";
-  for (const line of content.split(/(?<=\n)/)) {
+  const lines = content.split(/(?<=\n)/);
+  for (let index = 0; index < lines.length; index++) {
+    const line = lines[index];
     const unquoted = line.replace(/^(?: {0,3}> ?)+/, "");
     const marker = /^ {0,3}(?:(?:[-+*]|\d+[.)]) +)?(`{3,}|~{3,})(.*)/.exec(
       unquoted,
@@ -53,6 +47,37 @@ export function prepareMarkdown(content: string) {
         !marker[2].trim()
       )
         fence = undefined;
+    } else if (/^ {0,3}<!doctype html\b/i.test(line)) {
+      // Only wrap complete, top-level documents. Their contents may be indented
+      // and may contain backticks, so consume the document before parsing lines.
+      const remaining = lines.slice(index).join("");
+      const document = /^ {0,3}<!doctype html\b[^>]*>[\s\S]*?<\/html\s*>/i.exec(
+        remaining,
+      );
+      if (document) {
+        const html = document[0];
+        const delimiter = "`".repeat(
+          Math.max(
+            3,
+            ...Array.from(html.matchAll(/`+/g), (m) => m[0].length + 1),
+          ),
+        );
+        result +=
+          normalizeMath(prose) + `\n${delimiter}html\n${html}\n${delimiter}\n`;
+        prose = "";
+        // The wrapper supplies the separator after the document. Consume one
+        // original line break so trailing prose keeps its original placement.
+        const rawSuffix = remaining.slice(html.length);
+        const suffix = rawSuffix.replace(/^\r?\n/, "");
+        const consumedLines =
+          html.split("\n").length + (/^\r?\n/.test(rawSuffix) ? 1 : 0);
+        lines.splice(
+          index,
+          consumedLines,
+          ...(suffix ? suffix.split(/(?<=\n)/) : []),
+        );
+        index--;
+      } else prose += line;
     } else if (/^(?: {4}|\t)/.test(unquoted)) {
       result += normalizeMath(prose) + line;
       prose = "";
@@ -60,6 +85,22 @@ export function prepareMarkdown(content: string) {
   }
   result += normalizeMath(prose);
   return result;
+}
+
+/** Raster data URLs and same-origin object URLs are permitted only for images. */
+export function isSafeMarkdownImage(source: string, origin?: string) {
+  if (/^data:/i.test(source))
+    return /^data:image\/(?:png|jpe?g|gif|webp|avif|bmp|x-icon);base64,[a-z\d+/]+={0,2}$/i.test(
+      source,
+    );
+  if (/^blob:/i.test(source)) {
+    try {
+      return !!origin && new URL(source).origin === origin;
+    } catch {
+      return false;
+    }
+  }
+  return !/^(?:javascript|vbscript|file):/i.test(source.trim());
 }
 
 export const wrapCodeLanguages = new Set([

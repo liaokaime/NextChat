@@ -48,7 +48,7 @@
     "idb-keyval": "^6.2.1",
     "katex": "0.16.27",
     "lodash-es": "^4.17.21",
-    "mermaid": "^10.6.1",
+    "mermaid": "^12.2.0",
     "nanoid": "^5.0.3",
     "next": "16.4.3",
     "node-fetch": "^3.3.1",

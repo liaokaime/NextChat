@@ -1,10 +1,33 @@
-import { generateText, streamText, type ModelMessage } from "ai";
+import {
+  APICallError,
+  Output,
+  generateText,
+  smoothStream,
+  streamText,
+  type ModelMessage,
+} from "ai";
+import { z } from "zod";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import type { ChatOptions } from "./api";
 import { normalizeBaseUrl, type ProviderInstance } from "./providers";
+
+function canFallbackToText(error: unknown) {
+  // Only retry explicit format/schema incompatibilities, never auth, rate limits,
+  // network failures or unrelated bad requests.
+  return (
+    APICallError.isInstance(error) &&
+    [400, 422].includes(error.statusCode ?? 0) &&
+    /(?:response_format|json_schema|structured.?output|response.?schema)/i.test(
+      error.message,
+    ) &&
+    /(?:unsupported|not supported|not support|invalid|unknown|unrecognized)/i.test(
+      error.message,
+    )
+  );
+}
 
 export function createSdkModel(
   instance: ProviderInstance,
@@ -110,6 +133,44 @@ export async function runSdkChat(
       typeof streamText
     >[0]["providerOptions"],
   };
+  if (options.outputTask === "title") {
+    // Titles must also work with relays that do not support JSON output.
+    const result = await generateText(settings);
+    if (controller.signal.aborted)
+      throw new DOMException("The operation was aborted.", "AbortError");
+    if (result.finishReason !== "stop")
+      throw new Error("响应未完整结束，请重试。");
+    const title = z.string().trim().min(1).parse(result.text);
+    if (!response) throw new Error("服务商未返回响应。");
+    options.onFinish(title, response);
+    return;
+  }
+  if (options.outputTask === "summary") {
+    const field = options.outputTask;
+    let value: string;
+    try {
+      const result = await generateText({
+        ...settings,
+        output: Output.object({
+          schema: z.object({ [field]: z.string().trim().min(1) }),
+        }),
+      });
+      if (result.finishReason !== "stop")
+        throw new Error("响应未完整结束，请重试。");
+      value = result.output[field];
+    } catch (error) {
+      if (controller.signal.aborted || !canFallbackToText(error)) throw error;
+      const result = await generateText(settings);
+      if (result.finishReason !== "stop")
+        throw new Error("响应未完整结束，请重试。");
+      value = z.string().trim().min(1).parse(result.text);
+    }
+    if (controller.signal.aborted)
+      throw new DOMException("The operation was aborted.", "AbortError");
+    if (!response) throw new Error("服务商未返回响应。");
+    options.onFinish(value, response);
+    return;
+  }
   if (options.config.stream === false) {
     const result = await generateText(settings);
     if (controller.signal.aborted)
@@ -123,7 +184,16 @@ export async function runSdkChat(
     options.onFinish(result.text, response);
     return;
   }
-  const result = streamText(settings);
+  const result = streamText({
+    ...settings,
+    experimental_transform: smoothStream({
+      delayInMs: null,
+      chunking:
+        typeof Intl.Segmenter === "function"
+          ? new Intl.Segmenter(undefined, { granularity: "word" })
+          : (buffer) => Array.from(buffer)[0],
+    }),
+  });
   let text = "";
   let reasoning = "";
   for await (const part of result.fullStream) {

@@ -21,8 +21,18 @@ import { createCodePlugin } from "@streamdown/code";
 import { createMathPlugin } from "@streamdown/math";
 import { cjk } from "@streamdown/cjk";
 import RemarkBreaks from "remark-breaks";
-import { copyToClipboard, useWindowSize } from "../utils";
-import { prepareMarkdown, wrapCodeLanguages } from "../utils/markdown";
+import { copyToClipboard, downloadAs, useWindowSize } from "../utils";
+import {
+  isSafeMarkdownImage,
+  prepareMarkdown,
+  wrapCodeLanguages,
+} from "../utils/markdown";
+import type { PluggableList } from "unified";
+import {
+  MarkdownButton,
+  MarkdownPanel,
+  MarkdownTable,
+} from "./markdown-controls";
 import Locale from "../locales";
 import LoadingIcon from "../icons/three-dots.svg";
 import ReloadButtonIcon from "../icons/reload.svg";
@@ -47,21 +57,82 @@ const plugins = {
 };
 const remarkPlugins = [...Object.values(defaultRemarkPlugins), RemarkBreaks];
 // Keep raw HTML literal; executable documents belong in the existing sandbox.
-const rehypePlugins = [
-  defaultRehypePlugins.sanitize,
+const sanitizer = defaultRehypePlugins.sanitize;
+const imageSanitizer = Array.isArray(sanitizer)
+  ? ([
+      sanitizer[0],
+      {
+        ...sanitizer[1],
+        protocols: {
+          ...sanitizer[1].protocols,
+          src: [...sanitizer[1].protocols.src, "data", "blob"],
+        },
+      },
+    ] as PluggableList[number])
+  : sanitizer;
+// The extra schemes apply only to images; raw HTML remains literal.
+function validateImages() {
+  type Node = {
+    tagName?: string;
+    properties?: { src?: unknown };
+    children?: Node[];
+  };
+  return (tree: Node) => {
+    const visit = (node: Node) => {
+      if (
+        node.tagName === "img" &&
+        typeof node.properties?.src === "string" &&
+        !isSafeMarkdownImage(
+          node.properties.src,
+          typeof window === "undefined" ? undefined : window.location.origin,
+        )
+      ) {
+        delete node.properties.src;
+      }
+      node.children?.forEach(visit);
+    };
+    visit(tree);
+  };
+}
+const rehypePlugins: PluggableList = [
+  imageSanitizer,
+  validateImages,
   defaultRehypePlugins.harden,
 ];
 const remend = {
   linkMode: "text-only" as const,
-  inlineKatex: false,
+  inlineKatex: true,
   htmlTags: false,
 };
 const linkSafety = { enabled: false };
+const MarkdownText = Locale.Markdown ?? {
+  Table: "Table",
+  CopyTable: "Copy table",
+  Fullscreen: "Fullscreen",
+  ExitFullscreen: "Exit fullscreen",
+  Diagram: "Diagram",
+  ZoomIn: "Zoom in",
+  ZoomOut: "Zoom out",
+  Reset: "Reset",
+  DownloadSVG: "Download SVG",
+  Retry: "Retry",
+  DiagramError: "Diagram rendering failed.",
+};
+const streamAnimation = {
+  animation: "fadeIn" as const,
+  duration: 120,
+  sep: "char" as const,
+  stagger: 0,
+  maxBacklogMs: 120,
+};
 
 export const Mermaid = React.memo(function Mermaid({ code }: { code: string }) {
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const ref = useRef<HTMLDivElement>(null);
   const [rendered, setRendered] = useState<{ code: string; svg: string }>();
+  const [attempt, setAttempt] = useState(0);
+  const [view, setView] = useState({ scale: 1, x: 0, y: 0 });
+  const drag = useRef<{ pointer: number; x: number; y: number } | null>(null);
   useEffect(() => {
     let cancelled = false;
     import("mermaid")
@@ -87,27 +158,112 @@ export const Mermaid = React.memo(function Mermaid({ code }: { code: string }) {
     return () => {
       cancelled = true;
     };
-  }, [code, id]);
+  }, [code, id, attempt]);
+  useEffect(() => setView({ scale: 1, x: 0, y: 0 }), [code]);
   const ready = rendered?.code === code;
   return (
     <div data-render-pending={!ready} data-mermaid-preview>
+      {ready && !rendered.svg && (
+        <div data-export-control role="status">
+          {MarkdownText.DiagramError}
+          <MarkdownButton
+            onClick={() => {
+              setRendered(undefined);
+              setAttempt((n) => n + 1);
+            }}
+          >
+            {MarkdownText.Retry}
+          </MarkdownButton>
+        </div>
+      )}
       {ready && rendered.svg && (
-        <div
-          className="no-dark mermaid cursor-pointer overflow-auto"
-          ref={ref}
-          onClick={() => {
-            const svg = ref.current?.querySelector("svg");
-            if (!svg) return;
-            const blob = new Blob(
-              [new XMLSerializer().serializeToString(svg)],
-              { type: "image/svg+xml" },
-            );
-            const url = URL.createObjectURL(blob);
-            showImageModal(url);
-            window.setTimeout(() => URL.revokeObjectURL(url), 60000);
-          }}
-          dangerouslySetInnerHTML={{ __html: rendered.svg }}
-        />
+        <MarkdownPanel
+          label={MarkdownText.Diagram}
+          tools={
+            <>
+              <MarkdownButton
+                onClick={() =>
+                  setView((v) => ({ ...v, scale: Math.min(4, v.scale * 1.25) }))
+                }
+                aria-label={MarkdownText.ZoomIn}
+              >
+                ＋
+              </MarkdownButton>
+              <MarkdownButton
+                onClick={() =>
+                  setView((v) => ({
+                    ...v,
+                    scale: Math.max(0.25, v.scale / 1.25),
+                  }))
+                }
+                aria-label={MarkdownText.ZoomOut}
+              >
+                −
+              </MarkdownButton>
+              <MarkdownButton onClick={() => setView({ scale: 1, x: 0, y: 0 })}>
+                {MarkdownText.Reset}
+              </MarkdownButton>
+              <MarkdownButton
+                onClick={() => void downloadAs(rendered.svg, "diagram.svg")}
+              >
+                {MarkdownText.DownloadSVG}
+              </MarkdownButton>
+            </>
+          }
+        >
+          <div
+            className="no-dark mermaid markdown-diagram"
+            ref={ref}
+            onPointerDown={(event) => {
+              if (event.button !== 0) return;
+              event.currentTarget.setPointerCapture(event.pointerId);
+              drag.current = {
+                pointer: event.pointerId,
+                x: event.clientX,
+                y: event.clientY,
+              };
+            }}
+            onPointerMove={(event) => {
+              const previous = drag.current;
+              if (!previous || previous.pointer !== event.pointerId) return;
+              setView((v) => ({
+                ...v,
+                x: v.x + event.clientX - previous.x,
+                y: v.y + event.clientY - previous.y,
+              }));
+              drag.current = {
+                pointer: event.pointerId,
+                x: event.clientX,
+                y: event.clientY,
+              };
+            }}
+            onPointerUp={() => {
+              drag.current = null;
+            }}
+            onPointerCancel={() => {
+              drag.current = null;
+            }}
+            onDoubleClick={() => {
+              const svg = ref.current?.querySelector("svg");
+              if (!svg) return;
+              const blob = new Blob(
+                [new XMLSerializer().serializeToString(svg)],
+                { type: "image/svg+xml" },
+              );
+              const url = URL.createObjectURL(blob);
+              showImageModal(url);
+              window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+            }}
+          >
+            <div
+              className="markdown-diagram-content"
+              style={{
+                transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`,
+              }}
+              dangerouslySetInnerHTML={{ __html: rendered.svg }}
+            />
+          </div>
+        </MarkdownPanel>
       )}
     </div>
   );
@@ -223,15 +379,15 @@ export const ProjectCodeBlock = React.memo(function ProjectCodeBlock({
           data-export-control
         >
           <span>{language}</span>
-          <button
-            type="button"
-            data-copy-code
-            className="cursor-pointer rounded-[10px] border-0 bg-transparent px-[5px] text-inherit opacity-60 hover:opacity-100"
-            aria-label={Locale.Chat.Actions.Copy}
-            onClick={() => copyToClipboard(code)}
-          >
-            copy
-          </button>
+          <div className="markdown-code-actions">
+            <MarkdownButton
+              data-copy-code
+              aria-label={Locale.Chat.Actions.Copy}
+              onClick={() => copyToClipboard(code)}
+            >
+              {Locale.Chat.Actions.Copy}
+            </MarkdownButton>
+          </div>
         </div>
         <pre
           className={clsx(
@@ -250,7 +406,7 @@ export const ProjectCodeBlock = React.memo(function ProjectCodeBlock({
           >
             {tokens
               ? tokens.tokens.map((line, index) => (
-                  <React.Fragment key={index}>
+                  <span className="markdown-code-line" key={index}>
                     {line.map((token, tokenIndex) => (
                       <span
                         key={tokenIndex}
@@ -267,9 +423,14 @@ export const ProjectCodeBlock = React.memo(function ProjectCodeBlock({
                       </span>
                     ))}
                     {index < tokens.tokens.length - 1 ? "\n" : null}
-                  </React.Fragment>
+                  </span>
                 ))
-              : code}
+              : code.split("\n").map((line, index, lines) => (
+                  <span className="markdown-code-line" key={index}>
+                    {line}
+                    {index < lines.length - 1 ? "\n" : null}
+                  </span>
+                ))}
           </code>
         </pre>
         {showToggle && enableCodeFold && collapsed && (
@@ -329,7 +490,7 @@ const components: Components = {
   ol: "ol",
   li: "li",
   hr: "hr",
-  table: "table",
+  table: MarkdownTable,
   thead: "thead",
   tbody: "tbody",
   tr: "tr",
@@ -376,11 +537,23 @@ export function MarkdownContent({
   mode = "static",
 }: MarkdownContentProps) {
   const prepared = useMemo(() => prepareMarkdown(content), [content]);
+  const [reducedMotion, setReducedMotion] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+    if (!media) return;
+    const update = () => setReducedMotion(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
   return (
     <Streamdown
       className="markdown-content !space-y-0"
       mode={mode}
       isAnimating={isStreaming}
+      animated={
+        mode === "streaming" && !reducedMotion ? streamAnimation : false
+      }
       parseIncompleteMarkdown={isStreaming}
       remend={remend}
       plugins={plugins}

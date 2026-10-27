@@ -46,7 +46,7 @@ const styles: Record<string, string> = {
     "[&_.nc-home-session-search_input]:rounded-[10px] [&_.nc-home-session-search_input]:min-h-[36px]",
     "[&_.nc-home-session-search_input]:[padding:0_10px]",
     "[&_.nc-home-session-search_input]:[background:var(--white)]",
-    "[&_.nc-home-session-search_input]:[color:var(--black)] [&_.nc-home-session-search_input]:[font:inherit]",
+    "[&_.nc-home-session-search_input]:[color:var(--black)] [&_.nc-home-session-search_input]:[font-family:inherit] [&_.nc-home-session-search_input]:[line-height:inherit]",
     "[&_.nc-home-session-search_input]:[font-size:12px] [&_.nc-home-session-search-empty]:[padding:20px_0]",
     "[&_.nc-home-session-search-empty]:text-center [&_.nc-home-session-search-empty]:[font-size:13px]",
     "[&_.nc-home-session-search-empty]:[color:var(--black)]",

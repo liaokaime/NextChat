@@ -70,3 +70,32 @@ test("SDK summaries keep all unsummarized history and end with a user turn", () 
   for (const request of requests)
     expect(request.config.providerId).toBe("gemini");
 });
+
+test("summary results survive a deep clone and ignore reset sessions", () => {
+  const session = setupSession(
+    { providerId: "gemini", historyMessageCount: 2 },
+    6,
+  );
+  const store = useChatStore.getState();
+  store.summarizeSession(false, session);
+  const summary = chat.mock.calls
+    .map(([options]) => options)
+    .find((options) => options.outputTask === "summary")!;
+  store.update(() => {});
+  summary.onFinish("历史摘要", { ok: true, status: 200 } as Response);
+  expect(store.currentSession()).toMatchObject({
+    memoryPrompt: "历史摘要",
+    lastSummarizeIndex: 6,
+  });
+  store
+    .currentSession()
+    .messages.push(message("user", 6), message("assistant", 7));
+  store.summarizeSession(false, store.currentSession());
+  const pending = chat.mock.calls
+    .map(([options]) => options)
+    .filter((options) => options.outputTask === "summary")
+    .at(-1)!;
+  store.resetSession(store.currentSession());
+  pending.onFinish("过期摘要", { ok: true, status: 200 } as Response);
+  expect(store.currentSession().memoryPrompt).toBe("");
+});

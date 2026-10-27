@@ -36,6 +36,12 @@ import {
 } from "./config";
 import { createEmptyMask, Mask } from "./mask";
 import { summaryTarget } from "../client/providers";
+import { createStreamUpdates } from "../utils/stream-updates";
+
+const auxiliaryRequests = new Map<
+  string,
+  Partial<Record<"title" | "summary", symbol>>
+>();
 
 const localStorage = safeLocalStorage();
 
@@ -201,6 +207,7 @@ export const useChatStore = createPersistStore(
 
       clearSessions() {
         sessionsRevision += 1;
+        auxiliaryRequests.clear();
         ChatControllerPool.stopAll();
         set(() => ({
           sessions: [createEmptySession()],
@@ -276,6 +283,7 @@ export const useChatStore = createPersistStore(
         const deletedSession = get().sessions.at(index);
 
         if (!deletedSession) return;
+        auxiliaryRequests.delete(deletedSession.id);
 
         const sessions = get().sessions.slice();
         sessions.splice(index, 1);
@@ -392,26 +400,31 @@ export const useChatStore = createPersistStore(
           modelConfig.providerName,
           modelConfig.providerId,
         );
+        const updates = createStreamUpdates(() => {
+          get().updateTargetSession(session, (current) => {
+            if (
+              current.messages.some((message) => message.id === botMessage.id)
+            )
+              current.messages = current.messages.concat();
+          });
+        });
         // make request
         api.llm.chat({
           messages: sendMessages,
           config: { ...modelConfig, stream: true },
           onReasoning(reasoning) {
             botMessage.reasoning = reasoning;
-            get().updateTargetSession(session, (session) => {
-              session.messages = session.messages.concat();
-            });
+            updates.schedule();
           },
           onUpdate(message) {
             botMessage.streaming = true;
             if (message) {
               botMessage.content = message;
             }
-            get().updateTargetSession(session, (session) => {
-              session.messages = session.messages.concat();
-            });
+            updates.schedule();
           },
           async onFinish(message) {
+            updates.finish();
             botMessage.streaming = false;
             if (message) {
               botMessage.content = message;
@@ -421,6 +434,7 @@ export const useChatStore = createPersistStore(
             ChatControllerPool.remove(session.id, botMessage.id);
           },
           onError(error) {
+            updates.finish();
             const isAborted =
               error.name === "AbortError" ||
               error.message?.includes?.("aborted");
@@ -570,6 +584,7 @@ export const useChatStore = createPersistStore(
       },
 
       resetSession(session: ChatSession) {
+        auxiliaryRequests.delete(session.id);
         get().updateTargetSession(session, (session) => {
           session.messages = [];
           session.memoryPrompt = "";
@@ -581,7 +596,26 @@ export const useChatStore = createPersistStore(
         targetSession: ChatSession,
       ) {
         const config = useAppConfig.getState();
-        const session = targetSession;
+        const session = get().sessions.find((s) => s.id === targetSession.id);
+        if (!session) return;
+        const requestState = auxiliaryRequests.get(session.id) ?? {};
+        auxiliaryRequests.set(session.id, requestState);
+        const beginRequest = (task: "title" | "summary") => {
+          const token = Symbol(task);
+          requestState[task] = token;
+          const lastMessageId = session.messages.at(-1)?.id;
+          const messageCount = session.messages.length;
+          const clearContextIndex = session.clearContextIndex;
+          return () => {
+            const current = get().sessions.find((s) => s.id === session.id);
+            return auxiliaryRequests.get(session.id)?.[task] === token &&
+              current?.messages.length === messageCount &&
+              current.messages.at(-1)?.id === lastMessageId &&
+              current.clearContextIndex === clearContextIndex
+              ? current
+              : undefined;
+          };
+        };
         const modelConfig = session.mask.modelConfig;
         // skip summarize when using dalle3?
         if (isDalle3(modelConfig.model)) {
@@ -595,33 +629,44 @@ export const useChatStore = createPersistStore(
           providerId,
         );
 
-        // remove error messages if any
         const messages = session.messages;
-
-        // should summarize topic after chating more than 50 words
-        const SUMMARIZE_MIN_LEN = 50;
+        const titleMessages = messages.filter(
+          (message) =>
+            !message.isError &&
+            !message.streaming &&
+            getMessageTextContent(message).trim(),
+        );
+        const lastMessage = messages.at(-1);
+        const hasReply =
+          lastMessage?.role === "assistant" &&
+          !lastMessage.isError &&
+          !lastMessage.streaming &&
+          getMessageTextContent(lastMessage).trim();
         if (
-          (config.enableAutoGenerateTitle &&
+          titleMessages.length > 0 &&
+          ((config.enableAutoGenerateTitle &&
             session.topic === DEFAULT_TOPIC &&
-            countMessages(messages) >= SUMMARIZE_MIN_LEN) ||
-          refreshTitle
+            hasReply) ||
+            refreshTitle)
         ) {
-          const startIndex = Math.max(
-            0,
-            messages.length - modelConfig.historyMessageCount,
-          );
-          const topicMessages = messages
-            .slice(
-              startIndex < messages.length ? startIndex : messages.length - 1,
-              messages.length,
-            )
+          const topicMessages = titleMessages
+            .slice(-Math.max(1, modelConfig.historyMessageCount))
             .concat(
               createMessage({
                 role: "user",
                 content: Locale.Store.Prompt.Topic,
               }),
             );
+          const isCurrent = beginRequest("title");
+          const previousTopic = session.topic;
+          const onTitleError = (error: Error) => {
+            const current = isCurrent();
+            if (!current || current.topic !== previousTopic) return;
+            console.error("[Title] ", error);
+            if (refreshTitle) showToast(Locale.Store.Error);
+          };
           api.llm.chat({
+            outputTask: "title",
             messages: topicMessages,
             config: {
               ...modelConfig,
@@ -631,15 +676,21 @@ export const useChatStore = createPersistStore(
               providerId,
             },
             onFinish(message, responseRes) {
-              if (responseRes?.status === 200) {
+              const current = isCurrent();
+              if (!current || current.topic !== previousTopic) return;
+              const topic = trimTopic(message.trim());
+              if (responseRes?.ok && topic) {
                 get().updateTargetSession(
-                  session,
-                  (session) =>
-                    (session.topic =
-                      message.length > 0 ? trimTopic(message) : DEFAULT_TOPIC),
+                  current,
+                  (session) => (session.topic = topic),
+                );
+              } else {
+                onTitleError(
+                  new Error("Title response was unsuccessful or empty."),
                 );
               }
             },
+            onError: onTitleError,
           });
         }
         const summarizeIndex = Math.max(
@@ -662,7 +713,12 @@ export const useChatStore = createPersistStore(
             Math.max(0, n - modelConfig.historyMessageCount),
           );
         }
-        const memoryPrompt = get().getMemoryPrompt();
+        const memoryPrompt = session.memoryPrompt
+          ? createMessage({
+              role: "system",
+              content: Locale.Store.Prompt.History(session.memoryPrompt),
+            })
+          : undefined;
         if (memoryPrompt) {
           // add memory prompt
           toBeSummarizedMsgs.unshift(memoryPrompt);
@@ -685,7 +741,9 @@ export const useChatStore = createPersistStore(
            * this param is just shit
            **/
           const { max_tokens, ...modelcfg } = modelConfig;
+          const isCurrent = beginRequest("summary");
           api.llm.chat({
+            outputTask: "summary",
             messages: toBeSummarizedMsgs.concat(
               createMessage({
                 // Gemini via the AI SDK rejects system messages after the first user turn.
@@ -701,15 +759,12 @@ export const useChatStore = createPersistStore(
               providerName,
               providerId,
             },
-            onUpdate(message) {
-              session.memoryPrompt = message;
-            },
             onFinish(message, responseRes) {
-              if (responseRes?.status === 200) {
+              if (responseRes?.ok && message.trim() && isCurrent()) {
                 console.log("[Memory] ", message);
                 get().updateTargetSession(session, (session) => {
                   session.lastSummarizeIndex = lastSummarizeIndex;
-                  session.memoryPrompt = message; // Update the memory prompt for stored it in local storage
+                  session.memoryPrompt = message.trim();
                 });
               }
             },
@@ -737,6 +792,7 @@ export const useChatStore = createPersistStore(
         set(() => ({ sessions }));
       },
       async clearAllData() {
+        auxiliaryRequests.clear();
         await indexedDBStorage.clear();
         localStorage.clear();
         location.reload();

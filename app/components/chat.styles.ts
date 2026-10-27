@@ -21,7 +21,7 @@ const styles: Record<string, string> = {
     "[&_.nc-chat-model-service-action_select]:rounded-[20px]",
     "[&_.nc-chat-model-service-action_select]:[padding:4px_30px_4px_10px]",
     "[&_.nc-chat-model-service-action_select]:[box-shadow:var(--card-shadow)]",
-    "[&_.nc-chat-model-service-action_select]:[font:inherit]",
+    "[&_.nc-chat-model-service-action_select]:[font-family:inherit] [&_.nc-chat-model-service-action_select]:[line-height:inherit]",
     "[&_.nc-chat-model-service-action_select]:[font-size:12px] [&_.nc-chat-chat-input-action]:inline-flex",
     "[&_.nc-chat-chat-input-action]:rounded-[20px] [&_.nc-chat-chat-input-action]:[font-size:12px]",
     "[&_.nc-chat-chat-input-action]:[background-color:var(--white)]",

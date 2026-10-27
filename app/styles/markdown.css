@@ -299,3 +299,83 @@
 #dmermaid {
   display: none;
 }
+
+.markdown-panel {
+  min-width: 0;
+  max-width: 100%;
+  margin: 16px 0;
+}
+.markdown-panel[data-fullscreen] {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 20px;
+  overflow: auto;
+  background: var(--white);
+  color: var(--black);
+  user-select: text;
+}
+.markdown-toolbar,
+.markdown-code-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.markdown-toolbar {
+  margin-bottom: 6px;
+}
+.markdown-control {
+  appearance: none;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 3px 7px;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  opacity: 0.75;
+  cursor: pointer;
+}
+.markdown-control:hover,
+.markdown-control[aria-pressed="true"] {
+  opacity: 1;
+  background: var(--bar-color);
+}
+.markdown-control:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.markdown-table-scroll {
+  overflow: auto;
+  max-width: 100%;
+}
+.markdown-diagram {
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  min-height: 100px;
+}
+.markdown-diagram:active {
+  cursor: grabbing;
+}
+.markdown-diagram-content {
+  transform-origin: center;
+}
+[data-exporting="true"] .markdown-diagram-content {
+  transform: none !important;
+}
+[data-exporting="true"] [data-sd-animate] {
+  animation: none !important;
+  opacity: 1 !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-sd-animate],
+  [data-sd-animate-marker]::marker {
+    animation: none !important;
+  }
+}

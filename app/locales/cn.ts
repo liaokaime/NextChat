@@ -791,6 +791,19 @@ const cn = {
     ChooseAgain: "重新选择模型",
     Count: (n: number) => `${n} 个可用模型`,
   },
+  Markdown: {
+    Table: "表格",
+    CopyTable: "复制表格",
+    Fullscreen: "全屏",
+    ExitFullscreen: "退出全屏",
+    Diagram: "图表",
+    ZoomIn: "放大",
+    ZoomOut: "缩小",
+    Reset: "复位",
+    DownloadSVG: "下载 SVG",
+    Retry: "重试",
+    DiagramError: "图表渲染失败，可重试或查看上方源码。",
+  },
   Exporter: {
     Description: {
       Title: "只有清除上下文之后的消息会被展示",

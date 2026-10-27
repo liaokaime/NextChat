@@ -22,124 +22,126 @@ function fixture(protocol: ProviderProtocol) {
           { choices: [{ delta: {}, finish_reason: "stop" }] },
         ]
       : protocol === "google"
-      ? [
-          {
-            candidates: [
+        ? [
+            {
+              candidates: [
+                {
+                  content: {
+                    role: "model",
+                    parts: [{ text: thought, thought: true }],
+                  },
+                },
+              ],
+            },
+            {
+              candidates: [
+                {
+                  content: { role: "model", parts: [{ text: answer }] },
+                  finishReason: "STOP",
+                },
+              ],
+              usageMetadata: {
+                promptTokenCount: 1,
+                candidatesTokenCount: 2,
+                totalTokenCount: 3,
+              },
+            },
+          ]
+        : protocol === "anthropic"
+          ? [
               {
-                content: {
-                  role: "model",
-                  parts: [{ text: thought, thought: true }],
+                type: "message_start",
+                message: {
+                  id: "msg",
+                  model: "same-model",
+                  role: "assistant",
+                  usage: { input_tokens: 1 },
                 },
               },
-            ],
-          },
-          {
-            candidates: [
               {
-                content: { role: "model", parts: [{ text: answer }] },
-                finishReason: "STOP",
+                type: "content_block_start",
+                index: 0,
+                content_block: { type: "thinking", thinking: "" },
               },
-            ],
-            usageMetadata: {
-              promptTokenCount: 1,
-              candidatesTokenCount: 2,
-              totalTokenCount: 3,
-            },
-          },
-        ]
-      : protocol === "anthropic"
-      ? [
-          {
-            type: "message_start",
-            message: {
-              id: "msg",
-              model: "same-model",
-              role: "assistant",
-              usage: { input_tokens: 1 },
-            },
-          },
-          {
-            type: "content_block_start",
-            index: 0,
-            content_block: { type: "thinking", thinking: "" },
-          },
-          {
-            type: "content_block_delta",
-            index: 0,
-            delta: { type: "thinking_delta", thinking: thought },
-          },
-          { type: "content_block_stop", index: 0 },
-          {
-            type: "content_block_start",
-            index: 1,
-            content_block: { type: "text", text: "" },
-          },
-          {
-            type: "content_block_delta",
-            index: 1,
-            delta: { type: "text_delta", text: answer },
-          },
-          { type: "content_block_stop", index: 1 },
-          {
-            type: "message_delta",
-            delta: { stop_reason: "end_turn" },
-            usage: { output_tokens: 2 },
-          },
-          { type: "message_stop" },
-        ]
-      : [
-          {
-            type: "response.created",
-            response: { id: "resp", created_at: 1, model: "same-model" },
-          },
-          {
-            type: "response.output_item.added",
-            output_index: 0,
-            item: { type: "reasoning", id: "reason" },
-          },
-          {
-            type: "response.reasoning_summary_text.delta",
-            item_id: "reason",
-            summary_index: 0,
-            delta: thought,
-          },
-          {
-            type: "response.output_item.done",
-            output_index: 0,
-            item: {
-              type: "reasoning",
-              id: "reason",
-              summary: [{ type: "summary_text", text: thought }],
-            },
-          },
-          {
-            type: "response.output_item.added",
-            output_index: 1,
-            item: { type: "message", id: "msg" },
-          },
-          {
-            type: "response.output_text.delta",
-            item_id: "msg",
-            output_index: 1,
-            delta: answer,
-          },
-          {
-            type: "response.output_item.done",
-            output_index: 1,
-            item: {
-              type: "message",
-              id: "msg",
-              role: "assistant",
-              content: [{ type: "output_text", text: answer, annotations: [] }],
-            },
-          },
-          {
-            type: "response.completed",
-            response: {
-              usage: { input_tokens: 1, output_tokens: 2, total_tokens: 3 },
-            },
-          },
-        ];
+              {
+                type: "content_block_delta",
+                index: 0,
+                delta: { type: "thinking_delta", thinking: thought },
+              },
+              { type: "content_block_stop", index: 0 },
+              {
+                type: "content_block_start",
+                index: 1,
+                content_block: { type: "text", text: "" },
+              },
+              {
+                type: "content_block_delta",
+                index: 1,
+                delta: { type: "text_delta", text: answer },
+              },
+              { type: "content_block_stop", index: 1 },
+              {
+                type: "message_delta",
+                delta: { stop_reason: "end_turn" },
+                usage: { output_tokens: 2 },
+              },
+              { type: "message_stop" },
+            ]
+          : [
+              {
+                type: "response.created",
+                response: { id: "resp", created_at: 1, model: "same-model" },
+              },
+              {
+                type: "response.output_item.added",
+                output_index: 0,
+                item: { type: "reasoning", id: "reason" },
+              },
+              {
+                type: "response.reasoning_summary_text.delta",
+                item_id: "reason",
+                summary_index: 0,
+                delta: thought,
+              },
+              {
+                type: "response.output_item.done",
+                output_index: 0,
+                item: {
+                  type: "reasoning",
+                  id: "reason",
+                  summary: [{ type: "summary_text", text: thought }],
+                },
+              },
+              {
+                type: "response.output_item.added",
+                output_index: 1,
+                item: { type: "message", id: "msg" },
+              },
+              {
+                type: "response.output_text.delta",
+                item_id: "msg",
+                output_index: 1,
+                delta: answer,
+              },
+              {
+                type: "response.output_item.done",
+                output_index: 1,
+                item: {
+                  type: "message",
+                  id: "msg",
+                  role: "assistant",
+                  content: [
+                    { type: "output_text", text: answer, annotations: [] },
+                  ],
+                },
+              },
+              {
+                type: "response.completed",
+                response: {
+                  usage: { input_tokens: 1, output_tokens: 2, total_tokens: 3 },
+                },
+              },
+            ];
   return (
     events
       .map(
@@ -191,98 +193,116 @@ const protocols: ProviderProtocol[] = [
 ];
 
 describe.each(protocols)("SDK transport: %s", (protocol) => {
-  test("supports non-streaming title requests with the same explicit provider", async () => {
-    const body =
-      protocol === "openai-chat"
-        ? {
-            id: "chat",
-            created: 1,
-            model: "same-model",
-            choices: [
-              {
-                message: {
-                  role: "assistant",
-                  content: answer,
-                  reasoning_content: thought,
+  test.each([undefined, "title"] as const)(
+    "supports non-streaming requests with output task %s",
+    async (outputTask) => {
+      const body =
+        protocol === "openai-chat"
+          ? {
+              id: "chat",
+              created: 1,
+              model: "same-model",
+              choices: [
+                {
+                  message: {
+                    role: "assistant",
+                    content: answer,
+                    reasoning_content: thought,
+                  },
+                  finish_reason: "stop",
+                  index: 0,
                 },
-                finish_reason: "stop",
-                index: 0,
-              },
-            ],
-          }
-        : protocol === "anthropic"
-        ? {
-            id: "msg",
-            type: "message",
-            role: "assistant",
-            model: "same-model",
-            content: [
-              { type: "thinking", thinking: thought, signature: "signature" },
-              { type: "text", text: answer },
-            ],
-            stop_reason: "end_turn",
-            usage: { input_tokens: 1, output_tokens: 2 },
-          }
-        : protocol === "google"
-        ? {
-            candidates: [
-              {
-                content: {
-                  role: "model",
-                  parts: [{ text: thought, thought: true }, { text: answer }],
-                },
-                finishReason: "STOP",
-              },
-            ],
-            usageMetadata: {
-              promptTokenCount: 1,
-              candidatesTokenCount: 2,
-              totalTokenCount: 3,
-            },
-          }
-        : {
-            id: "resp",
-            created_at: 1,
-            model: "same-model",
-            status: "completed",
-            output: [
-              {
-                type: "reasoning",
-                id: "reason",
-                summary: [{ type: "summary_text", text: thought }],
-              },
-              {
-                type: "message",
+              ],
+            }
+          : protocol === "anthropic"
+            ? {
                 id: "msg",
+                type: "message",
                 role: "assistant",
+                model: "same-model",
                 content: [
-                  { type: "output_text", text: answer, annotations: [] },
+                  {
+                    type: "thinking",
+                    thinking: thought,
+                    signature: "signature",
+                  },
+                  { type: "text", text: answer },
                 ],
-              },
-            ],
-            usage: { input_tokens: 1, output_tokens: 2, total_tokens: 3 },
-          };
-    const finish = jest.fn();
-    const reasoning = jest.fn();
-    await runSdkChat(
-      provider(protocol),
-      {
-        messages: [{ role: "user", content: "title" }],
-        config: { model: "same-model", stream: false },
-        onFinish: finish,
-        onReasoning: reasoning,
-      },
-      async (input, init) => {
-        const requestBody = JSON.parse(init?.body as string);
-        expect(requestBody.stream).not.toBe(true);
-        expect(String(input)).not.toContain("streamGenerateContent");
-        return Response.json(body);
-      },
-    );
-    expect(finish).toHaveBeenCalledTimes(1);
-    expect(finish.mock.calls[0][0]).toBe(answer);
-    expect(reasoning).toHaveBeenLastCalledWith(thought);
-  });
+                stop_reason: "end_turn",
+                usage: { input_tokens: 1, output_tokens: 2 },
+              }
+            : protocol === "google"
+              ? {
+                  candidates: [
+                    {
+                      content: {
+                        role: "model",
+                        parts: [
+                          { text: thought, thought: true },
+                          { text: answer },
+                        ],
+                      },
+                      finishReason: "STOP",
+                    },
+                  ],
+                  usageMetadata: {
+                    promptTokenCount: 1,
+                    candidatesTokenCount: 2,
+                    totalTokenCount: 3,
+                  },
+                }
+              : {
+                  id: "resp",
+                  created_at: 1,
+                  model: "same-model",
+                  status: "completed",
+                  output: [
+                    {
+                      type: "reasoning",
+                      id: "reason",
+                      summary: [{ type: "summary_text", text: thought }],
+                    },
+                    {
+                      type: "message",
+                      id: "msg",
+                      role: "assistant",
+                      content: [
+                        { type: "output_text", text: answer, annotations: [] },
+                      ],
+                    },
+                  ],
+                  usage: { input_tokens: 1, output_tokens: 2, total_tokens: 3 },
+                };
+      const finish = jest.fn();
+      const reasoning = jest.fn();
+      await runSdkChat(
+        provider(protocol),
+        {
+          messages: [{ role: "user", content: "title" }],
+          config: { model: "same-model", stream: false },
+          outputTask,
+          onFinish: finish,
+          onReasoning: reasoning,
+        },
+        async (input, init) => {
+          const requestBody = JSON.parse(init?.body as string);
+          expect(requestBody.stream).not.toBe(true);
+          expect(requestBody.response_format).toBeUndefined();
+          expect(requestBody.text?.format).toBeUndefined();
+          expect(
+            requestBody.generationConfig?.responseMimeType,
+          ).toBeUndefined();
+          expect(requestBody.output_config?.format).toBeUndefined();
+          expect(String(input)).not.toContain("streamGenerateContent");
+          return Response.json(body);
+        },
+      );
+      expect(finish).toHaveBeenCalledTimes(1);
+      expect(finish.mock.calls[0][0]).toBe(answer);
+      if (outputTask) expect(reasoning).not.toHaveBeenCalled();
+      else expect(reasoning).toHaveBeenLastCalledWith(thought);
+    },
+  );
 
   test("uses the explicit protocol, credentials and model, and separates fragmented reasoning from text", async () => {
     const requests: { url: string; headers: Headers; body: any }[] = [];
@@ -322,17 +342,18 @@ describe.each(protocols)("SDK transport: %s", (protocol) => {
     expect(finish).toHaveBeenCalledTimes(1);
     expect(finish.mock.calls[0][0]).toBe(answer);
     expect(reasoning).toHaveBeenLastCalledWith(thought);
-    expect(update).toHaveBeenLastCalledWith(answer, answer);
+    expect(update.mock.calls.at(-1)?.[0]).toBe(answer);
+    expect(update.mock.calls.map(([, chunk]) => chunk).join("")).toBe(answer);
     expect(requests).toHaveLength(1);
     const request = requests[0];
     const path =
       protocol === "openai-chat"
         ? "/chat/completions"
         : protocol === "openai-responses"
-        ? "/responses"
-        : protocol === "anthropic"
-        ? "/messages"
-        : "/models/same-model:streamGenerateContent";
+          ? "/responses"
+          : protocol === "anthropic"
+            ? "/messages"
+            : "/models/same-model:streamGenerateContent";
     expect(new URL(request.url).pathname).toBe(`/v1${path}`);
     expect(request.headers.get("x-route")).toBe("one");
     expect(
@@ -340,8 +361,8 @@ describe.each(protocols)("SDK transport: %s", (protocol) => {
         protocol === "anthropic"
           ? "x-api-key"
           : protocol === "google"
-          ? "x-goog-api-key"
-          : "authorization",
+            ? "x-goog-api-key"
+            : "authorization",
       ),
     ).toBe(protocol.startsWith("openai") ? "Bearer secret-one" : "secret-one");
     expect(JSON.stringify(request.body)).toContain("iVBORw0KGgo=");
@@ -380,6 +401,76 @@ describe.each(protocols)("SDK transport: %s", (protocol) => {
       expect(finish).not.toHaveBeenCalled();
     },
   );
+});
+
+test.each([
+  { content: "  ", reason: "stop" },
+  { content: "Partial title", reason: "length" },
+  { content: "", reason: "tool_calls" },
+])(
+  "rejects an empty or incomplete title ($reason)",
+  async ({ content, reason }) => {
+    const finish = jest.fn();
+    const options: ChatOptions = {
+      messages: [{ role: "user", content: "title" }],
+      config: { model: "same-model", stream: false },
+      outputTask: "title",
+      onFinish: finish,
+    };
+    const transport = jest.fn<typeof fetch>().mockImplementation(async () =>
+      Response.json({
+        id: "chat",
+        created: 1,
+        model: "same-model",
+        choices: [
+          {
+            message: { role: "assistant", content },
+            finish_reason: reason,
+            index: 0,
+          },
+        ],
+      }),
+    );
+    await expect(
+      runSdkChat(provider("openai-chat"), options, transport),
+    ).rejects.toThrow();
+    expect(finish).not.toHaveBeenCalled();
+    expect(transport).toHaveBeenCalledTimes(1);
+  },
+);
+
+test("validates auxiliary summary output with the SDK object schema", async () => {
+  const finish = jest.fn();
+  await runSdkChat(
+    provider("openai-chat"),
+    {
+      messages: [{ role: "user", content: "summary" }],
+      config: { model: "same-model", stream: false },
+      outputTask: "summary",
+      onFinish: finish,
+    },
+    async (_input, init) => {
+      const requestBody = JSON.parse(init?.body as string);
+      expect(requestBody.response_format).toBeDefined();
+      return Response.json({
+        id: "chat",
+        created: 1,
+        model: "same-model",
+        choices: [
+          {
+            message: {
+              role: "assistant",
+              content: JSON.stringify({ summary: "A validated summary" }),
+            },
+            finish_reason: "stop",
+            index: 0,
+          },
+        ],
+      });
+    },
+  );
+  expect(finish).toHaveBeenCalledTimes(1);
+  expect(finish.mock.calls[0][0]).toBe("A validated summary");
 });
 
 test("same model in two instances never shares endpoint or credentials", async () => {

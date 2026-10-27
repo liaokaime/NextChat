@@ -1,4 +1,8 @@
-import { prepareMarkdown, waitForMarkdown } from "../app/utils/markdown";
+import {
+  isSafeMarkdownImage,
+  prepareMarkdown,
+  waitForMarkdown,
+} from "../app/utils/markdown";
 import { jest } from "@jest/globals";
 
 test("normalizes legacy math without changing dollar math", () => {
@@ -44,6 +48,22 @@ test("wraps complete HTML documents but preserves HTML inside code", () => {
   expect(prepareMarkdown("<!DOCTYPE html><html>")).toBe(
     "<!DOCTYPE html><html>",
   );
+  expect(prepareMarkdown(html + "\nExplanation after the preview")).toBe(
+    "\n```html\n" + html + "\n```\nExplanation after the preview",
+  );
+});
+
+test("allows safe image data and same-origin blob URLs only", () => {
+  expect(isSafeMarkdownImage("data:image/png;base64,aGVsbG8=")).toBe(true);
+  expect(isSafeMarkdownImage("data:text/html;base64,PGh0bWw+")).toBe(false);
+  expect(isSafeMarkdownImage("data:image/png,raw-pixels")).toBe(false);
+  expect(
+    isSafeMarkdownImage("blob:https://example.test/id", "https://example.test"),
+  ).toBe(true);
+  expect(
+    isSafeMarkdownImage("blob:https://other.test/id", "https://example.test"),
+  ).toBe(false);
+  expect(isSafeMarkdownImage("javascript:alert(1)")).toBe(false);
 });
 
 test("export waits for pending rendering and image decoding", async () => {
