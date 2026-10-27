@@ -43,7 +43,7 @@
   },
   "productName": "NextChat",
   "mainBinaryName": "NextChat",
-  "version": "2.16.1",
+  "version": "3.0.0",
   "identifier": "com.yida.chatgpt.next.web",
   "plugins": {},
   "app": {
