@@ -114,7 +114,6 @@ const imageCaches: Record<string, string> = {};
 export function cacheImageToBase64Image(imageUrl: string) {
   if (imageUrl.includes(CACHE_URL_PREFIX)) {
     if (!imageCaches[imageUrl]) {
-      const reader = new FileReader();
       return fetch(imageUrl, {
         method: "GET",
         mode: "cors",
@@ -162,14 +161,6 @@ export function uploadImage(file: Blob): Promise<string> {
       }
       throw Error(`upload Error: ${res?.msg}`);
     });
-}
-
-export function removeImage(imageUrl: string) {
-  return fetch(imageUrl, {
-    method: "DELETE",
-    mode: "cors",
-    credentials: "include",
-  });
 }
 
 export function stream(

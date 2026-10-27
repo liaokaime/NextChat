@@ -1,4 +1,3 @@
-import React from "react";
 import { jest } from "@jest/globals";
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { useChatScroll } from "../app/components/use-chat-scroll";

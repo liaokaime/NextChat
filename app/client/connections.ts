@@ -4,7 +4,6 @@ import type { LLMModel } from "./api";
 import {
   createProviderModel,
   instanceModels,
-  llmModelSelection,
   migrateLegacyProviders,
   type ProviderInstance,
   type ProviderModel,
@@ -47,7 +46,6 @@ export const LEGACY_PREFIXES: Record<ServiceProvider, string> = {
   ChatGLM: "chatglm",
   DeepSeek: "deepseek",
   SiliconFlow: "siliconflow",
-  "302.AI": "ai302",
 };
 export const legacyKey = (service: string) => `legacy:${service}`;
 export const sdkKey = (id: string) => `sdk:${id}`;
@@ -74,10 +72,8 @@ export function legacyConfigured(
     service === ServiceProvider.Google
       ? "GEMINI"
       : service === ServiceProvider.ByteDance
-      ? "BYTEDANCE"
-      : service === ServiceProvider["302.AI"]
-      ? "AI302"
-      : service.toUpperCase();
+        ? "BYTEDANCE"
+        : service.toUpperCase();
   const defaultUrl = (Constants as unknown as Record<string, unknown>)[
     `${defaultUrlName}_BASE_URL`
   ];
@@ -216,12 +212,6 @@ export function desktopConnectionModels(
     });
   return [...sdk, ...builtin];
 }
-export const modelConnectionKey = (model: {
-  provider?: LLMModel["provider"];
-}) =>
-  model.provider?.providerType === "ai-sdk"
-    ? sdkKey(model.provider.id)
-    : legacyKey(model.provider?.providerName || ServiceProvider.OpenAI);
 export const modelConnectionName = (model: {
   provider?: LLMModel["provider"];
 }) => model.provider?.connectionName || model.provider?.providerName || "";
@@ -288,10 +278,4 @@ export function pruneUnusedImportedProviders(
           candidate.id === p.id && signature(candidate) === signature(p),
       ),
   );
-}
-export function rememberModel(recent: string[], key: string) {
-  return [key, ...recent.filter((entry) => entry !== key)].slice(0, 8);
-}
-export function visibleModelKeys(models: readonly LLMModel[]) {
-  return new Set(models.filter((m) => m.available).map(llmModelSelection));
 }

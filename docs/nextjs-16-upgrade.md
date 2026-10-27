@@ -29,7 +29,7 @@ Next.js、React 的目标版本通过官方 npm registry 的 `latest` 标签核�
 
 官方 `next-async-request-api` codemod 已对 `app` 执行 dry run，报告 139 个文件未修改。项目将入口导出为 `GET = handle` 等形式，工具未转换这些参数，因此人工修改并通过 Next 生成的路由类型和回归测试验证。框架迁移先通过一次 `next build --webpack`；最终版本已删除 Webpack 自定义配置，仅使用 Turbopack。
 
-开发模式按 Next.js 16.2+ 的官方行为生成了根目录 `AGENTS.md`，指向当前安装版本附带的文档；保留该文件，避免后续开发反复产生未跟踪文件。未启用实验性 agent feedback。
+开发模式按 Next.js 16.2+ 的官方行为生成过根目录 `AGENTS.md`，指向当前安装版本附带的文档。仓库统一保留中文 Markdown 文档后，已删除该英文文件；后续 `next dev` 检测到 AI 编码代理时仍可能重新生成。未启用实验性 agent feedback。
 
 ## 实现与兼容边界
 

@@ -1,6 +1,5 @@
 /* eslint-disable @next/next/no-img-element */
 import styles from "./ui-lib.styles";
-import LoadingIcon from "../icons/three-dots.svg";
 import CloseIcon from "../icons/close.svg";
 import EyeIcon from "../icons/eye.svg";
 import EyeOffIcon from "../icons/eye-off.svg";
@@ -45,15 +44,6 @@ export function Popover(props: {
   );
 }
 
-export function Card(props: {
-  children: React.JSX.Element[];
-  className?: string;
-}) {
-  return (
-    <div className={clsx(styles.card, props.className)}>{props.children}</div>
-  );
-}
-
 export function ListItem(props: {
   title?: string | React.JSX.Element;
   subTitle?: string | React.JSX.Element;
@@ -94,22 +84,6 @@ export function List(props: { children: React.ReactNode; id?: string }) {
   return (
     <div className={styles.list} id={props.id}>
       {props.children}
-    </div>
-  );
-}
-
-export function Loading() {
-  return (
-    <div
-      style={{
-        height: "100vh",
-        width: "100vw",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <LoadingIcon />
     </div>
   );
 }

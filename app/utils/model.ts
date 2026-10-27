@@ -1,5 +1,6 @@
 import { DEFAULT_MODELS, ServiceProvider } from "../constant";
 import { LLMModel } from "../client/api";
+import { isRemovedProvider } from "../client/removed-providers";
 
 const CustomSeq = {
   val: -1000, //To ensure the custom model located at front, start from -1000, refer to constant.ts
@@ -66,6 +67,12 @@ export function collectModelTable(
 
   // default models
   models.forEach((m) => {
+    if (
+      m.provider?.id === "legacy-ai302" ||
+      (m.provider?.providerType !== "ai-sdk" &&
+        isRemovedProvider(m.provider?.providerName || m.provider?.id))
+    )
+      return;
     // using <modelName>@<providerId> as fullName
     modelTable[`${m.name}@${m?.provider?.id}`] = {
       ...m,
@@ -91,6 +98,7 @@ export function collectModelTable(
       } else {
         // 1. find model by name, and set available value
         const [customModelName, customProviderName] = getModelProvider(name);
+        if (isRemovedProvider(customProviderName)) return;
         let count = 0;
         for (const fullName in modelTable) {
           const [modelName, providerName] = getModelProvider(fullName);

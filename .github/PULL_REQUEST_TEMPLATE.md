@@ -1,28 +1,26 @@
-#### 💻 变更类型 | Change Type
+#### 💻 变更类型
 
-<!-- For change type, change [ ] to [x]. -->
+<!-- 请将对应变更类型前的 [ ] 改为 [x]。 -->
 
-- [ ] feat    <!-- 引入新功能 | Introduce new features -->
-- [ ] fix    <!-- 修复 Bug | Fix a bug -->
-- [ ] refactor    <!-- 重构代码（既不修复 Bug 也不添加新功能） | Refactor code that neither fixes a bug nor adds a feature -->
-- [ ] perf    <!-- 提升性能的代码变更 | A code change that improves performance -->
-- [ ] style    <!-- 添加或更新不影响代码含义的样式文件 | Add or update style files that do not affect the meaning of the code -->
-- [ ] test    <!-- 添加缺失的测试或纠正现有的测试 | Adding missing tests or correcting existing tests -->
-- [ ] docs    <!-- 仅文档更新 | Documentation only changes -->
-- [ ] ci    <!-- 修改持续集成配置文件和脚本 | Changes to our CI configuration files and scripts -->
-- [ ] chore    <!-- 其他不修改 src 或 test 文件的变更 | Other changes that don’t modify src or test files -->
-- [ ] build    <!-- 进行架构变更 | Make architectural changes -->
+- [ ] feat <!-- 引入新功能 -->
+- [ ] fix <!-- 修复缺陷 -->
+- [ ] refactor <!-- 重构代码，既不修复缺陷也不添加新功能 -->
+- [ ] perf <!-- 提升性能 -->
+- [ ] style <!-- 修改代码格式，不影响代码含义 -->
+- [ ] test <!-- 添加或修正测试 -->
+- [ ] docs <!-- 仅更新文档 -->
+- [ ] ci <!-- 修改持续集成配置和脚本 -->
+- [ ] chore <!-- 其他不修改源码或测试的变更 -->
+- [ ] build <!-- 修改构建系统或依赖 -->
 
-#### 🔀 变更说明 | Description of Change
+#### 🔀 变更说明
 
-<!-- 
-感谢您的 Pull Request ，请提供此 Pull Request 的变更说明
-Thank you for your Pull Request. Please provide a description above.
+<!--
+感谢提交合并请求，请说明本次变更的内容。
 -->
 
-#### 📝 补充信息 | Additional Information
+#### 📝 补充信息
 
-<!-- 
-请添加与此 Pull Request 相关的补充信息
-Add any other context about the Pull Request here.
+<!--
+请添加与本次合并请求相关的补充信息。
 -->

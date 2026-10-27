@@ -531,17 +531,6 @@ const en: LocaleType = {
           SubTitle: "Select a safety filtering level",
         },
       },
-      AI302: {
-        ApiKey: {
-          Title: "302.AI API Key",
-          SubTitle: "Use a custom 302.AI API Key",
-          Placeholder: "302.AI API Key",
-        },
-        Endpoint: {
-          Title: "Endpoint Address",
-          SubTitle: "Example: ",
-        },
-      },
     },
 
     Model: "Model",
@@ -789,10 +778,6 @@ const en: LocaleType = {
       `Affects ${sessions} chats, ${masks} masks and ${global} global settings.`,
     ChooseModel: "Choose model",
     Search: "Search models or connections",
-    Favorite: "Favorite",
-    Unfavorite: "Remove favorite",
-    Favorites: "Favorites",
-    Recent: "Recently used",
     AllModels: "All models",
     NoResults: "No matching available models.",
     Unavailable:

@@ -43,6 +43,17 @@ const providerContext = (
   params: Promise.resolve({ provider, path }),
 });
 
+test("removed 302.AI proxy returns 404 without forwarding credentials", async () => {
+  const req = new NextRequest("https://app.example/api/302ai/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: "Bearer retired-key" },
+    body: JSON.stringify({ model: "old-model" }),
+  });
+  const res = await providers.POST(req, providerContext("302ai"));
+  expect(res.status).toBe(404);
+  expect(fetch).not.toHaveBeenCalled();
+});
+
 test("promise route params preserve upstream URL, authorization, body and streaming", async () => {
   const req = new NextRequest(
     "https://app.example/api/openai/v1/chat/completions",

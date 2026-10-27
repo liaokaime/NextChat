@@ -7,12 +7,7 @@ import {
 } from "@/app/constant";
 import { useAccessStore, useAppConfig, useChatStore } from "@/app/store";
 
-import {
-  ChatOptions,
-  getHeaders,
-  LLMApi,
-  LLMModel,
-} from "../api";
+import { ChatOptions, getHeaders, LLMApi, LLMModel } from "../api";
 import Locale from "../../locales";
 import {
   EventStreamContentType,
@@ -26,8 +21,6 @@ import { fetch } from "@/app/utils/stream";
 import { RequestPayload } from "./openai";
 
 export class SparkApi implements LLMApi {
-  private disableListModels = true;
-
   path(path: string): string {
     const accessStore = useAccessStore.getState();
 

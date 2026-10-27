@@ -33,7 +33,7 @@ Docker 版本相当于稳定版，latest Docker 总是与 latest release version
 这是你自定义的访问密码，你可以选择：
 
 1. 不设置，删除该环境变量即可。谨慎：此时任何人可以访问你的项目。
-2. 部署项目时，设置环境变量 CODE（支持多个密码逗号分隔）。设置访问密码后，用户需要在设置界面输入访问密码才可以使用。参见[相关说明](https://github.com/Yidadaa/ChatGPT-Next-Web/blob/main/README_CN.md#%E9%85%8D%E7%BD%AE%E9%A1%B5%E9%9D%A2%E8%AE%BF%E9%97%AE%E5%AF%86%E7%A0%81)
+2. 部署项目时，设置环境变量 CODE（支持多个密码逗号分隔）。使用服务端密钥时，用户需要在设置界面输入访问密码；是否允许用户使用自己的 API 密钥由 HIDE_USER_API_KEY 控制。参见[配置页面访问密码](../README.md#配置页面访问密码)。
 
 ## 为什么我部署的版本没有流式响应
 

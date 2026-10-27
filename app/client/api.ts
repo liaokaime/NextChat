@@ -18,9 +18,9 @@ import { DeepSeekApi } from "./platforms/deepseek";
 import { XAIApi } from "./platforms/xai";
 import { ChatGLMApi } from "./platforms/glm";
 import { SiliconflowApi } from "./platforms/siliconflow";
-import { Ai302Api } from "./platforms/ai302";
 import { SdkApi } from "./platforms/ai-sdk";
 import Locale from "../locales";
+import { isRemovedProvider } from "./removed-providers";
 
 export const ROLES = ["system", "user", "assistant"] as const;
 export type MessageRole = (typeof ROLES)[number];
@@ -101,27 +101,6 @@ export abstract class LLMApi {
   abstract models(): Promise<LLMModel[]>;
 }
 
-type ProviderName = "openai" | "azure" | "claude" | "palm";
-
-interface Model {
-  name: string;
-  provider: ProviderName;
-  ctxlen: number;
-}
-
-interface ChatProvider {
-  name: ProviderName;
-  apiConfig: {
-    baseUrl: string;
-    apiKey: string;
-    summaryModel: Model;
-  };
-  models: Model[];
-
-  chat: () => void;
-  usage: () => void;
-}
-
 export class ClientApi {
   public llm: LLMApi;
 
@@ -170,19 +149,10 @@ export class ClientApi {
       case ModelProvider.SiliconFlow:
         this.llm = new SiliconflowApi();
         break;
-      case ModelProvider["302.AI"]:
-        this.llm = new Ai302Api();
-        break;
       default:
         this.llm = new ChatGPTApi();
     }
   }
-
-  config() {}
-
-  prompts() {}
-
-  masks() {}
 
   async share(messages: ChatMessage[], avatarUrl: string | null = null) {
     const msgs = messages
@@ -269,7 +239,6 @@ export function getHeaders(
     const isChatGLM = modelConfig.providerName === ServiceProvider.ChatGLM;
     const isSiliconFlow =
       modelConfig.providerName === ServiceProvider.SiliconFlow;
-    const isAI302 = modelConfig.providerName === ServiceProvider["302.AI"];
     const isEnabledAccessControl = accessStore.enabledAccessControl();
     const apiKey = isGoogle
       ? accessStore.googleApiKey
@@ -298,23 +267,12 @@ export function getHeaders(
                               ":" +
                               accessStore.iflytekApiSecret
                             : ""
-                          : isAI302
-                            ? accessStore.ai302ApiKey
-                            : accessStore.openaiApiKey;
+                          : accessStore.openaiApiKey;
     return {
       isGoogle,
       isAzure,
       isAnthropic,
       isBaidu,
-      isByteDance,
-      isAlibaba,
-      isMoonshot,
-      isIflytek,
-      isDeepSeek,
-      isXAI,
-      isChatGLM,
-      isSiliconFlow,
-      isAI302,
       apiKey,
       isEnabledAccessControl,
     };
@@ -335,15 +293,6 @@ export function getHeaders(
     isAzure,
     isAnthropic,
     isBaidu,
-    isByteDance,
-    isAlibaba,
-    isMoonshot,
-    isIflytek,
-    isDeepSeek,
-    isXAI,
-    isChatGLM,
-    isSiliconFlow,
-    isAI302,
     apiKey,
     isEnabledAccessControl,
   } = getConfig();
@@ -376,6 +325,10 @@ export function getClientApi(
   const api = getLegacyClientApi(provider);
   const chat = api.llm.chat.bind(api.llm);
   api.llm.chat = async (options) => {
+    if (isRemovedProvider(provider)) {
+      options.onError?.(new Error(Locale.ModelServices.Unavailable));
+      return;
+    }
     const meta = useAccessStore.getState().legacyConnections[provider];
     if (
       getClientConfig()?.isApp &&
@@ -419,8 +372,6 @@ function getLegacyClientApi(provider: ServiceProvider): ClientApi {
       return new ClientApi(ModelProvider.ChatGLM);
     case ServiceProvider.SiliconFlow:
       return new ClientApi(ModelProvider.SiliconFlow);
-    case ServiceProvider["302.AI"]:
-      return new ClientApi(ModelProvider["302.AI"]);
     default:
       return new ClientApi(ModelProvider.GPT);
   }

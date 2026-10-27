@@ -7,7 +7,6 @@ import {
   normalizeLegacyConnections,
   pruneUnusedImportedProviders,
   referencesConnection,
-  rememberModel,
   type ConnectionAccess,
 } from "../app/client/connections";
 import {
@@ -134,7 +133,7 @@ test("native model overrides and metadata survive normalization and disable only
   ]);
 });
 
-test("connection impact includes compression and recent models use stable keys with a bounded history", () => {
+test("connection impact includes compression models", () => {
   expect(
     referencesConnection(
       {
@@ -148,15 +147,4 @@ test("connection impact includes compression and recent models use stable keys w
   expect(
     referencesConnection({ providerName: "Google" }, { key: "legacy:OpenAI" }),
   ).toBe(false);
-  const recent = Array.from({ length: 9 }, (_, i) => `key-${i}`);
-  expect(rememberModel(recent, "key-3")).toEqual([
-    "key-3",
-    "key-0",
-    "key-1",
-    "key-2",
-    "key-4",
-    "key-5",
-    "key-6",
-    "key-7",
-  ]);
 });

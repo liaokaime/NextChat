@@ -59,7 +59,6 @@ import {
   getModelSizes,
   supportsCustomSize,
   useMobileScreen,
-  selectOrCopy,
 } from "../utils";
 
 import { uploadImage as uploadImageRemote } from "@/app/utils/chat";
@@ -900,16 +899,6 @@ function ChatContent() {
       e.preventDefault();
     }
   };
-  const onRightClick = (e: any, message: ChatMessage) => {
-    // copy to clipboard
-    if (selectOrCopy(e.currentTarget, getMessageTextContent(message))) {
-      if (userInput.length === 0) {
-        setUserInput(getMessageTextContent(message));
-      }
-
-      e.preventDefault();
-    }
-  };
 
   const deleteMessage = (msgId?: string) => {
     chatStore.updateTargetSession(
@@ -1640,7 +1629,6 @@ function ChatContent() {
                                     message.content.length === 0 &&
                                     !isUser
                                   }
-                                  //   onContextMenu={(e) => onRightClick(e, message)} // hard to use
                                   onDoubleClickCapture={() => {
                                     if (!isMobileScreen) return;
                                     setUserInput(

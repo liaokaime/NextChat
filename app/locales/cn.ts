@@ -527,17 +527,6 @@ const cn = {
         Title: "自定义模型名",
         SubTitle: "增加自定义模型可选项，使用英文逗号隔开",
       },
-      AI302: {
-        ApiKey: {
-          Title: "接口密钥",
-          SubTitle: "使用自定义302.AI API Key",
-          Placeholder: "302.AI API Key",
-        },
-        Endpoint: {
-          Title: "接口地址",
-          SubTitle: "样例：",
-        },
-      },
     },
 
     Model: "模型 (model)",
@@ -778,10 +767,6 @@ const cn = {
       `影响 ${sessions} 个会话、${masks} 个面具、${global} 项全局配置。`,
     ChooseModel: "选择模型",
     Search: "搜索模型或提供商",
-    Favorite: "收藏",
-    Unfavorite: "取消收藏",
-    Favorites: "已收藏",
-    Recent: "最近使用",
     AllModels: "全部模型",
     NoResults: "没有匹配的可用模型。",
     Unavailable: "当前模型或提供商不可用，请重新选择模型。",

@@ -137,16 +137,7 @@ export const PROVIDER_PLATFORMS: readonly ProviderPlatform[] = [
       "openai-responses": "https://aihubmix.com/v1",
     },
   },
-  {
-    id: "302ai",
-    defaultProtocol: "openai-chat",
-    name: "302.AI",
-    aliases: [],
-    baseUrls: {
-      anthropic: "https://api.302.ai/v1",
-      "openai-chat": "https://api.302.ai/v1",
-    },
-  },
+
   {
     id: "cherryin",
     defaultProtocol: "openai-chat",

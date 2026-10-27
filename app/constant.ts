@@ -1,5 +1,3 @@
-export const RUNTIME_CONFIG_DOM = "danger-runtime-config";
-
 export const OPENAI_BASE_URL = "https://api.openai.com";
 export const ANTHROPIC_BASE_URL = "https://api.anthropic.com";
 
@@ -24,8 +22,6 @@ export const XAI_BASE_URL = "https://api.x.ai";
 export const CHATGLM_BASE_URL = "https://open.bigmodel.cn";
 
 export const SILICONFLOW_BASE_URL = "https://api.siliconflow.cn";
-
-export const AI302_BASE_URL = "https://api.302.ai";
 
 export const CACHE_URL_PREFIX = "/api/cache";
 export const UPLOAD_URL = `${CACHE_URL_PREFIX}/upload`;
@@ -58,7 +54,6 @@ export enum ApiPath {
   ChatGLM = "/api/chatglm",
   DeepSeek = "/api/deepseek",
   SiliconFlow = "/api/siliconflow",
-  "302.AI" = "/api/302ai",
 }
 
 export enum SlotID {
@@ -88,7 +83,6 @@ export const NARROW_SIDEBAR_WIDTH = 100;
 
 export const ACCESS_CODE_PREFIX = "nk-";
 
-export const LAST_INPUT_KEY = "last-input";
 export const UNFINISHED_INPUT = (id: string) => "unfinished-input-" + id;
 
 export const STORAGE_KEY = "chatgpt-next-web";
@@ -113,7 +107,6 @@ export enum ServiceProvider {
   ChatGLM = "ChatGLM",
   DeepSeek = "DeepSeek",
   SiliconFlow = "SiliconFlow",
-  "302.AI" = "302.AI",
 }
 
 // Google API safety settings, see https://ai.google.dev/gemini-api/docs/safety-settings
@@ -139,7 +132,6 @@ export enum ModelProvider {
   ChatGLM = "ChatGLM",
   DeepSeek = "DeepSeek",
   SiliconFlow = "SiliconFlow",
-  "302.AI" = "302.AI",
 }
 
 export const Anthropic = {
@@ -244,13 +236,6 @@ export const SiliconFlow = {
   ListModelPath: "v1/models?&sub_type=chat",
 };
 
-export const AI302 = {
-  ExampleEndpoint: AI302_BASE_URL,
-  ChatPath: "v1/chat/completions",
-  EmbeddingsPath: "jina/v1/embeddings",
-  ListModelPath: "v1/models?llm=1",
-};
-
 export const DEFAULT_INPUT_TEMPLATE = `{{input}}`; // input / time / model / lang
 // export const DEFAULT_SYSTEM_TEMPLATE = `
 // You are a helpful AI assistant powered by a large language model from {{ServiceProvider}}.
@@ -270,8 +255,6 @@ Latex block: $$e=mc^2$$
 `;
 
 export const SUMMARIZE_MODEL = "gpt-6-luna";
-export const GEMINI_SUMMARIZE_MODEL = "gemini-3.5-flash-lite";
-export const DEEPSEEK_SUMMARIZE_MODEL = "deepseek-flash";
 
 export const KnowledgeCutOffDate: Record<string, string> = {
   default: "2021-09",
@@ -382,8 +365,6 @@ const siliconflowModels = [
   "Pro/moonshotai/Kimi-K2.6",
   "Pro/zai-org/GLM-5.1",
 ];
-
-const ai302Models: string[] = [];
 
 let seq = 1000; // 内置的模型序号生成器从1000开始
 export const DEFAULT_MODELS = [
@@ -541,21 +522,9 @@ export const DEFAULT_MODELS = [
       sorted: 14,
     },
   })),
-  ...ai302Models.map((name) => ({
-    name,
-    available: true,
-    sorted: seq++,
-    provider: {
-      id: "ai302",
-      providerName: "302.AI",
-      providerType: "ai302",
-      sorted: 15,
-    },
-  })),
 ] as const;
 
 export const CHAT_PAGE_SIZE = 15;
-export const MAX_RENDER_MSG_COUNT = 45;
 
 // some famous webdav endpoints
 export const internalAllowedWebDavEndpoints = [

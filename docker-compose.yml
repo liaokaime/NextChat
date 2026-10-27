@@ -1,9 +1,9 @@
-version: "3.9"
 services:
   chatgpt-next-web:
     profiles: [ "no-proxy" ]
     container_name: chatgpt-next-web
-    image: yidadaa/chatgpt-next-web
+    build: .
+    image: nextchat-local
     ports:
       - 3000:3000
     environment:
@@ -16,12 +16,12 @@ services:
       - DISABLE_GPT4=$DISABLE_GPT4
       - ENABLE_BALANCE_QUERY=$ENABLE_BALANCE_QUERY
       - DISABLE_FAST_LINK=$DISABLE_FAST_LINK
-      - OPENAI_SB=$OPENAI_SB
 
   chatgpt-next-web-proxy:
     profiles: [ "proxy" ]
     container_name: chatgpt-next-web-proxy
-    image: yidadaa/chatgpt-next-web
+    build: .
+    image: nextchat-local
     ports:
       - 3000:3000
     environment:
@@ -35,4 +35,3 @@ services:
       - DISABLE_GPT4=$DISABLE_GPT4
       - ENABLE_BALANCE_QUERY=$ENABLE_BALANCE_QUERY
       - DISABLE_FAST_LINK=$DISABLE_FAST_LINK
-      - OPENAI_SB=$OPENAI_SB

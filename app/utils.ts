@@ -156,18 +156,6 @@ export function isFirefox() {
   );
 }
 
-export function selectOrCopy(el: HTMLElement, content: string) {
-  const currentSelection = window.getSelection();
-
-  if (currentSelection?.type === "Range") {
-    return false;
-  }
-
-  copyToClipboard(content);
-
-  return true;
-}
-
 function getDomContentWidth(dom: HTMLElement) {
   const style = window.getComputedStyle(dom);
   const paddingWidth =
@@ -216,10 +204,6 @@ export function autoGrowTextArea(dom: HTMLTextAreaElement) {
     Math.round(height / singleLineHeight) + (endWithEmptyLine ? 1 : 0);
 
   return rows;
-}
-
-export function getCSSVar(varName: string) {
-  return getComputedStyle(document.body).getPropertyValue(varName).trim();
 }
 
 /**

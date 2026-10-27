@@ -16,9 +16,9 @@ import {
   XAI_BASE_URL,
   CHATGLM_BASE_URL,
   SILICONFLOW_BASE_URL,
-  AI302_BASE_URL,
 } from "../constant";
 import { getHeaders } from "../client/api";
+import { stripRemovedProviderAccess } from "../client/removed-providers";
 import { getClientConfig } from "../config/client";
 import { createPersistStore } from "../utils/store";
 import { ensure } from "../utils/clone";
@@ -68,8 +68,6 @@ const DEFAULT_CHATGLM_URL = isApp ? CHATGLM_BASE_URL : ApiPath.ChatGLM;
 const DEFAULT_SILICONFLOW_URL = isApp
   ? SILICONFLOW_BASE_URL
   : ApiPath.SiliconFlow;
-
-const DEFAULT_AI302_URL = isApp ? AI302_BASE_URL : ApiPath["302.AI"];
 
 const DEFAULT_ACCESS_STATE = {
   providers: [] as ProviderInstance[],
@@ -144,10 +142,6 @@ const DEFAULT_ACCESS_STATE = {
   siliconflowUrl: DEFAULT_SILICONFLOW_URL,
   siliconflowApiKey: "",
 
-  // 302.AI
-  ai302Url: DEFAULT_AI302_URL,
-  ai302ApiKey: "",
-
   // server config
   needCode: true,
   hideUserApiKey: false,
@@ -157,7 +151,6 @@ const DEFAULT_ACCESS_STATE = {
   customModels: "",
   defaultModel: "",
   visionModels: "",
-
 };
 
 export const useAccessStore = createPersistStore(
@@ -314,11 +307,12 @@ export const useAccessStore = createPersistStore(
   }),
   {
     name: StoreKey.Access,
-    version: 3,
+    // Re-save the sanitized state so retired credentials leave persisted storage.
+    version: 4,
     merge(persistedState, currentState) {
-      const state = persistedState as
-        | Partial<typeof DEFAULT_ACCESS_STATE>
-        | undefined;
+      const state = stripRemovedProviderAccess(
+        (persistedState ?? {}) as Partial<typeof DEFAULT_ACCESS_STATE>,
+      );
       return {
         ...currentState,
         ...state,

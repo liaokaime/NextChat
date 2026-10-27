@@ -1,4 +1,5 @@
 import type { LLMModel } from "./api";
+import { isRemovedProviderInstance } from "./removed-providers";
 import { collectModels } from "../utils/model";
 import {
   VISION_MODEL_REGEXES,
@@ -132,6 +133,7 @@ export function normalizeProviders(value: unknown): ProviderInstance[] {
         !p ||
         typeof p.id !== "string" ||
         !p.id ||
+        isRemovedProviderInstance(p.id, p.baseUrl) ||
         ids.has(p.id) ||
         !Object.hasOwn(PROVIDER_PROTOCOLS, p.protocol)
       )
@@ -190,7 +192,6 @@ export function migrateLegacyProviders(
     ["Moonshot", "moonshot", "openai-chat", "v1"],
     ["XAI", "xai", "openai-chat", "v1"],
     ["SiliconFlow", "siliconflow", "openai-chat", "v1"],
-    ["302.AI", "ai302", "openai-chat", "v1"],
     ["ChatGLM", "chatglm", "openai-chat", "api/paas/v4"],
     ["ByteDance", "bytedance", "openai-chat", "api/v3"],
   ];

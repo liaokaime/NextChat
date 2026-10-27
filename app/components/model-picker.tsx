@@ -1,8 +1,7 @@
 import Locale from "../locales";
-import { useAppConfig } from "../store/config";
 import { useAllModels } from "../utils/hooks";
 import { llmModelSelection } from "../client/providers";
-import { modelConnectionName, rememberModel } from "../client/connections";
+import { modelConnectionName } from "../client/connections";
 import type { LLMModel } from "../client/api";
 import { Select } from "./ui-lib";
 import styles from "./model-services.styles";
@@ -16,7 +15,6 @@ export function ModelPicker(props: {
   models?: Array<ReturnType<typeof useAllModels>[number]>;
   onSelect: (model?: LLMModel) => void;
 }) {
-  const config = useAppConfig();
   const allModels = useAllModels();
   const available = (props.models ?? allModels).filter(
     (m): m is LLMModel => m.available && !!m.provider,
@@ -42,12 +40,6 @@ export function ModelPicker(props: {
         }
         const model = available.find((m) => llmModelSelection(m) === key);
         if (!model) return;
-        config.update((state) => {
-          state.modelPicker.recent = rememberModel(
-            state.modelPicker.recent,
-            key,
-          );
-        });
         props.onSelect(model);
       }}
     >

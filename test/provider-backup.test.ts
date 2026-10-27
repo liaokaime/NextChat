@@ -10,6 +10,59 @@ import { createProviderModel } from "../app/client/providers";
 
 const snapshot = () => JSON.parse(JSON.stringify(getLocalAppState()));
 
+test("retired provider credentials are removed while conversations and custom connections survive", () => {
+  const state = snapshot();
+  const access = state[StoreKey.Access];
+  access.provider = "302.AI";
+  access.ai302ApiKey = "retired-secret";
+  access.ai302Url = "https://api.302.ai";
+  access.legacyConnections = {
+    "302.AI": { name: "retired", enabled: true },
+    OpenAI: { name: "keep", enabled: true },
+  };
+  const provider = {
+    name: "302.AI",
+    protocol: "openai-chat",
+    apiKey: "retired-secret",
+    headers: {},
+    models: [createProviderModel("old-model")],
+    enabled: true,
+  };
+  access.providers = [
+    { ...provider, id: "legacy-ai302", baseUrl: "https://old.example/v1" },
+    { ...provider, id: "platform-preset", baseUrl: "https://api.302.ai/v1" },
+    { ...provider, id: "custom", baseUrl: "https://custom.example/v1", apiKey: "keep-key" },
+  ];
+  const selection = { model: "old-model", providerName: "302.AI" };
+  state[StoreKey.Chat].sessions = [{
+    id: "history",
+    mask: { modelConfig: selection },
+    messages: [{ role: "assistant", content: "saved reply" }],
+  }];
+  const history = JSON.stringify(state[StoreKey.Chat]);
+  normalizeAppState(state);
+  expect(access.ai302ApiKey).toBeUndefined();
+  expect(access.ai302Url).toBeUndefined();
+  expect(access.provider).toBe("OpenAI");
+  expect(Object.keys(access.legacyConnections)).toEqual(["OpenAI"]);
+  expect(access.providers).toEqual([expect.objectContaining({ id: "custom", apiKey: "keep-key" })]);
+  expect(JSON.stringify(state[StoreKey.Chat])).toBe(history);
+  expect(JSON.stringify(state)).not.toContain("retired-secret");
+});
+
+test("older backups never migrate the retired service into a new SDK connection", () => {
+  const state = snapshot();
+  const access = state[StoreKey.Access];
+  delete access.providers;
+  access.ai302ApiKey = "retired-secret";
+  access.ai302Url = "https://api.302.ai";
+  access.openaiApiKey = "keep-key";
+  access.openaiUrl = "https://keep.example";
+  normalizeAppState(state);
+  expect(access.providers.map((p: { id: string }) => p.id)).not.toContain("legacy-ai302");
+  expect(access.providers).toContainEqual(expect.objectContaining({ id: "legacy-openai", apiKey: "keep-key" }));
+});
+
 test("old backups migrate custom models and keys without altering historical routing", () => {
   const state = snapshot();
   delete state[StoreKey.Access].providers;

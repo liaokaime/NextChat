@@ -1,6 +1,5 @@
 // Static Tailwind recipes. nc-* tokens anchor descendant/state variants; they have no CSS of their own.
 const styles: Record<string, string> = {
-  card: "nc-ui-lib-card [background-color:var(--white)] rounded-[10px] [box-shadow:var(--card-shadow)] p-[10px]",
   popover: "nc-ui-lib-popover relative [z-index:2]",
   "popover-content": [
     "nc-ui-lib-popover-content absolute w-[350px] [animation:slide-in_0.3s_ease] right-0",

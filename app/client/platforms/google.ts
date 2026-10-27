@@ -1,11 +1,5 @@
 import { ApiPath, Google } from "@/app/constant";
-import {
-  ChatOptions,
-  getHeaders,
-  LLMApi,
-  LLMModel,
-  LLMUsage,
-} from "../api";
+import { ChatOptions, getHeaders, LLMApi, LLMModel, LLMUsage } from "../api";
 import { useAccessStore, useAppConfig, useChatStore } from "@/app/store";
 import { stream } from "@/app/utils/chat";
 import { getClientConfig } from "@/app/config/client";
@@ -77,7 +71,6 @@ export class GeminiProApi implements LLMApi {
   }
   async chat(options: ChatOptions): Promise<void> {
     const apiClient = this;
-    let multimodal = false;
 
     // try get base64image from local cache image_url
     const _messages: ChatOptions["messages"] = [];
@@ -90,7 +83,6 @@ export class GeminiProApi implements LLMApi {
       if (isVisionModel(options.config.model)) {
         const images = getMessageImages(v);
         if (images.length > 0) {
-          multimodal = true;
           parts = parts.concat(
             images.map((image) => {
               const imageType = image.split(";")[0].split(":")[1];
@@ -112,7 +104,7 @@ export class GeminiProApi implements LLMApi {
     });
 
     // google requires that role in neighboring messages must not be the same
-    for (let i = 0; i < messages.length - 1; ) {
+    for (let i = 0; i < messages.length - 1;) {
       // Check if current and next item both have the role "model"
       if (messages[i].role === messages[i + 1].role) {
         // Concatenate the 'parts' of the current and next item
@@ -182,8 +174,6 @@ export class GeminiProApi implements LLMApi {
         signal: controller.signal,
         headers: getHeaders(false, options.config),
       };
-
-      const isThinking = options.config.model.includes("-thinking");
       // make a fetch request
       const requestTimeoutId = setTimeout(
         () => controller.abort(),

@@ -13,7 +13,6 @@ import { handle as deepseekHandler } from "../../deepseek";
 import { handle as siliconflowHandler } from "../../siliconflow";
 import { handle as xaiHandler } from "../../xai";
 import { handle as chatglmHandler } from "../../glm";
-import { handle as ai302Handler } from "../../302ai";
 
 async function handle(
   req: NextRequest,
@@ -50,8 +49,6 @@ async function handle(
       return siliconflowHandler(req, { params });
     case ApiPath.OpenAI:
       return openaiHandler(req, { params });
-    case ApiPath["302.AI"]:
-      return ai302Handler(req, { params });
     default:
       return NextResponse.json({ error: "Unknown provider" }, { status: 404 });
   }

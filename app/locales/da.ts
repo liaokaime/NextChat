@@ -498,17 +498,6 @@ const da: PartialLocaleType = {
           SubTitle: "Vælg et niveau for indholdskontrol",
         },
       },
-      AI302: {
-        ApiKey: {
-          Title: "302.AI API Key",
-          SubTitle: "Brug en custom 302.AI API Key",
-          Placeholder: "302.AI API Key",
-        },
-        Endpoint: {
-          Title: "Endpoint-adresse",
-          SubTitle: "Eksempel: ",
-        },
-      },
     },
     Model: "Model",
     CompressModel: {

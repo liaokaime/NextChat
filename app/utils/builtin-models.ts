@@ -1,5 +1,6 @@
 import type { LLMModel } from "../client/api";
 import removedModels from "../config/removed-builtin-models.json";
+import { isRemovedProvider } from "../client/removed-providers";
 
 const removed = new Map(
   Object.entries(removedModels).map(([provider, names]) => [
@@ -23,6 +24,12 @@ export function mergeBuiltinModels(
   const models = new Map(builtin.map((model) => [key(model), model]));
   for (const model of persisted) {
     const provider = model.provider;
+    if (
+      provider?.id === "legacy-ai302" ||
+      (provider?.providerType !== "ai-sdk" &&
+        isRemovedProvider(provider?.providerName || provider?.id))
+    )
+      continue;
     const names = removed.get(
       (provider?.providerName || provider?.id || "").toLowerCase(),
     );

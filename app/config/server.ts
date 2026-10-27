@@ -84,10 +84,6 @@ declare global {
       SILICONFLOW_URL?: string;
       SILICONFLOW_API_KEY?: string;
 
-      // 302.AI only
-      AI302_URL?: string;
-      AI302_API_KEY?: string;
-
       // custom template for preprocessing user input
       DEFAULT_INPUT_TEMPLATE?: string;
     }
@@ -112,13 +108,6 @@ function getApiKey(keys?: string) {
   const apiKeys = apiKeyEnvVar.split(",").map((v) => v.trim());
   const randomIndex = Math.floor(Math.random() * apiKeys.length);
   const apiKey = apiKeys[randomIndex];
-  if (apiKey) {
-    console.log(
-      `[Server Config] using ${randomIndex + 1} of ${
-        apiKeys.length
-      } api key - ${apiKey}`,
-    );
-  }
 
   return apiKey;
 }
@@ -145,29 +134,6 @@ export const getServerSideConfig = () => {
     }
   }
 
-  const isAzure = !!process.env.AZURE_URL;
-  const isGoogle = !!process.env.GOOGLE_API_KEY;
-  const isAnthropic = !!process.env.ANTHROPIC_API_KEY;
-  const isTencent = !!process.env.TENCENT_API_KEY;
-
-  const isBaidu = !!process.env.BAIDU_API_KEY;
-  const isBytedance = !!process.env.BYTEDANCE_API_KEY;
-  const isAlibaba = !!process.env.ALIBABA_API_KEY;
-  const isMoonshot = !!process.env.MOONSHOT_API_KEY;
-  const isIflytek = !!process.env.IFLYTEK_API_KEY;
-  const isDeepSeek = !!process.env.DEEPSEEK_API_KEY;
-  const isXAI = !!process.env.XAI_API_KEY;
-  const isChatGLM = !!process.env.CHATGLM_API_KEY;
-  const isSiliconFlow = !!process.env.SILICONFLOW_API_KEY;
-  const isAI302 = !!process.env.AI302_API_KEY;
-  // const apiKeyEnvVar = process.env.OPENAI_API_KEY ?? "";
-  // const apiKeys = apiKeyEnvVar.split(",").map((v) => v.trim());
-  // const randomIndex = Math.floor(Math.random() * apiKeys.length);
-  // const apiKey = apiKeys[randomIndex];
-  // console.log(
-  //   `[Server Config] using ${randomIndex + 1} of ${apiKeys.length} api key`,
-  // );
-
   const allowedWebDavEndpoints = (
     process.env.WHITE_WEBDAV_ENDPOINTS ?? ""
   ).split(",");
@@ -177,56 +143,44 @@ export const getServerSideConfig = () => {
     apiKey: getApiKey(process.env.OPENAI_API_KEY),
     openaiOrgId: process.env.OPENAI_ORG_ID,
 
-    isAzure,
     azureUrl: process.env.AZURE_URL,
     azureApiKey: getApiKey(process.env.AZURE_API_KEY),
     azureApiVersion: process.env.AZURE_API_VERSION,
 
-    isGoogle,
     googleApiKey: getApiKey(process.env.GOOGLE_API_KEY),
     googleUrl: process.env.GOOGLE_URL,
 
-    isAnthropic,
     anthropicApiKey: getApiKey(process.env.ANTHROPIC_API_KEY),
     anthropicApiVersion: process.env.ANTHROPIC_API_VERSION,
     anthropicUrl: process.env.ANTHROPIC_URL,
 
-    isBaidu,
     baiduUrl: process.env.BAIDU_URL,
     baiduApiKey: getApiKey(process.env.BAIDU_API_KEY),
     baiduSecretKey: process.env.BAIDU_SECRET_KEY,
 
-    isBytedance,
     bytedanceApiKey: getApiKey(process.env.BYTEDANCE_API_KEY),
     bytedanceUrl: process.env.BYTEDANCE_URL,
 
-    isAlibaba,
     alibabaUrl: process.env.ALIBABA_URL,
     alibabaApiKey: getApiKey(process.env.ALIBABA_API_KEY),
 
-    isTencent,
     tencentUrl: process.env.TENCENT_URL,
     tencentSecretKey: getApiKey(process.env.TENCENT_SECRET_KEY),
     tencentSecretId: process.env.TENCENT_SECRET_ID,
 
-    isMoonshot,
     moonshotUrl: process.env.MOONSHOT_URL,
     moonshotApiKey: getApiKey(process.env.MOONSHOT_API_KEY),
 
-    isIflytek,
     iflytekUrl: process.env.IFLYTEK_URL,
     iflytekApiKey: process.env.IFLYTEK_API_KEY,
     iflytekApiSecret: process.env.IFLYTEK_API_SECRET,
 
-    isDeepSeek,
     deepseekUrl: process.env.DEEPSEEK_URL,
     deepseekApiKey: getApiKey(process.env.DEEPSEEK_API_KEY),
 
-    isXAI,
     xaiUrl: process.env.XAI_URL,
     xaiApiKey: getApiKey(process.env.XAI_API_KEY),
 
-    isChatGLM,
     chatglmUrl: process.env.CHATGLM_URL,
     chatglmApiKey: getApiKey(process.env.CHATGLM_API_KEY),
 
@@ -235,22 +189,15 @@ export const getServerSideConfig = () => {
     cloudflareKVApiKey: getApiKey(process.env.CLOUDFLARE_KV_API_KEY),
     cloudflareKVTTL: process.env.CLOUDFLARE_KV_TTL,
 
-    isSiliconFlow,
     siliconFlowUrl: process.env.SILICONFLOW_URL,
     siliconFlowApiKey: getApiKey(process.env.SILICONFLOW_API_KEY),
-
-    isAI302,
-    ai302Url: process.env.AI302_URL,
-    ai302ApiKey: getApiKey(process.env.AI302_API_KEY),
 
     gtmId: process.env.GTM_ID,
     gaId: process.env.GA_ID || DEFAULT_GA_ID,
 
     needCode: ACCESS_CODES.size > 0,
-    code: process.env.CODE,
     codes: ACCESS_CODES,
 
-    proxyUrl: process.env.PROXY_URL,
     isVercel: !!process.env.VERCEL,
 
     hideUserApiKey: !!process.env.HIDE_USER_API_KEY,

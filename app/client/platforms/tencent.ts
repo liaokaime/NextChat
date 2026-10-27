@@ -52,8 +52,10 @@ function capitalizeKeys(obj: any): any {
     return obj.map(capitalizeKeys);
   } else if (isObject(obj)) {
     return mapValues(
-      mapKeys(obj, (value: any, key: string) =>
-        key.replace(/(^|_)(\w)/g, (m, $1, $2) => $2.toUpperCase()),
+      mapKeys(obj, (_value: any, key: string) =>
+        key.replace(/(^|_)(\w)/g, (_match, _prefix, letter) =>
+          letter.toUpperCase(),
+        ),
       ),
       capitalizeKeys,
     );

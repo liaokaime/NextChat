@@ -1,462 +1,265 @@
-<div align="center">
+# NextChat 自定义版
 
-<a href='https://nextchat.club'>
-  <img src="https://github.com/user-attachments/assets/83bdcc07-ae5e-4954-a53a-ac151ba6ccf3" width="1000" alt="icon"/>
-</a>
+基于 [NextChat](https://github.com/chatgptnextweb/nextchat) 的个人 fork，重点改进桌面端的模型提供商管理、模型配置与聊天体验，同时保留 Web 自部署能力。
 
-<h1 align="center">NextChat</h1>
+[本仓库](https://github.com/liaokaime/NextChat) · [问题反馈](https://github.com/liaokaime/NextChat/issues) · [桌面版配置指南](./docs/desktop-providers.md) · [开源协议](./LICENSE)
 
-English / [简体中文](./README_CN.md)
+## 本 fork 的主要改动
 
-<a href="https://trendshift.io/repositories/5973" target="_blank"><img src="https://trendshift.io/api/badge/repositories/5973" alt="ChatGPTNextWeb%2FChatGPT-Next-Web | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+- **桌面端多提供商**：通过统一入口管理官方服务、中转和本地服务；同一种协议可以配置多个实例，各自保存地址、密钥、自定义请求头与模型列表。
+- **四种 API 协议**：新提供商使用 Vercel AI SDK，支持 OpenAI Chat Completions、OpenAI Responses、Anthropic Messages 和 Gemini。
+- **模型管理**：支持常见平台预设、获取或手动添加模型、连接测试、图片输入，以及按模型配置生成参数和推理强度。
+- **聊天体验**：支持独立的「思考过程」展示、标题和正文搜索、单独删除聊天会话，以及全局模型与会话模型配置。
+- **Markdown 渲染**：使用 Streamdown，支持代码高亮、LaTeX 公式、Mermaid 图表及流式内容；保留聊天导出和 HTML 预览。
+- **技术栈更新**：Next.js 16、React 19、Tauri 2、Tailwind CSS 4，开发与构建要求 Node.js 24+。
 
-✨ Light and Fast AI Assistant,with Claude, DeepSeek, GPT4 & Gemini Pro support.
+继续支持面具（自定义提示词模板）、历史摘要、本地备份，以及 WebDAV / Upstash 同步。内置模型已重新清理，具体来源与范围见[内置模型审计](./docs/builtin-model-audit.md)。
 
-[![Saas][Saas-image]][saas-url]
-[![Web][Web-image]][web-url]
-[![Windows][Windows-image]][download-url]
-[![MacOS][MacOS-image]][download-url]
-[![Linux][Linux-image]][download-url]
+本 fork 已移除 MCP、实时语音聊天及语音相关功能、插件、Stable Diffusion 入口和上游商业推广。旧发现菜单中的历史搜索已移除，当前可通过侧栏搜索会话。新提供商暂不支持原生工具调用。
 
-[NextChatAI](https://nextchat.club?utm_source=readme) / [iOS APP](https://apps.apple.com/us/app/nextchat-ai/id6743085599) / [Web App Demo](https://app.nextchat.club) / [Desktop App](https://github.com/Yidadaa/ChatGPT-Next-Web/releases) / [Enterprise Edition](#enterprise-edition)
+## 桌面版
 
-[saas-url]: https://nextchat.club?utm_source=readme
-[saas-image]: https://img.shields.io/badge/NextChat-Saas-green?logo=microsoftedge
-[web-url]: https://app.nextchat.club/
-[download-url]: https://github.com/Yidadaa/ChatGPT-Next-Web/releases
-[Web-image]: https://img.shields.io/badge/Web-PWA-orange?logo=microsoftedge
-[Windows-image]: https://img.shields.io/badge/-Windows-blue?logo=windows
-[MacOS-image]: https://img.shields.io/badge/-MacOS-black?logo=apple
-[Linux-image]: https://img.shields.io/badge/-Linux-333?logo=ubuntu
+桌面版使用 Tauri 2 加载本地静态页面，通过原生网络桥接请求模型服务，不需要另外运行 Next.js 服务端。API 地址与密钥在应用内配置。
 
-[<img src="https://zeabur.com/button.svg" alt="Deploy on Zeabur" height="30">](https://zeabur.com/templates/ZBUEFA) [<img src="https://vercel.com/button" alt="Deploy on Vercel" height="30">](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FChatGPTNextWeb%2FChatGPT-Next-Web&env=OPENAI_API_KEY&env=CODE&project-name=nextchat&repository-name=NextChat) [<img src="https://gitpod.io/button/open-in-gitpod.svg" alt="Open in Gitpod" height="30">](https://gitpod.io/#https://github.com/ChatGPTNextWeb/NextChat) [<img src="https://oss.opendeploy.dev/static/deploy-with-your-agent.svg" alt="Deploy with your agent" height="30">](https://opendeploy.dev/github/ChatGPTNextWeb/NextChat)
+### 快速配置
 
-[<img src="https://github.com/user-attachments/assets/903482d4-3e87-4134-9af1-f2588fa90659" height="50" width="" >](https://monica.im/?utm=nxcrp)
+1. 打开「设置 → 模型提供商」，点击「新建提供商」。
+2. 选择常见平台，或手动填写名称、接口兼容类型和 API 基础地址，再填写 API 密钥；不需要鉴权的本地服务可以留空。
+3. 点击「获取模型列表」，或手动添加服务商提供的实际模型 ID。显示名称仅用于界面。
+4. 按需开启模型的「图片输入」，在模型行的「参数」中设置生成参数、推理强度或模型专用选项。
+5. 保存配置，选择已启用的模型进行「测试连接」，再从聊天中的模型选择器切换到该模型。
 
-</div>
+| 接口兼容类型            | 官方基础地址示例                                   |
+| ----------------------- | -------------------------------------------------- |
+| OpenAI Chat Completions | `https://api.openai.com/v1`                        |
+| OpenAI Responses        | `https://api.openai.com/v1`                        |
+| Anthropic Messages      | `https://api.anthropic.com/v1`                     |
+| Gemini                  | `https://generativelanguage.googleapis.com/v1beta` |
 
-## ❤️ Sponsor AI API
+基础地址应保留服务商要求的版本或路由前缀，不要填写完整聊天接口路径；应用会追加对应协议的请求路径。协议取决于服务商实际支持的接口，不能只根据模型名称选择。获取列表失败时可以手动添加模型，获取成功也不代表聊天接口可用。
 
-<a href='https://302.ai/'>
-  <img src="https://github.com/user-attachments/assets/a03edf82-2031-4f23-bdb8-bfc0bfd168a4" width="100%" alt="icon"/>
-</a>
+新提供商的生成参数默认使用「服务商默认」，只有勾选自定义才发送设定值。聊天、标题、历史摘要和连接测试使用对应模型的参数。压缩模型可单独指定，也可以跟随当前模型。
 
-[302.AI](https://302.ai/) is a pay-as-you-go AI application platform that offers the most comprehensive AI APIs and online applications available.
+原有提供商仍可在同一个管理入口编辑，继续使用原请求方式。旧会话保留原有路由，手动选择新提供商的模型后才切换。详细说明见[桌面版模型提供商](./docs/desktop-providers.md)。
 
-## 🥳 Cheer for NextChat iOS Version Online!
+### 开发与构建
 
-> [👉 Click Here to Install Now](https://apps.apple.com/us/app/nextchat-ai/id6743085599)
+前置条件：
 
-> [❤️ Source Code Coming Soon](https://github.com/ChatGPTNextWeb/NextChat-iOS)
+- Node.js **24 或更高版本**、Yarn **1.22.19**。
+- rustup；项目通过 `rust-toolchain.toml` 固定 Rust **1.99.1**。
+- Windows 需要 MSVC C++ 构建工具和 WebView2。其他平台依赖见 [Tauri 官方前置条件](https://v2.tauri.app/start/prerequisites/)。
 
-![Github iOS Image](https://github.com/user-attachments/assets/e0aa334f-4c13-4dc9-8310-e3b09fa4b9f3)
+获取本 fork 并安装依赖：
 
-## Enterprise Edition
-
-Meeting Your Company's Privatization and Customization Deployment Requirements:
-
-- **Brand Customization**: Tailored VI/UI to seamlessly align with your corporate brand image.
-- **Resource Integration**: Unified configuration and management of dozens of AI resources by company administrators, ready for use by team members.
-- **Permission Control**: Clearly defined member permissions, resource permissions, and knowledge base permissions, all controlled via a corporate-grade Admin Panel.
-- **Knowledge Integration**: Combining your internal knowledge base with AI capabilities, making it more relevant to your company's specific business needs compared to general AI.
-- **Security Auditing**: Automatically intercept sensitive inquiries and trace all historical conversation records, ensuring AI adherence to corporate information security standards.
-- **Private Deployment**: Enterprise-level private deployment supporting various mainstream private cloud solutions, ensuring data security and privacy protection.
-- **Continuous Updates**: Ongoing updates and upgrades in cutting-edge capabilities like multimodal AI, ensuring consistent innovation and advancement.
-
-For enterprise inquiries, please contact: **business@nextchat.club**
-
-## Screenshots
-
-![Settings](./docs/images/settings.png)
-
-![More](./docs/images/more.png)
-
-## Features
-
-- **Deploy for free with one-click** on Vercel in under 1 minute
-- Compact client (~5MB) on Linux/Windows/MacOS, [download it now](https://github.com/Yidadaa/ChatGPT-Next-Web/releases)
-- Fully compatible with self-deployed LLMs, recommended for use with [RWKV-Runner](https://github.com/josStorer/RWKV-Runner) or [LocalAI](https://github.com/go-skynet/LocalAI)
-- Privacy first, all data is stored locally in the browser
-- Markdown support: LaTex, mermaid, code highlight, etc.
-- Responsive design, dark mode and PWA
-- Fast first screen loading speed (~100kb), support streaming response
-- New in v2: create, share and debug your chat tools with prompt templates (mask)
-- Awesome prompts powered by [awesome-chatgpt-prompts-zh](https://github.com/PlexPt/awesome-chatgpt-prompts-zh) and [awesome-chatgpt-prompts](https://github.com/f/awesome-chatgpt-prompts)
-- Automatically compresses chat history to support long conversations while also saving your tokens
-- I18n: English, 简体中文, 繁体中文, 日本語, Français, Español, Italiano, Türkçe, Deutsch, Tiếng Việt, Русский, Čeština, 한국어, Indonesia
-
-<div align="center">
-   
-![主界面](./docs/images/cover.png)
-
-</div>
-
-## Roadmap
-
-- [x] System Prompt: pin a user defined prompt as system prompt [#138](https://github.com/Yidadaa/ChatGPT-Next-Web/issues/138)
-- [x] User Prompt: user can edit and save custom prompts to prompt list
-- [x] Prompt Template: create a new chat with pre-defined in-context prompts [#993](https://github.com/Yidadaa/ChatGPT-Next-Web/issues/993)
-- [x] Share as image, share to ShareGPT [#1741](https://github.com/Yidadaa/ChatGPT-Next-Web/pull/1741)
-- [x] Desktop App with tauri
-- [x] Self-host Model: Fully compatible with [RWKV-Runner](https://github.com/josStorer/RWKV-Runner), as well as server deployment of [LocalAI](https://github.com/go-skynet/LocalAI): llama/gpt4all/rwkv/vicuna/koala/gpt4all-j/cerebras/falcon/dolly etc.
-- [x] Artifacts: Easily preview, copy and share generated content/webpages through a separate window [#5092](https://github.com/ChatGPTNextWeb/ChatGPT-Next-Web/pull/5092)
-- [x] Plugins: support network search, calculator, any other apis etc. [#165](https://github.com/Yidadaa/ChatGPT-Next-Web/issues/165) [#5353](https://github.com/ChatGPTNextWeb/ChatGPT-Next-Web/issues/5353)
-  - [x] network search, calculator, any other apis etc. [#165](https://github.com/Yidadaa/ChatGPT-Next-Web/issues/165) [#5353](https://github.com/ChatGPTNextWeb/ChatGPT-Next-Web/issues/5353)
-- [x] Supports Realtime Chat [#5672](https://github.com/ChatGPTNextWeb/ChatGPT-Next-Web/issues/5672)
-- [ ] local knowledge base
-
-## What's New
-
-- 🚀 v2.15.8 Now supports Realtime Chat [#5672](https://github.com/ChatGPTNextWeb/ChatGPT-Next-Web/issues/5672)
-- 🚀 v2.15.4 The Application supports using Tauri fetch LLM API, MORE SECURITY! [#5379](https://github.com/ChatGPTNextWeb/ChatGPT-Next-Web/issues/5379)
-- 🚀 v2.15.0 Now supports Plugins! Read this: [NextChat-Awesome-Plugins](https://github.com/ChatGPTNextWeb/NextChat-Awesome-Plugins)
-- 🚀 v2.14.0 Now supports Artifacts & SD
-- 🚀 v2.10.1 support Google Gemini Pro model.
-- 🚀 v2.9.11 you can use azure endpoint now.
-- 🚀 v2.8 now we have a client that runs across all platforms!
-- 🚀 v2.7 let's share conversations as image, or share to ShareGPT!
-- 🚀 v2.0 is released, now you can create prompt templates, turn your ideas into reality! Read this: [ChatGPT Prompt Engineering Tips: Zero, One and Few Shot Prompting](https://www.allabtai.com/prompt-engineering-tips-zero-one-and-few-shot-prompting/).
-
-## Get Started
-
-1. Get [OpenAI API Key](https://platform.openai.com/account/api-keys);
-2. Click
-   [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FYidadaa%2FChatGPT-Next-Web&env=OPENAI_API_KEY&env=CODE&project-name=chatgpt-next-web&repository-name=ChatGPT-Next-Web), remember that `CODE` is your page password;
-3. Enjoy :)
-
-## FAQ
-
-[English > FAQ](./docs/faq-en.md)
-
-## Keep Updated
-
-If you have deployed your own project with just one click following the steps above, you may encounter the issue of "Updates Available" constantly showing up. This is because Vercel will create a new project for you by default instead of forking this project, resulting in the inability to detect updates correctly.
-
-We recommend that you follow the steps below to re-deploy:
-
-- Delete the original repository;
-- Use the fork button in the upper right corner of the page to fork this project;
-- Choose and deploy in Vercel again, [please see the detailed tutorial](./docs/vercel-cn.md).
-
-### Enable Automatic Updates
-
-> If you encounter a failure of Upstream Sync execution, please [manually update code](./README.md#manually-updating-code).
-
-After forking the project, due to the limitations imposed by GitHub, you need to manually enable Workflows and Upstream Sync Action on the Actions page of the forked project. Once enabled, automatic updates will be scheduled every hour:
-
-![Automatic Updates](./docs/images/enable-actions.jpg)
-
-![Enable Automatic Updates](./docs/images/enable-actions-sync.jpg)
-
-### Manually Updating Code
-
-If you want to update instantly, you can check out the [GitHub documentation](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/syncing-a-fork) to learn how to synchronize a forked project with upstream code.
-
-You can star or watch this project or follow author to get release notifications in time.
-
-## Access Password
-
-This project provides limited access control. Please add an environment variable named `CODE` on the vercel environment variables page. The value should be passwords separated by comma like this:
-
-```
-code1,code2,code3
+```sh
+git clone https://github.com/liaokaime/NextChat.git
+cd NextChat
+yarn install --frozen-lockfile
 ```
 
-After adding or modifying this environment variable, please redeploy the project for the changes to take effect.
+启动桌面开发模式：
 
-## Environment Variables
-
-### `CODE` (optional)
-
-Access password, separated by comma.
-
-### `OPENAI_API_KEY` (required)
-
-Your openai api key, join multiple api keys with comma.
-
-### `BASE_URL` (optional)
-
-> Default: `https://api.openai.com`
-
-> Examples: `http://your-openai-proxy.com`
-
-Override openai api request base url.
-
-### `OPENAI_ORG_ID` (optional)
-
-Specify OpenAI organization ID.
-
-### `AZURE_URL` (optional)
-
-> Example: https://{azure-resource-url}/openai
-
-Azure deploy url.
-
-### `AZURE_API_KEY` (optional)
-
-Azure Api Key.
-
-### `AZURE_API_VERSION` (optional)
-
-Azure Api Version, find it at [Azure Documentation](https://learn.microsoft.com/en-us/azure/ai-services/openai/reference#chat-completions).
-
-### `GOOGLE_API_KEY` (optional)
-
-Google Gemini Pro Api Key.
-
-### `GOOGLE_URL` (optional)
-
-Google Gemini Pro Api Url.
-
-### `ANTHROPIC_API_KEY` (optional)
-
-anthropic claude Api Key.
-
-### `ANTHROPIC_API_VERSION` (optional)
-
-anthropic claude Api version.
-
-### `ANTHROPIC_URL` (optional)
-
-anthropic claude Api Url.
-
-### `BAIDU_API_KEY` (optional)
-
-Baidu Api Key.
-
-### `BAIDU_SECRET_KEY` (optional)
-
-Baidu Secret Key.
-
-### `BAIDU_URL` (optional)
-
-Baidu Api Url.
-
-### `BYTEDANCE_API_KEY` (optional)
-
-ByteDance Api Key.
-
-### `BYTEDANCE_URL` (optional)
-
-ByteDance Api Url.
-
-### `ALIBABA_API_KEY` (optional)
-
-Alibaba Cloud Api Key.
-
-### `ALIBABA_URL` (optional)
-
-Alibaba Cloud Api Url.
-
-### `IFLYTEK_URL` (Optional)
-
-iflytek Api Url.
-
-### `IFLYTEK_API_KEY` (Optional)
-
-iflytek Api Key.
-
-### `IFLYTEK_API_SECRET` (Optional)
-
-iflytek Api Secret.
-
-### `CHATGLM_API_KEY` (optional)
-
-ChatGLM Api Key.
-
-### `CHATGLM_URL` (optional)
-
-ChatGLM Api Url.
-
-### `DEEPSEEK_API_KEY` (optional)
-
-DeepSeek Api Key.
-
-### `DEEPSEEK_URL` (optional)
-
-DeepSeek Api Url.
-
-### `HIDE_USER_API_KEY` (optional)
-
-> Default: Empty
-
-If you do not want users to input their own API key, set this value to 1.
-
-### `DISABLE_GPT4` (optional)
-
-> Default: Empty
-
-If you do not want users to use GPT-4, set this value to 1.
-
-### `ENABLE_BALANCE_QUERY` (optional)
-
-> Default: Empty
-
-If you do want users to query balance, set this value to 1.
-
-### `DISABLE_FAST_LINK` (optional)
-
-> Default: Empty
-
-If you want to disable parse settings from url, set this to 1.
-
-### `CUSTOM_MODELS` (optional)
-
-> Default: Empty
-> Example: `+llama,+claude-2,-gpt-3.5-turbo,gpt-4-1106-preview=gpt-4-turbo` means add `llama, claude-2` to model list, and remove `gpt-3.5-turbo` from list, and display `gpt-4-1106-preview` as `gpt-4-turbo`.
-
-To control custom models, use `+` to add a custom model, use `-` to hide a model, use `name=displayName` to customize model name, separated by comma.
-
-User `-all` to disable all default models, `+all` to enable all default models.
-
-For Azure: use `modelName@Azure=deploymentName` to customize model name and deployment name.
-
-> Example: `+gpt-3.5-turbo@Azure=gpt35` will show option `gpt35(Azure)` in model list.
-> If you only can use Azure model, `-all,+gpt-3.5-turbo@Azure=gpt35` will `gpt35(Azure)` the only option in model list.
-
-For ByteDance: use `modelName@bytedance=deploymentName` to customize model name and deployment name.
-
-> Example: `+Doubao-lite-4k@bytedance=ep-xxxxx-xxx` will show option `Doubao-lite-4k(ByteDance)` in model list.
-
-### `DEFAULT_MODEL` （optional）
-
-Change default model
-
-### `VISION_MODELS` (optional)
-
-> Default: Empty
-> Example: `gpt-4-vision,claude-3-opus,my-custom-model` means add vision capabilities to these models in addition to the default pattern matches (which detect models containing keywords like "vision", "claude-3", "gemini-1.5", etc).
-
-Add additional models to have vision capabilities, beyond the default pattern matching. Multiple models should be separated by commas.
-
-### `WHITE_WEBDAV_ENDPOINTS` (optional)
-
-You can use this option if you want to increase the number of webdav service addresses you are allowed to access, as required by the format：
-
-- Each address must be a complete endpoint
-  > `https://xxxx/yyy`
-- Multiple addresses are connected by ', '
-
-### `DEFAULT_INPUT_TEMPLATE` (optional)
-
-Customize the default template used to initialize the User Input Preprocessing configuration item in Settings.
-
-### `STABILITY_API_KEY` (optional)
-
-Stability API key.
-
-### `STABILITY_URL` (optional)
-
-Customize Stability API url.
-
-### `SILICONFLOW_API_KEY` (optional)
-
-SiliconFlow API Key.
-
-### `SILICONFLOW_URL` (optional)
-
-SiliconFlow API URL.
-
-### `AI302_API_KEY` (optional)
-
-302.AI API Key.
-
-### `AI302_URL` (optional)
-
-302.AI API URL.
-
-## Requirements
-
-NodeJS >= 18, Docker >= 20
-
-## Development
-
-[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/Yidadaa/ChatGPT-Next-Web)
-
-Before starting development, you must create a new `.env.local` file at project root, and place your api key into it:
-
-```
-OPENAI_API_KEY=<your api key here>
-
-# if you are not able to access openai service, use this BASE_URL
-BASE_URL=https://chatgpt1.nextweb.fun/api/proxy
+```sh
+yarn app:dev
 ```
 
-### Local Development
+Windows 构建 NSIS 安装包：
 
-```shell
-# 1. install nodejs and yarn first
-# 2. config local env vars in `.env.local`
-# 3. run
-yarn install
+```powershell
+yarn app:build --bundles nsis
+```
+
+安装包位于 `src-tauri/target/release/bundle/nsis/`，可执行文件为 `src-tauri/target/release/NextChat.exe`。同时构建 MSI 可使用 `yarn app:build --bundles 'nsis,msi'`。包装脚本会自动向 Cargo 传递 `--locked`。
+
+如需单独构建并检查桌面前端：
+
+```sh
+yarn export
+yarn verify:export
+```
+
+`yarn export` 输出到 `out/`，不包含 Next.js API 路由。该产物用于桌面端；将它作为普通静态网站托管，不会获得 Tauri 原生网络与文件能力。
+
+Windows 安装包已有本地构建验证记录；macOS 和 Linux 配有 CI 构建流程，实际安装与运行情况需在对应平台验证。权限、平台依赖和构建细节见 [Tauri 升级记录](./docs/tauri-upgrade.md)。
+
+## Web 开发与部署
+
+Web 版仍使用原有提供商设置与 Next.js 服务端路由，未采用桌面端新建多提供商的配置界面。可以由部署者配置服务端 API 密钥，也可以允许用户在设置中填写自己的密钥。模型服务的使用费用由对应服务商收取。
+
+以下命令均在本 fork 的项目根目录执行，依赖安装方式与桌面版相同。
+
+### 本地开发
+
+在根目录创建 `.env.local`。例如，使用服务端 OpenAI 密钥时：
+
+```dotenv
+OPENAI_API_KEY=sk-your-api-key
+CODE=replace-with-a-long-random-access-code
+# 使用兼容中转时按需设置，Web 原有 OpenAI 路由会追加 /v1/...
+# BASE_URL=https://your-relay.example.com
+```
+
+也可以使用其他提供商的环境变量，或让用户自行填写密钥，`OPENAI_API_KEY` 不是所有使用方式都必填。可参考 [.env.template](./.env.template)，具体含义以[环境变量](#环境变量)和代码实际读取项为准。
+
+```sh
 yarn dev
 ```
 
-## Deployment
+默认访问 `http://localhost:3000`；端口被占用时以终端输出为准。`yarn dev` 仅用于开发。
 
-### Docker (Recommended)
+### Node.js standalone 部署
 
-```shell
-docker pull yidadaa/chatgpt-next-web
+`yarn build` 默认生成 standalone 服务。生产部署使用其中的 `server.js` 启动，并复制静态资源；不使用 `yarn start` 启动 standalone 产物。
 
-docker run -d -p 3000:3000 \
-   -e OPENAI_API_KEY=sk-xxxx \
-   -e CODE=your-password \
-   yidadaa/chatgpt-next-web
+Linux / macOS：
+
+```sh
+yarn build
+cp -r public .next/standalone/
+cp -r .next/static .next/standalone/.next/
+node --env-file=.env.local .next/standalone/server.js
 ```
 
-You can start service behind a proxy:
+Windows PowerShell：
 
-```shell
-docker run -d -p 3000:3000 \
-   -e OPENAI_API_KEY=sk-xxxx \
-   -e CODE=your-password \
-   -e PROXY_URL=http://localhost:7890 \
-   yidadaa/chatgpt-next-web
+```powershell
+yarn build
+Copy-Item -Recurse -Force public .next/standalone/
+Copy-Item -Recurse -Force .next/static .next/standalone/.next/
+node --env-file=.env.local .next/standalone/server.js
 ```
 
-If your proxy needs password, use:
+上述示例显式加载根目录的 `.env.local`。部署到其他机器时，复制整理后的 `.next/standalone/`，通过运行环境提供密钥；如果使用环境文件，应将 `--env-file` 指向实际位置。监听地址和端口可通过运行环境中的 `HOSTNAME`、`PORT` 设置。构建期间读取的配置变更后应重新构建；运行时配置变更后应重启服务。
 
-```shell
--e PROXY_URL="http://127.0.0.1:7890 user pass"
+### Docker 部署
+
+从本 fork 的源码构建镜像：
+
+```sh
+docker build -t nextchat-custom:local .
+docker run -d --name nextchat-custom -p 3000:3000 --env-file .env.local -e HOSTNAME=0.0.0.0 --restart unless-stopped nextchat-custom:local
 ```
 
-### Shell
+`.env.local` 在运行时通过 `--env-file` 注入，已被 `.dockerignore` 排除，不会随源码复制进镜像。仅填写需要的变量；直接复制 `.env.template` 时，应删除或修改其中的示例值，尤其是 `PROXY_URL`。
 
-```shell
-bash <(curl -s https://raw.githubusercontent.com/Yidadaa/ChatGPT-Next-Web/main/scripts/setup.sh)
+容器需要出站代理时可设置 `PROXY_URL=http://host:port`；地址必须能从容器内访问，容器里的 `127.0.0.1` 指向容器自身。
+
+也可使用仓库中的 `docker-compose.yml` 从本 fork 源码构建。配置好 `.env.local` 后执行 `docker compose --env-file .env.local --profile no-proxy up -d --build`；需要出站代理时改用 `--profile proxy`，并配置 `PROXY_URL`。
+
+### Vercel 部署
+
+1. Fork [本仓库](https://github.com/liaokaime/NextChat)，或将本 fork 的代码推送到自己的仓库。
+2. 在 Vercel 中导入该仓库，使用 Next.js 预设，选择 Node.js 24，安装命令使用 `yarn install --frozen-lockfile`，构建命令使用 `yarn build`。
+3. 在项目设置中添加所需提供商的密钥和 `CODE` 等环境变量，然后部署。
+4. 修改环境变量后重新部署；按需绑定自己的域名。
+
+### 配置页面访问密码
+
+`CODE` 用于保护 Web 版的服务端密钥，可用英文逗号配置多个访问码：
+
+```dotenv
+CODE=first-long-random-code,second-long-random-code
 ```
 
-## Synchronizing Chat Records (UpStash)
+用户在设置页填写访问码后，可使用部署者提供的密钥。未设置 `CODE` 时，访客可以直接使用已配置的服务端密钥；公开部署应设置足够长的随机访问码。
 
-| [简体中文](./docs/synchronise-chat-logs-cn.md) | [English](./docs/synchronise-chat-logs-en.md) | [Italiano](./docs/synchronise-chat-logs-es.md) | [日本語](./docs/synchronise-chat-logs-ja.md) | [한국어](./docs/synchronise-chat-logs-ko.md)
+默认也允许用户提供自己的 API 密钥，此时无需访问码。若要禁用用户自行填写密钥并只允许访问码方式，设置 `HIDE_USER_API_KEY=1`。这属于有限访问控制，不提供独立用户账号或企业权限管理。桌面版在本地配置提供商，不使用此访问码。
 
-## Documentation
+## 环境变量
 
-> Please go to the [docs][./docs] directory for more documentation instructions.
+除特别说明外，以下变量用于 Web 服务端。桌面静态包没有 `/api/config` 或模型代理服务，应在应用的「模型提供商」中配置地址、密钥和模型。
 
-- [Deploy with cloudflare (Deprecated)](./docs/cloudflare-pages-en.md)
-- [Frequent Ask Questions](./docs/faq-en.md)
-- [How to add a new translation](./docs/translation.md)
-- [How to use Vercel (No English)](./docs/vercel-cn.md)
-- [User Manual (Only Chinese, WIP)](./docs/user-manual-cn.md)
+### 常用配置
 
-## Translation
+| 变量                     | 说明                                                                                                                           |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| `OPENAI_API_KEY`         | 服务端 OpenAI 密钥；支持英文逗号分隔多个密钥，每次读取配置时随机选择。仅在使用此服务端凭据时需要。                             |
+| `BASE_URL`               | 原有 OpenAI 路由的基础地址，默认 `https://api.openai.com`，路由会追加 `/v1/...`。与桌面新提供商通常包含 `/v1` 的地址写法不同。 |
+| `OPENAI_ORG_ID`          | 可选的 OpenAI 组织 ID。                                                                                                        |
+| `CODE`                   | Web 访问码，支持英文逗号分隔，见[配置页面访问密码](#配置页面访问密码)。                                                        |
+| `HIDE_USER_API_KEY`      | 禁止用户使用自己的 API 密钥。                                                                                                  |
+| `DISABLE_GPT4`           | 按现有识别规则限制 GPT-4 及部分推理模型，不是通用的模型权限管理。                                                              |
+| `ENABLE_BALANCE_QUERY`   | 显示原有 OpenAI 余额查询入口；是否可用取决于服务商是否仍支持对应接口。                                                         |
+| `DISABLE_FAST_LINK`      | 禁用通过链接解析预制设置。                                                                                                     |
+| `CUSTOM_MODELS`          | 调整原有提供商的模型列表，支持新增、隐藏和自定义显示名称。                                                                     |
+| `DEFAULT_MODEL`          | 设置原有提供商的默认模型；可用 `模型名@提供商` 指定来源。                                                                      |
+| `VISION_MODELS`          | 英文逗号分隔的模型名，为原有视觉模型匹配规则补充图片输入能力。                                                                 |
+| `WHITE_WEBDAV_ENDPOINTS` | WebDAV 代理额外允许的完整 endpoint，多个地址用英文逗号分隔。                                                                   |
+| `PROXY_URL`              | 容器启动脚本使用的出站代理，不是桌面提供商地址。                                                                               |
+| `DEFAULT_INPUT_TEMPLATE` | 默认输入预处理模板，在构建时写入前端配置，也适用于桌面构建。                                                                   |
 
-If you want to add a new translation, read this [document](./docs/translation.md).
+`HIDE_USER_API_KEY`、`DISABLE_GPT4`、`ENABLE_BALANCE_QUERY`、`DISABLE_FAST_LINK` 按变量是否为非空字符串判断：启用可填 `1`，关闭请删除或留空；字符串 `0`、`false` 也会被视为启用。
 
-## Donation
+`CUSTOM_MODELS` 示例：
 
-[Buy Me a Coffee](https://www.buymeacoffee.com/yidadaa)
+```dotenv
+CUSTOM_MODELS=-all,+my-model@openai=自定义模型
+DEFAULT_MODEL=my-model@openai
+VISION_MODELS=my-model
+```
 
-## Special Thanks
+此例先隐藏全部原有模型，再添加实际 ID 为 `my-model` 的 OpenAI 兼容模型。请将 ID 替换为服务商提供的模型名。`+` 添加、`-` 隐藏、`模型名=显示名` 修改显示名称。桌面新提供商的模型与图片输入应直接在界面中维护。
 
-### Contributors
+### 提供商凭据
 
-<a href="https://github.com/ChatGPTNextWeb/ChatGPT-Next-Web/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=ChatGPTNextWeb/ChatGPT-Next-Web" />
-</a>
+按需配置，不需要同时填写所有服务商。下表列出当前代码读取的服务端配置项；不同原有提供商追加路径的方式不同，不应直接套用桌面新提供商的基础地址。
 
-## LICENSE
+| 提供商               | 环境变量                                                                                                                                        |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Azure OpenAI         | `AZURE_URL`、`AZURE_API_KEY`、`AZURE_API_VERSION`；基础地址形如 `https://{resource}.openai.azure.com/openai`，版本与部署名称需匹配 Azure 资源。 |
+| Google Gemini        | `GOOGLE_API_KEY`、`GOOGLE_URL`                                                                                                                  |
+| Anthropic            | `ANTHROPIC_API_KEY`、`ANTHROPIC_URL`、`ANTHROPIC_API_VERSION`                                                                                   |
+| DeepSeek             | `DEEPSEEK_API_KEY`、`DEEPSEEK_URL`                                                                                                              |
+| xAI                  | `XAI_API_KEY`、`XAI_URL`                                                                                                                        |
+| Moonshot             | `MOONSHOT_API_KEY`、`MOONSHOT_URL`                                                                                                              |
+| SiliconFlow          | `SILICONFLOW_API_KEY`、`SILICONFLOW_URL`                                                                                                        |
+| 百度                 | `BAIDU_API_KEY`、`BAIDU_SECRET_KEY`、`BAIDU_URL`                                                                                                |
+| 字节跳动             | `BYTEDANCE_API_KEY`、`BYTEDANCE_URL`                                                                                                            |
+| 阿里云               | `ALIBABA_API_KEY`、`ALIBABA_URL`                                                                                                                |
+| 讯飞                 | `IFLYTEK_API_KEY`、`IFLYTEK_API_SECRET`、`IFLYTEK_URL`                                                                                          |
+| 智谱                 | `CHATGLM_API_KEY`、`CHATGLM_URL`                                                                                                                |
+| 腾讯混元原有签名接口 | `TENCENT_SECRET_ID`、`TENCENT_SECRET_KEY`、`TENCENT_URL`；签名使用 Secret ID / Secret Key，模板中的 `TENCENT_API_KEY` 不能替代它们。            |
 
-[MIT](https://opensource.org/license/mit/)
+其他部署配置可查阅 [Web 服务端配置](./app/config/server.ts) 与[构建配置](./app/config/build.ts)。已移除功能对应的 `ENABLE_MCP`、`STABILITY_API_KEY`、`STABILITY_URL` 不再生效；Next.js 升级后也不再使用 `DISABLE_CHUNK`。
+
+## 数据、备份与同步
+
+- 聊天、面具和设置保存在本地浏览器或桌面 WebView 存储中；发送消息时，请求内容仍会交给配置的模型服务商处理。
+- 可在设置中导出和恢复备份，或配置 WebDAV / Upstash 同步。桌面静态包不提供同步代理路由，使用这些同步功能需要可访问的兼容 NextChat 同步代理服务，并在同步设置中填写代理地址。
+- 备份和同步数据包含提供商 API 密钥及连接配置，请妥善保管。删除或停用提供商后，受影响会话的引用会保留，需要手动重新选择模型。
+- 「删除所有聊天会话」删除聊天和草稿，保留设置、提供商与面具，并创建一个空白会话；「清除所有数据」会清除全部本地数据。
+- 当前桌面版保持原有应用标识 `com.yida.chatgpt.next.web` 和存储位置。升级、覆盖安装或回退前应备份数据；这不代表所有旧版本之间的降级已经验证。
+
+## 更新与开发检查
+
+桌面客户端的上游自动更新已关闭，更新本 fork 应使用本仓库对应版本的安装包或重新构建。上游官方安装包、镜像和演示站不包含此 fork 的自定义功能。
+
+已移除上游定时同步、向上游镜像仓库发布以及自动翻译 issue 的工作流。合并上游更新时应先审查差异、处理冲突并验证。
+
+常用开发检查：
+
+```sh
+yarn typecheck
+yarn lint
+yarn test:ci --runInBand
+yarn build
+yarn export
+yarn verify:export
+```
+
+Web 构建与桌面导出共用 `.next/` 目录，切换后应重新运行所需模式的构建。
+
+## 详细文档
+
+- [桌面版模型提供商与模型参数](./docs/desktop-providers.md)
+- [内置模型审计](./docs/builtin-model-audit.md)
+- [Tauri 2 升级、平台依赖与构建记录](./docs/tauri-upgrade.md)
+- [Next.js 16 升级记录](./docs/nextjs-16-upgrade.md)
+- [Markdown 与 Tailwind 样式迁移](./docs/markdown-tailwind-migration.md)
+
+仓库内部分较早的部署教程、FAQ 和截图沿用上游版本，涉及功能、依赖版本与部署入口时，以本 README 和当前实现为准。
+
+## 致谢与许可证
+
+感谢 [NextChat](https://github.com/chatgptnextweb/nextchat) 原作者、贡献者及本项目使用的开源依赖。本 fork 沿用 [MIT 许可证](./LICENSE)，保留原有版权声明。

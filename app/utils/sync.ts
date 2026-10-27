@@ -13,6 +13,8 @@ import {
   normalizeProviders,
 } from "../client/providers";
 import { normalizeLegacyConnections } from "../client/connections";
+import { stripRemovedProviderAccess } from "../client/removed-providers";
+import { mergeBuiltinModels } from "./builtin-models";
 
 type NonFunctionKeys<T> = {
   [K in keyof T]: T[K] extends (...args: any[]) => any ? never : K;
@@ -187,6 +189,13 @@ export function normalizeAppState(appState: AppState) {
   const access = appState[StoreKey.Access];
   const config = appState[StoreKey.Config];
   if (!access || !config) throw new Error("备份缺少服务商或应用配置。");
+  const cleanedAccess = stripRemovedProviderAccess(access);
+  for (const key of Object.keys(access)) {
+    if (!(key in cleanedAccess))
+      delete (access as Record<string, unknown>)[key];
+  }
+  Object.assign(access, cleanedAccess);
+  config.models = mergeBuiltinModels([], config.models || []);
   access.providers = Array.isArray(access.providers)
     ? normalizeProviders(access.providers)
     : migrateLegacyProviders(

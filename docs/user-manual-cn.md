@@ -1,6 +1,4 @@
-# 用户手册 User Manual
-
-> No english version yet, please read this doc with ChatGPT or other translation tools.
+# 用户手册
 
 本文档用于解释 NextChat 的部分功能介绍和设计原则。
 

@@ -71,8 +71,7 @@ export const DEFAULT_CONFIG = {
     frequency_penalty: 0,
     sendMemory: true,
     historyMessageCount: DEFAULT_HISTORY_MESSAGE_COUNT,
-    compressMessageLengthThreshold:
-      DEFAULT_COMPRESS_MESSAGE_LENGTH_THRESHOLD,
+    compressMessageLengthThreshold: DEFAULT_COMPRESS_MESSAGE_LENGTH_THRESHOLD,
     compressModel: "",
     compressProviderName: "",
     compressProviderId: undefined as string | undefined,
@@ -151,8 +150,6 @@ export const useAppConfig = createPersistStore(
         models: Object.values(modelMap),
       }));
     },
-
-    allModels() {},
   }),
   {
     name: StoreKey.Config,
@@ -213,7 +210,7 @@ export const useAppConfig = createPersistStore(
         state.modelConfig.template =
           state.modelConfig.template !== DEFAULT_INPUT_TEMPLATE
             ? state.modelConfig.template
-            : config?.template ?? DEFAULT_INPUT_TEMPLATE;
+            : (config?.template ?? DEFAULT_INPUT_TEMPLATE);
       }
 
       if (version < 4.1) {

@@ -146,7 +146,7 @@ export const usePromptStore = createPersistStore(
       return newState as any;
     },
 
-    onRehydrateStorage(state) {
+    onRehydrateStorage() {
       // Skip store rehydration on server side
       if (typeof window === "undefined") {
         return;

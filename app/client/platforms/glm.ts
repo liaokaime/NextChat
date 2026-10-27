@@ -2,12 +2,7 @@
 import { ApiPath, CHATGLM_BASE_URL, ChatGLM } from "@/app/constant";
 import { useAccessStore, useAppConfig, useChatStore } from "@/app/store";
 import { stream } from "@/app/utils/chat";
-import {
-  ChatOptions,
-  getHeaders,
-  LLMApi,
-  LLMModel,
-} from "../api";
+import { ChatOptions, getHeaders, LLMApi, LLMModel } from "../api";
 import { getClientConfig } from "@/app/config/client";
 import {
   getMessageTextContent,
@@ -36,18 +31,9 @@ interface ImageGenerationPayload extends BasePayload {
   user_id?: string;
 }
 
-interface VideoGenerationPayload extends BasePayload {
-  prompt: string;
-  duration?: number;
-  resolution?: string;
-  user_id?: string;
-}
-
 type ModelType = "chat" | "image" | "video";
 
 export class ChatGLMApi implements LLMApi {
-  private disableListModels = true;
-
   private getModelType(model: string): ModelType {
     if (model.startsWith("cogview-")) return "image";
     if (model.startsWith("cogvideo-")) return "video";

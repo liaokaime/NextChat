@@ -137,7 +137,7 @@ export function ArtifactsShareButton({
             }
             throw Error();
           })
-          .catch((e) => {
+          .catch(() => {
             showToast(Locale.Export.Artifacts.Error);
           });
   return (
@@ -219,7 +219,7 @@ export function Artifacts() {
         })
         .then((res) => res.text())
         .then(setCode)
-        .catch((e) => {
+        .catch(() => {
           showToast(Locale.Export.Artifacts.Error);
         });
     }

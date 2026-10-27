@@ -1,7 +1,5 @@
 "use client";
 
-require("../polyfill");
-
 import { useEffect, useState } from "react";
 import styles from "./home.styles";
 

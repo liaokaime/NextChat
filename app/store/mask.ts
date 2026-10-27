@@ -87,9 +87,7 @@ export const useMaskStore = createPersistStore(
         (a, b) => b.createdAt - a.createdAt,
       );
     },
-    search(text: string) {
-      return Object.values(get().masks);
-    },
+
     setLanguage(language: Lang | undefined) {
       set({
         language,

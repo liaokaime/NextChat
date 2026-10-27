@@ -19,6 +19,9 @@ fn configure<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R>
         ])
 }
 
+// The test harness supplies its own entry point and generates a context in desktop_tests.
+// Compiling both contexts would embed the macOS Info.plist symbol twice.
+#[cfg(not(test))]
 fn main() {
     configure(tauri::Builder::default())
         .run(tauri::generate_context!())
