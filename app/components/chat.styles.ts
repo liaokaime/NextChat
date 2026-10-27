@@ -137,9 +137,14 @@ const styles: Record<string, string> = {
     "[transition:all_ease_0.1s] [opacity:0]",
   ].join(" "),
   chat: "nc-chat-chat flex flex-col relative h-full",
+  "chat-viewport": "nc-chat-viewport relative flex min-h-0 flex-1 flex-col",
+  "chat-overflow-hint": [
+    "nc-chat-overflow-hint pointer-events-none absolute inset-x-0 bottom-0 z-10 h-[44px]",
+    "[background:linear-gradient(to_bottom,transparent,color-mix(in_srgb,var(--white)_75%,transparent)_45%,var(--white))]",
+  ].join(" "),
   "chat-body": [
     "nc-chat-chat-body [flex:1] overflow-auto overflow-x-hidden p-[20px] pb-[40px] relative",
-    "[overscroll-behavior:none]",
+    "[overscroll-behavior:none] [overflow-anchor:none] [scroll-behavior:auto]",
   ].join(" "),
   "chat-body-main-title":
     "nc-chat-chat-body-main-title cursor-pointer [&:hover]:[text-decoration:underline]",
