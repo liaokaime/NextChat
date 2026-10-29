@@ -11,6 +11,7 @@ import {
 } from "../constant";
 import { createPersistStore } from "../utils/store";
 import { mergeBuiltinModels } from "../utils/builtin-models";
+import { DEFAULT_WINDOW_SIZE, normalizeWindowSize } from "../utils/window-size";
 
 export type ModelType = (typeof DEFAULT_MODELS)[number]["name"];
 
@@ -47,6 +48,7 @@ export const DEFAULT_CONFIG = {
   sendPreviewBubble: true,
   enableAutoGenerateTitle: true,
   sidebarWidth: DEFAULT_SIDEBAR_WIDTH,
+  windowSize: { ...DEFAULT_WINDOW_SIZE },
 
   enableArtifacts: true, // show artifacts config
 
@@ -162,6 +164,7 @@ export const useAppConfig = createPersistStore(
       return {
         ...currentState,
         ...state,
+        windowSize: normalizeWindowSize(state.windowSize),
         models: models,
         modelPicker: {
           favorites: Array.isArray(state.modelPicker?.favorites)

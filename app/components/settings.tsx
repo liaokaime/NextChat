@@ -32,6 +32,7 @@ import {
 } from "./ui-lib";
 import { ModelConfigList } from "./model-config";
 import { ProviderSettings } from "./provider-settings";
+import { WindowSizeSettings } from "./window-size-settings";
 import { ShortcutKeyModal } from "./shortcut-key-modal";
 import { LegacyProviderFields } from "./legacy-provider-fields";
 
@@ -800,6 +801,8 @@ export function Settings() {
               ))}
             </Select>
           </ListItem>
+
+          {clientConfig?.isApp && config._hasHydrated && <WindowSizeSettings />}
 
           <ListItem title={Locale.Settings.Lang.Name}>
             <Select

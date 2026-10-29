@@ -10,6 +10,7 @@ export function IconButton(props: {
   onClick?: () => void;
   icon?: React.JSX.Element;
   type?: ButtonType;
+  htmlType?: React.ButtonHTMLAttributes<HTMLButtonElement>["type"];
   text?: string;
   bordered?: boolean;
   shadow?: boolean;
@@ -23,6 +24,7 @@ export function IconButton(props: {
 }) {
   return (
     <button
+      type={props.htmlType}
       className={clsx(
         "clickable",
         styles["icon-button"],

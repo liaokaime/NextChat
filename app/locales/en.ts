@@ -163,6 +163,16 @@ const en: LocaleType = {
     Title: "Settings",
     SubTitle: "All Settings",
     ShowPassword: "ShowPassword",
+    WindowSize: {
+      Title: "Startup Window Size",
+      SubTitle: "Saved automatically. Applies on next launch.",
+      Width: "Width:",
+      Height: "Height:",
+      Reset: "Reset Size",
+      UseCurrent: "Use Current Size",
+      ReadFailed: "Failed to read the current window size. Please try again.",
+      SaveFailed: "Failed to save the startup window size. Please try again.",
+    },
     Danger: {
       DeleteChats: {
         Title: "Delete All Chats",

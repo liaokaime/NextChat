@@ -10,6 +10,8 @@
     "core:event:allow-unlisten",
     "core:window:allow-start-dragging",
     "core:window:allow-internal-toggle-maximize",
+    "core:window:allow-inner-size",
+    "core:window:allow-scale-factor",
     "dialog:allow-save",
     "fs:allow-write-file",
     "fs:allow-write-text-file",
@@ -25,6 +27,7 @@
       ]
     },
     "allow-stream-fetch",
-    "allow-cancel-stream"
+    "allow-cancel-stream",
+    "allow-save-startup-window-size"
   ]
 }

@@ -33,6 +33,7 @@ import { installBrowserNavigationGuard } from "../utils/unsaved-navigation";
 import { useChatStore } from "../store/chat";
 import { useMaskStore } from "../store/mask";
 import clsx from "clsx";
+import { initializeDesktopWindowSettings } from "../utils/desktop-window";
 
 export function Loading(props: { noLogo?: boolean }) {
   return (
@@ -224,6 +225,7 @@ export function useLoadData() {
 }
 
 export function Home() {
+  useEffect(initializeDesktopWindowSettings, []);
   useInsertionEffect(installBrowserNavigationGuard, []);
   useSwitchTheme();
   useLoadData();

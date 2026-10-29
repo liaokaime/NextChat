@@ -161,6 +161,16 @@ const cn = {
     Title: "设置",
     SubTitle: "所有设置选项",
     ShowPassword: "显示密码",
+    WindowSize: {
+      Title: "启动窗口大小",
+      SubTitle: "自动保存，下次启动生效",
+      Width: "宽：",
+      Height: "高：",
+      Reset: "重置宽高",
+      UseCurrent: "填入当前宽高",
+      ReadFailed: "读取当前窗口大小失败，请重试",
+      SaveFailed: "保存启动窗口大小失败，请重试",
+    },
 
     Danger: {
       DeleteChats: {

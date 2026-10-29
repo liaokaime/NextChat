@@ -9,19 +9,35 @@ use tauri::{
     ipc::{CallbackFn, InvokeBody, InvokeResponseBody},
     test::{get_ipc_response, mock_builder, MockRuntime, INVOKE_KEY},
     webview::InvokeRequest,
-    Listener, WebviewWindow,
+    Listener, Manager, WebviewWindow,
 };
 use tauri_plugin_fs::FsExt;
 
 fn app() -> tauri::App<MockRuntime> {
+    let unique = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    app_with_startup_path(std::env::temp_dir().join(format!("nextchat-startup-{unique}.json")))
+}
+
+fn app_with_startup_path(path: std::path::PathBuf) -> tauri::App<MockRuntime> {
     // Compile the real capabilities and register the production plugins/commands.
     // MockRuntime does not create an OS window or a WebView.
-    super::configure(mock_builder())
-        .build(tauri::generate_context!())
-        .unwrap()
+    let mut app = super::configure(
+        mock_builder().manage(super::startup_window::StartupWindowStore::new(path)),
+    )
+    .build(tauri::generate_context!())
+    .unwrap();
+    // MockRuntime's build does not enter the event loop that normally runs setup.
+    super::startup_window::setup(&mut app).unwrap();
+    app
 }
 
 fn window(app: &tauri::App<MockRuntime>, label: &str) -> WebviewWindow<MockRuntime> {
+    if let Some(window) = app.get_webview_window(label) {
+        return window;
+    }
     tauri::WebviewWindowBuilder::new(app, label, Default::default())
         .build()
         .unwrap()
@@ -72,6 +88,92 @@ fn only_the_local_main_window_can_invoke_app_commands() {
     remote.url = "https://example.invalid/".parse().unwrap();
     let denied = get_ipc_response(&main, remote).unwrap_err();
     assert!(denied.to_string().contains("not allowed"), "{denied}");
+}
+
+#[test]
+fn startup_window_size_commands_are_allowed_for_the_local_main_window() {
+    let app = app();
+    assert!(
+        !app.config()
+            .app
+            .windows
+            .iter()
+            .find(|window| window.label == "main")
+            .unwrap()
+            .create,
+        "the main window must be created by native setup with its saved dimensions"
+    );
+    assert!(app.get_webview_window("main").is_some());
+    let main = window(&app, "main");
+    let secondary = window(&app, "secondary");
+    for (command, body) in [
+        ("plugin:window|inner_size", json!({ "label": "main" })),
+        ("plugin:window|scale_factor", json!({ "label": "main" })),
+    ] {
+        assert!(invoke(&main, command, body.clone()).is_ok(), "{command}");
+        let denied = invoke(&secondary, command, body).unwrap_err();
+        assert!(denied.to_string().contains("not allowed"), "{denied}");
+    }
+}
+
+#[test]
+fn native_startup_size_is_persisted_and_used_before_window_creation() {
+    let app = app();
+    let main = window(&app, "main");
+    let store = app.state::<super::startup_window::StartupWindowStore>();
+    let configured = &app.config().app.windows[0];
+    for (width, height) in [(1280, 800), (1440, 900)] {
+        invoke(
+            &main,
+            "save_startup_window_size",
+            json!({ "size": { "width": width, "height": height } }),
+        )
+        .unwrap();
+        let initial = super::startup_window::window_config(configured, &store.path);
+        assert_eq!(
+            (initial.width, initial.height),
+            (f64::from(width), f64::from(height))
+        );
+        assert!(initial.visible);
+    }
+    let bytes = std::fs::read(&store.path).unwrap();
+    let secondary = window(&app, "secondary");
+    let denied = invoke(
+        &secondary,
+        "save_startup_window_size",
+        json!({ "size": { "width": 960, "height": 600 } }),
+    )
+    .unwrap_err();
+    assert!(denied.to_string().contains("not allowed"), "{denied}");
+    for size in [
+        json!({ "width": 0, "height": 800 }),
+        json!({ "width": 1280, "height": 99999 }),
+        json!({ "width": 1280.5, "height": 800 }),
+    ] {
+        assert!(invoke(&main, "save_startup_window_size", json!({ "size": size })).is_err());
+        assert_eq!(std::fs::read(&store.path).unwrap(), bytes);
+    }
+    std::fs::remove_file(&store.path).unwrap();
+}
+
+#[test]
+fn missing_or_corrupt_native_preferences_keep_a_visible_default_window() {
+    let app = app();
+    let store = app.state::<super::startup_window::StartupWindowStore>();
+    let configured = &app.config().app.windows[0];
+    for contents in [
+        None,
+        Some("broken JSON"),
+        Some(r#"{"width":1,"height":600}"#),
+    ] {
+        if let Some(contents) = contents {
+            std::fs::write(&store.path, contents).unwrap();
+        }
+        let initial = super::startup_window::window_config(configured, &store.path);
+        assert_eq!((initial.width, initial.height), (960.0, 600.0));
+        assert!(initial.visible);
+    }
+    std::fs::remove_file(&store.path).unwrap();
 }
 
 #[test]
