@@ -5,6 +5,7 @@ import {
   smoothStream,
   streamText,
   type ModelMessage,
+  type SystemModelMessage,
 } from "ai";
 import { z } from "zod";
 import { createOpenAI } from "@ai-sdk/openai";
@@ -76,15 +77,23 @@ export async function runSdkChat(
   if (!instance.enabled || !model?.enabled)
     throw new Error("服务商或模型已停用，请重新选择模型。");
   const messages: ModelMessage[] = [];
+  const systemMessages: SystemModelMessage[] = [];
   for (const message of options.messages) {
+    const text =
+      typeof message.content === "string"
+        ? message.content
+        : message.content
+            .filter((p) => p.type === "text")
+            .map((p) => p.text || "")
+            .join("\n");
+    if (message.role === "system") {
+      systemMessages.push({ role: "system", content: text });
+      continue;
+    }
     if (typeof message.content === "string") {
       messages.push({ role: message.role, content: message.content });
       continue;
     }
-    const text = message.content
-      .filter((p) => p.type === "text")
-      .map((p) => p.text || "")
-      .join("\n");
     if (message.role !== "user") {
       messages.push({ role: message.role, content: text });
       continue;
@@ -124,6 +133,12 @@ export async function runSdkChat(
   };
   const settings = {
     model: createSdkModel(instance, model.id, trackedFetch),
+    instructions:
+      systemMessages.length === 0
+        ? undefined
+        : systemMessages.length === 1
+          ? systemMessages[0].content
+          : systemMessages,
     messages,
     abortSignal: controller.signal,
     maxRetries: 0,

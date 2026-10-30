@@ -1,4 +1,6 @@
 import { useState } from "react";
+import ResetIcon from "../icons/reload.svg";
+import RulerIcon from "../icons/ruler.svg";
 import Locale from "../locales";
 import { useAppConfig } from "../store/config";
 import { getCurrentWindowSize } from "../utils/desktop-window";
@@ -24,8 +26,10 @@ export function WindowSizeSettings() {
       <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
         <IconButton
           htmlType="button"
+          icon={<ResetIcon />}
           text={text.Reset}
-          bordered
+          aria={text.Reset}
+          className="bg-transparent! hover:opacity-70 focus-visible:[outline:2px_solid_var(--primary)] focus-visible:outline-offset-2"
           onClick={() => {
             useAppConfig.getState().update((config) => {
               config.windowSize = { ...DEFAULT_WINDOW_SIZE };
@@ -34,9 +38,12 @@ export function WindowSizeSettings() {
         />
         <IconButton
           htmlType="button"
+          icon={<RulerIcon />}
           text={text.UseCurrent}
+          title={text.UseCurrentHint}
+          aria={text.UseCurrent}
           disabled={readingSize}
-          bordered
+          className="bg-transparent! hover:enabled:opacity-70 focus-visible:[outline:2px_solid_var(--primary)] focus-visible:outline-offset-2"
           onClick={async () => {
             setReadingSize(true);
             try {

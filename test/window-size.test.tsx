@@ -2,6 +2,12 @@ import React from "react";
 import { jest } from "@jest/globals";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
+for (const icon of ["ruler", "reload"]) {
+  jest.unstable_mockModule(`@/app/icons/${icon}.svg`, () => ({
+    default: () => React.createElement("svg"),
+  }));
+}
+
 const saved = new Map<string, string>();
 const getItem = jest.fn<(key: string) => Promise<string | null>>(
   async (key) => saved.get(key) ?? null,

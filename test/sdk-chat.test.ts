@@ -369,6 +369,29 @@ describe.each(protocols)("SDK transport: %s", (protocol) => {
     expect(request.body.temperature).toBeUndefined();
   });
 
+  test("moves system messages out of SDK message history", async () => {
+    let requestBody: any;
+    const finish = jest.fn();
+    await runSdkChat(
+      provider(protocol),
+      {
+        messages: [
+          { role: "system", content: "Be concise." },
+          { role: "user", content: "Hello" },
+        ],
+        config: { model: "same-model" },
+        onFinish: finish,
+      },
+      async (_input, init) => {
+        requestBody = JSON.parse(init?.body as string);
+        return streamResponse(fixture(protocol));
+      },
+    );
+
+    expect(finish).toHaveBeenCalledWith(answer, expect.any(Response));
+    expect(JSON.stringify(requestBody)).toContain("Be concise.");
+  });
+
   test.each([401, 429])(
     "reports HTTP %i without retries or finishing",
     async (status) => {

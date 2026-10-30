@@ -169,7 +169,9 @@ const en: LocaleType = {
       Width: "Width:",
       Height: "Height:",
       Reset: "Reset Size",
-      UseCurrent: "Use Current Size",
+      UseCurrent: "Fill Current Size",
+      UseCurrentHint:
+        "Fill the inputs on the right with the current window width and height",
       ReadFailed: "Failed to read the current window size. Please try again.",
       SaveFailed: "Failed to save the startup window size. Please try again.",
     },

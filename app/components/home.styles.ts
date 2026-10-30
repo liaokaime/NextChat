@@ -161,7 +161,6 @@ const styles: Record<string, string> = {
   "sidebar-action": "nc-home-sidebar-action [&:not(:last-child)]:mr-[15px]",
   "loading-content":
     "nc-home-loading-content flex flex-col justify-center items-center h-full w-full",
-  "rtl-screen": "nc-home-rtl-screen [direction:rtl]",
   "sidebar-header-narrow": "nc-home-sidebar-header-narrow justify-center",
 };
 
