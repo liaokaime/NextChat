@@ -37,6 +37,7 @@ import {
 import { createEmptyMask, Mask } from "./mask";
 import { summaryTarget } from "../client/providers";
 import { createStreamUpdates } from "../utils/stream-updates";
+import { deepClone } from "../utils/clone";
 
 const auxiliaryRequests = new Map<
   string,
@@ -179,30 +180,44 @@ export const useChatStore = createPersistStore(
     }
 
     const methods = {
-      forkSession() {
-        // 获取当前会话
+      forkSession(messageId?: string) {
         const currentSession = get().currentSession();
         if (!currentSession) return;
 
-        const newSession = createEmptySession();
+        const messageIndex =
+          messageId === undefined
+            ? currentSession.messages.length - 1
+            : currentSession.messages.findIndex(
+                (message) => message.id === messageId,
+              );
+        if (messageId !== undefined && messageIndex < 0) return;
 
-        newSession.topic = currentSession.topic;
-        // 深拷贝消息
-        newSession.messages = currentSession.messages.map((msg) => ({
-          ...msg,
-          id: nanoid(), // 生成新的消息 ID
+        const newSession = createEmptySession();
+        newSession.topic =
+          messageId === undefined
+            ? currentSession.topic
+            : Locale.Chat.Fork.Topic(currentSession.topic);
+        newSession.messages = deepClone(
+          currentSession.messages.slice(0, messageIndex + 1),
+        ).map((message: ChatMessage) => ({
+          ...message,
+          id: nanoid(),
+          streaming: false,
         }));
-        newSession.mask = {
-          ...currentSession.mask,
-          modelConfig: {
-            ...currentSession.mask.modelConfig,
-          },
-        };
+        newSession.mask = deepClone(currentSession.mask);
+        if (
+          messageId !== undefined &&
+          currentSession.clearContextIndex !== undefined &&
+          currentSession.clearContextIndex <= messageIndex
+        ) {
+          newSession.clearContextIndex = currentSession.clearContextIndex;
+        }
 
         set((state) => ({
           currentSessionIndex: 0,
           sessions: [newSession, ...state.sessions],
         }));
+        return newSession;
       },
 
       clearSessions() {

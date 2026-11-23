@@ -34,6 +34,11 @@ const cn = {
   },
   Chat: {
     SubTitle: (count: number) => `共 ${count} 条对话`,
+    Fork: {
+      Action: "从此处开启分支",
+      Hint: "包含这条回答及之前的聊天记录",
+      Topic: (topic: string) => `${topic} · 分支`,
+    },
     EditMessage: {
       Title: "编辑消息记录",
       Topic: {

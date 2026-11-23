@@ -35,6 +35,11 @@ const en: LocaleType = {
   },
   Chat: {
     SubTitle: (count: number) => `${count} messages`,
+    Fork: {
+      Action: "Branch from here",
+      Hint: "Includes this answer and all previous messages",
+      Topic: (topic: string) => `${topic} · Branch`,
+    },
     EditMessage: {
       Title: "Edit All Messages",
       Topic: {

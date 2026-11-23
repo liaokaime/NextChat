@@ -151,7 +151,7 @@ const styles: Record<string, string> = {
   "chat-body-title":
     "nc-chat-chat-body-title [@media_only_screen_and_(max-width:_600px)]:text-center",
   "chat-message":
-    "nc-chat-chat-message flex flex-row [&:last-child]:[animation:slide-in_ease_0.3s]",
+    "nc-chat-chat-message flex flex-col items-start [&:last-child]:[animation:slide-in_ease_0.3s]",
   "chat-message-user": [
     "nc-chat-chat-message-user flex flex-row-reverse [&_.nc-chat-chat-message-header]:flex-row-reverse",
     "[&_>_.nc-chat-chat-message-container]:items-end",
@@ -180,6 +180,22 @@ const styles: Record<string, string> = {
     "[&:hover_.nc-chat-chat-message-actions]:[transform:scale(1)_translateY(0)]",
   ].join(" "),
   "chat-message-edit": "nc-chat-chat-message-edit",
+  "message-fork-zone": [
+    "nc-chat-message-fork-zone w-full self-stretch pt-[4px]",
+    "[.nc-chat-chat-message[data-fork-visible=true]_&_.nc-chat-message-fork]:opacity-100",
+    "[&:hover_.nc-chat-message-fork]:opacity-100 [&:focus-within_.nc-chat-message-fork]:opacity-100",
+  ].join(" "),
+  "message-fork": [
+    "nc-chat-message-fork box-border flex w-full h-[36px] items-center justify-center gap-[12px]",
+    "m-0 px-[12px] py-0 rounded-[8px] border border-solid border-transparent bg-transparent",
+    "text-[#888] dark:text-[#999] text-[12px] [font-family:inherit] cursor-pointer opacity-0",
+    "transition-opacity duration-150 motion-reduce:transition-none",
+    "focus-visible:opacity-100",
+    "focus-visible:border-primary [@media(hover:none)]:opacity-100 [@media(pointer:coarse)]:h-[44px]",
+  ].join(" "),
+  "message-fork-line": "h-px flex-1 bg-current opacity-40",
+  "message-fork-label":
+    "flex shrink-0 items-center gap-[6px] [&_svg]:!filter-none",
   "chat-message-avatar": [
     "nc-chat-chat-message-avatar relative [&_.nc-chat-chat-message-edit]:absolute",
     "[&_.nc-chat-chat-message-edit]:h-full [&_.nc-chat-chat-message-edit]:w-full",

@@ -16,6 +16,7 @@ import EditIcon from "../icons/rename.svg";
 import ExportIcon from "../icons/share.svg";
 import ReturnIcon from "../icons/return.svg";
 import CopyIcon from "../icons/copy.svg";
+import ForkIcon from "../icons/fork.svg";
 import LoadingIcon from "../icons/three-dots.svg";
 import LoadingButtonIcon from "../icons/loading.svg";
 import PromptIcon from "../icons/prompt.svg";
@@ -1442,6 +1443,13 @@ function ChatContent() {
                     .map((message, i) => {
                       const isUser = message.role === "user";
                       const isContext = i < context.length;
+                      const canFork =
+                        message.role === "assistant" &&
+                        !message.preview &&
+                        !message.streaming &&
+                        !message.isError &&
+                        message.content.length > 0 &&
+                        session.messages.some((item) => item.id === message.id);
                       const showActions =
                         i > 0 &&
                         !(message.preview || message.content.length === 0) &&
@@ -1462,6 +1470,32 @@ function ChatContent() {
                               isUser
                                 ? styles["chat-message-user"]
                                 : styles["chat-message"]
+                            }
+                            onPointerMove={
+                              canFork
+                                ? (event) => {
+                                    if (event.pointerType !== "mouse") return;
+                                    const container = event.currentTarget;
+                                    const fork =
+                                      container.querySelector<HTMLElement>(
+                                        "[data-fork-zone]",
+                                      );
+                                    if (fork) {
+                                      container.dataset.forkVisible = String(
+                                        event.clientY >=
+                                          fork.getBoundingClientRect().top - 24,
+                                      );
+                                    }
+                                  }
+                                : undefined
+                            }
+                            onPointerLeave={
+                              canFork
+                                ? (event) => {
+                                    delete event.currentTarget.dataset
+                                      .forkVisible;
+                                  }
+                                : undefined
                             }
                           >
                             <div className={styles["chat-message-container"]}>
@@ -1688,6 +1722,42 @@ function ChatContent() {
                                   : message.date.toLocaleString()}
                               </div>
                             </div>
+                            {canFork && (
+                              <div
+                                data-fork-zone
+                                className={styles["message-fork-zone"]}
+                              >
+                                <button
+                                  type="button"
+                                  className={styles["message-fork"]}
+                                  title={Locale.Chat.Fork.Hint}
+                                  onClick={() => {
+                                    if (chatStore.forkSession(message.id)) {
+                                      requestAnimationFrame(() => {
+                                        document
+                                          .getElementById("chat-input")
+                                          ?.focus();
+                                      });
+                                    }
+                                  }}
+                                >
+                                  <span
+                                    className={styles["message-fork-line"]}
+                                    aria-hidden="true"
+                                  />
+                                  <span
+                                    className={styles["message-fork-label"]}
+                                  >
+                                    <ForkIcon aria-hidden="true" />
+                                    {Locale.Chat.Fork.Action}
+                                  </span>
+                                  <span
+                                    className={styles["message-fork-line"]}
+                                    aria-hidden="true"
+                                  />
+                                </button>
+                              </div>
+                            )}
                           </div>
                           {shouldShowClearContextDivider && (
                             <ClearContextDivider />
