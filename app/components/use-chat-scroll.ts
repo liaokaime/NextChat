@@ -228,6 +228,29 @@ class ChatScroll {
     this.schedule();
   };
 
+  scrollToMessage = (messageId: string) => {
+    if (!this.scroller) return false;
+    const row = this.rows().find(
+      (element) => element.dataset.messageId === messageId,
+    );
+    if (!row) return false;
+
+    this.cancelFrame();
+    this.endInteraction();
+    this.pendingReply = undefined;
+    this.following = false;
+
+    const top = Math.max(
+      0,
+      this.rowTop(row) - (this.scroller.clientHeight - row.offsetHeight) / 2,
+    );
+    this.landingFloor = top;
+    this.reserve(top);
+    this.write(top);
+    this.publishViewport();
+    return true;
+  };
+
   commit(replyId?: string, tailId?: string) {
     this.replyId = replyId;
     this.tailId = tailId;
@@ -375,6 +398,7 @@ export function useChatScroll(replyId?: string, tailId?: string) {
     hasContentBelow,
     beginReply: scroll.beginReply,
     followLatest: scroll.followLatest,
+    scrollToMessage: scroll.scrollToMessage,
     onScroll: scroll.onScroll,
   };
 }

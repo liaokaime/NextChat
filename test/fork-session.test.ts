@@ -35,7 +35,9 @@ test("forks through the chosen answer and sends only its history", async () => {
   expect(useChatStore.getState().currentSession()).toBe(fork);
   expect(useChatStore.getState().sessions).toHaveLength(2);
   expect(fork.id).not.toBe(session.id);
-  expect(fork.topic).toBe(Locale.Chat.Fork.Topic(session.topic));
+  expect(fork.parentSessionId).toBe(session.id);
+  expect(fork.parentMessageId).toBe(session.messages[1].id);
+  expect(fork.topic).toBe(Locale.Chat.Fork.Topic(session.topic, 1));
   expect(fork.messages.map((message) => message.content)).toEqual([
     "First question",
     "Branching answer",
@@ -53,6 +55,92 @@ test("forks through the chosen answer and sends only its history", async () => {
   );
   expect(session.messages).toHaveLength(4);
   expect(session.memoryPrompt).toContain("later answer");
+});
+
+test("inserts a fork directly below the source session", () => {
+  const sourceSession = setupHistory();
+  useChatStore.getState().newSession();
+  const firstSession = useChatStore.getState().sessions[0];
+  useChatStore.getState().newSession();
+  const secondSession = useChatStore.getState().sessions[0];
+
+  useChatStore.getState().moveSession(2, 1);
+  const sessionsBeforeFork = useChatStore.getState().sessions;
+  const sourceIndex = sessionsBeforeFork.findIndex(
+    (session) => session.id === sourceSession.id,
+  );
+
+  useChatStore.getState().selectSession(sourceIndex);
+  expect(useChatStore.getState().currentSession()).toBe(sourceSession);
+
+  const fork = useChatStore
+    .getState()
+    .forkSession(sourceSession.messages[1].id)!;
+  const sessions = useChatStore.getState().sessions;
+
+  expect(sessions).toEqual([secondSession, sourceSession, fork, firstSession]);
+  expect(useChatStore.getState().currentSession()).toBe(fork);
+});
+
+test("keeps parent links for nested branches", () => {
+  const root = setupHistory();
+  const child = useChatStore.getState().forkSession(root.messages[1].id)!;
+  const grandchild = useChatStore.getState().forkSession(child.messages[1].id)!;
+
+  expect(child.topic).toBe("Exploring ideas[1]");
+  expect(grandchild.topic).toBe("Exploring ideas[1][1]");
+  expect(child.parentSessionId).toBe(root.id);
+  expect(child.parentMessageId).toBe(root.messages[1].id);
+  expect(grandchild.parentSessionId).toBe(child.id);
+  expect(grandchild.parentMessageId).toBe(child.messages[1].id);
+});
+
+test("increments sibling branch titles independently from nested branches", () => {
+  const root = setupHistory();
+  const first = useChatStore.getState().forkSession(root.messages[1].id)!;
+  useChatStore.getState().selectSession(0);
+  const second = useChatStore.getState().forkSession(root.messages[1].id)!;
+  useChatStore.getState().selectSession(0);
+  const third = useChatStore.getState().forkSession(root.messages[1].id)!;
+
+  expect(first.topic).toBe("Exploring ideas[1]");
+  expect(second.topic).toBe("Exploring ideas[2]");
+  expect(third.topic).toBe("Exploring ideas[3]");
+});
+
+test("does not reuse a branch index after deletion", () => {
+  const root = setupHistory();
+  const first = useChatStore.getState().forkSession(root.messages[1].id)!;
+  useChatStore.getState().selectSession(0);
+  const second = useChatStore.getState().forkSession(root.messages[1].id)!;
+  const secondIndex = useChatStore
+    .getState()
+    .sessions.findIndex((session) => session.id === second.id);
+  useChatStore.getState().deleteSession(secondIndex);
+  const rootIndex = useChatStore
+    .getState()
+    .sessions.findIndex((session) => session.id === root.id);
+  useChatStore.getState().selectSession(rootIndex);
+  const third = useChatStore.getState().forkSession(root.messages[1].id)!;
+
+  expect(first.topic).toBe("Exploring ideas[1]");
+  expect(third.topic).toBe("Exploring ideas[3]");
+});
+
+test("continues branch numbering after persisted state is rehydrated", async () => {
+  const root = setupHistory();
+  useChatStore.getState().forkSession(root.messages[1].id);
+  useChatStore.getState().selectSession(0);
+  useChatStore.getState().forkSession(root.messages[1].id);
+
+  await useChatStore.persist.rehydrate();
+  const rootIndex = useChatStore
+    .getState()
+    .sessions.findIndex((session) => session.id === root.id);
+  useChatStore.getState().selectSession(rootIndex);
+  const third = useChatStore.getState().forkSession(root.messages[1].id)!;
+
+  expect(third.topic).toBe("Exploring ideas[3]");
 });
 
 test("deep copies multimodal messages and mask context", () => {
@@ -115,11 +203,19 @@ test("keeps the full-copy command and stops copied streaming flags", () => {
   session.messages[3].streaming = true;
   const fork = useChatStore.getState().forkSession()!;
   expect(fork.topic).toBe(session.topic);
+  expect(fork.parentSessionId).toBe(session.id);
+  expect(fork.parentMessageId).toBe(session.messages.at(-1)?.id);
   expect(fork.messages.map((message) => message.content)).toEqual(
     session.messages.map((message) => message.content),
   );
   expect(fork.messages[3].streaming).toBe(false);
   expect(session.messages[3].streaming).toBe(true);
+
+  useChatStore.getState().selectSession(0);
+  const branch = useChatStore
+    .getState()
+    .forkSession(session.messages[1].id)!;
+  expect(branch.topic).toBe("Exploring ideas[1]");
 });
 
 test("can still copy an empty conversation", () => {
@@ -127,4 +223,6 @@ test("can still copy an empty conversation", () => {
   const fork = useChatStore.getState().forkSession()!;
   expect(fork.messages).toEqual([]);
   expect(fork.id).not.toBe(original.id);
+  expect(fork.parentSessionId).toBe(original.id);
+  expect(fork.parentMessageId).toBeUndefined();
 });

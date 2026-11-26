@@ -38,6 +38,7 @@ import { createEmptyMask, Mask } from "./mask";
 import { summaryTarget } from "../client/providers";
 import { createStreamUpdates } from "../utils/stream-updates";
 import { deepClone } from "../utils/clone";
+import type { TranslationSessionInfo } from "../translation/types";
 
 const auxiliaryRequests = new Map<
   string,
@@ -75,6 +76,12 @@ export interface ChatSession {
   id: string;
   topic: string;
 
+  // The next index reserved for a message fork created from this session.
+  nextForkIndex?: number;
+
+  parentSessionId?: string;
+  parentMessageId?: string;
+
   memoryPrompt: string;
   messages: ChatMessage[];
   stat: ChatStat;
@@ -83,6 +90,7 @@ export interface ChatSession {
   clearContextIndex?: number;
 
   mask: Mask;
+  translation?: TranslationSessionInfo;
 }
 
 export const DEFAULT_TOPIC = Locale.Store.DefaultTopic;
@@ -95,6 +103,7 @@ function createEmptySession(): ChatSession {
   return {
     id: nanoid(),
     topic: DEFAULT_TOPIC,
+    nextForkIndex: 1,
     memoryPrompt: "",
     messages: [],
     stat: {
@@ -107,6 +116,37 @@ function createEmptySession(): ChatSession {
 
     mask: createEmptyMask(),
   };
+}
+
+const BRANCH_TOPIC_INDEX = /\[(\d+)\]$/;
+const LEGACY_BRANCH_TOPIC = /(?:·\s*(?:Branch|分支))$/;
+
+function getExistingBranchIndex(topic: string) {
+  const match = topic.match(BRANCH_TOPIC_INDEX);
+  if (match) return Number(match[1]);
+  if (LEGACY_BRANCH_TOPIC.test(topic)) return 1;
+  return undefined;
+}
+
+function getNextForkIndex(sessions: ChatSession[], parent: ChatSession) {
+  const storedIndex =
+    Number.isInteger(parent.nextForkIndex) && parent.nextForkIndex! > 0
+      ? parent.nextForkIndex!
+      : 1;
+  const children = sessions.filter(
+    (session) => session.parentSessionId === parent.id,
+  );
+  let maxExistingIndex = storedIndex - 1;
+  let branchCount = 0;
+
+  children.forEach((child) => {
+    const index = getExistingBranchIndex(child.topic);
+    if (index === undefined) return;
+    branchCount += 1;
+    maxExistingIndex = Math.max(maxExistingIndex, index);
+  });
+
+  return Math.max(storedIndex, maxExistingIndex + 1, branchCount + 1);
 }
 
 function countMessages(msgs: ChatMessage[]) {
@@ -183,6 +223,7 @@ export const useChatStore = createPersistStore(
       forkSession(messageId?: string) {
         const currentSession = get().currentSession();
         if (!currentSession) return;
+        if (currentSession.translation?.kind === "translation") return;
 
         const messageIndex =
           messageId === undefined
@@ -192,11 +233,18 @@ export const useChatStore = createPersistStore(
               );
         if (messageId !== undefined && messageIndex < 0) return;
 
+        const branchIndex =
+          messageId === undefined
+            ? undefined
+            : getNextForkIndex(get().sessions, currentSession);
         const newSession = createEmptySession();
         newSession.topic =
           messageId === undefined
             ? currentSession.topic
-            : Locale.Chat.Fork.Topic(currentSession.topic);
+            : Locale.Chat.Fork.Topic(currentSession.topic, branchIndex);
+        newSession.parentSessionId = currentSession.id;
+        newSession.parentMessageId =
+          messageId ?? currentSession.messages.at(-1)?.id;
         newSession.messages = deepClone(
           currentSession.messages.slice(0, messageIndex + 1),
         ).map((message: ChatMessage) => ({
@@ -213,10 +261,22 @@ export const useChatStore = createPersistStore(
           newSession.clearContextIndex = currentSession.clearContextIndex;
         }
 
-        set((state) => ({
-          currentSessionIndex: 0,
-          sessions: [newSession, ...state.sessions],
-        }));
+        set((state) => {
+          const insertIndex = state.currentSessionIndex + 1;
+          const sessions = state.sessions.slice();
+          const parent = sessions.find(
+            (session) => session.id === currentSession.id,
+          );
+          if (branchIndex !== undefined && parent) {
+            parent.nextForkIndex = branchIndex + 1;
+          }
+          sessions.splice(insertIndex, 0, newSession);
+
+          return {
+            currentSessionIndex: insertIndex,
+            sessions,
+          };
+        });
         return newSession;
       },
 
@@ -224,6 +284,29 @@ export const useChatStore = createPersistStore(
         sessionsRevision += 1;
         auxiliaryRequests.clear();
         ChatControllerPool.stopAll();
+        const translationSession = get().sessions.find(
+          (session) => session.translation?.kind === "translation",
+        );
+        if (translationSession) {
+          const preserved = deepClone(translationSession);
+          preserved.messages = [];
+          preserved.memoryPrompt = "";
+          preserved.stat = {
+            tokenCount: 0,
+            wordCount: 0,
+            charCount: 0,
+          };
+          preserved.lastSummarizeIndex = 0;
+          preserved.clearContextIndex = undefined;
+          preserved.lastUpdate = Date.now();
+          set(() => ({
+            sessions: [preserved, createEmptySession()],
+            currentSessionIndex: 1,
+            lastInput: "",
+            lastUpdateTime: Date.now(),
+          }));
+          return;
+        }
         set(() => ({
           sessions: [createEmptySession()],
           currentSessionIndex: 0,
@@ -241,6 +324,13 @@ export const useChatStore = createPersistStore(
       moveSession(from: number, to: number) {
         set((state) => {
           const { sessions, currentSessionIndex: oldIndex } = state;
+
+          if (
+            (sessions[from]?.translation?.kind === "translation" && to !== 0) ||
+            (sessions[to]?.translation?.kind === "translation" && from !== 0)
+          ) {
+            return state;
+          }
 
           // move the session
           const newSessions = [...sessions];
@@ -298,6 +388,7 @@ export const useChatStore = createPersistStore(
         const deletedSession = get().sessions.at(index);
 
         if (!deletedSession) return;
+        if (deletedSession.translation?.kind === "translation") return;
         auxiliaryRequests.delete(deletedSession.id);
 
         const sessions = get().sessions.slice();
@@ -366,7 +457,15 @@ export const useChatStore = createPersistStore(
 
       async onUserInput(content: string, attachImages?: string[]) {
         const session = get().currentSession();
-        const modelConfig = session.mask.modelConfig;
+        const modelConfig = session.translation
+          ? useAppConfig.getState().modelConfig
+          : session.mask.modelConfig;
+
+        if (session.translation) {
+          get().updateTargetSession(session, (current) => {
+            current.mask.modelConfig = { ...modelConfig };
+          });
+        }
 
         let mContent: string | MultimodalContent[] = fillTemplateWith(
           content,
@@ -610,6 +709,7 @@ export const useChatStore = createPersistStore(
         refreshTitle: boolean = false,
         targetSession: ChatSession,
       ) {
+        if (targetSession.translation?.kind === "translation") return;
         const config = useAppConfig.getState();
         const session = get().sessions.find((s) => s.id === targetSession.id);
         if (!session) return;
@@ -823,7 +923,7 @@ export const useChatStore = createPersistStore(
   },
   {
     name: StoreKey.Chat,
-    version: 3.5,
+    version: 3.6,
     migrate(persistedState, version) {
       const state = persistedState as any;
       const newState = JSON.parse(
@@ -907,6 +1007,12 @@ export const useChatStore = createPersistStore(
             s.mask.modelConfig.compressMessageLengthThreshold =
               DEFAULT_COMPRESS_MESSAGE_LENGTH_THRESHOLD;
           }
+        });
+      }
+
+      if (version < 3.6) {
+        newState.sessions.forEach((session) => {
+          session.nextForkIndex = getNextForkIndex(newState.sessions, session);
         });
       }
 

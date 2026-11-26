@@ -32,12 +32,19 @@ const cn = {
     Empty: "没有匹配的会话",
     Close: "关闭搜索",
   },
+  Translation: {
+    Name: "翻译",
+    Subtitle: "双向翻译",
+    Pinned: "置顶工具",
+    LanguageSelector: "选择翻译语言",
+    SwitchTo: (language: string) => `切换为${language}`,
+  },
   Chat: {
     SubTitle: (count: number) => `共 ${count} 条对话`,
     Fork: {
       Action: "从此处开启分支",
       Hint: "包含这条回答及之前的聊天记录",
-      Topic: (topic: string) => `${topic} · 分支`,
+      Topic: (topic: string, index = 1) => `${topic}[${index}]`,
     },
     EditMessage: {
       Title: "编辑消息记录",
@@ -59,6 +66,7 @@ const cn = {
       Delete: "删除",
       Edit: "编辑",
       FullScreen: "全屏",
+      Parent: "跳转到父会话",
       RefreshTitle: "刷新标题",
       RefreshToast: "已发送刷新标题请求",
     },
@@ -68,7 +76,6 @@ const cn = {
       next: "下一个聊天",
       prev: "上一个聊天",
       clear: "清除上下文",
-      fork: "复制聊天",
       del: "删除聊天",
     },
     InputActions: {

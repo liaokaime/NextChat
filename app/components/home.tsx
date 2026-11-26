@@ -35,6 +35,7 @@ import { useMaskStore } from "../store/mask";
 import clsx from "clsx";
 import { initializeDesktopWindowSettings } from "../utils/desktop-window";
 import { installWindowsImeRecovery } from "../utils/windows-ime";
+import { ensureTranslationSession } from "../translation";
 
 export function Loading(props: { noLogo?: boolean }) {
   return (
@@ -231,6 +232,15 @@ export function Home() {
   useSwitchTheme();
   useLoadData();
   useHtmlLang();
+
+  const chatsHydrated = useChatStore((state) => state._hasHydrated);
+  const configHydrated = useAppConfig((state) => state._hasHydrated);
+
+  useEffect(() => {
+    if (chatsHydrated && configHydrated) {
+      ensureTranslationSession();
+    }
+  }, [chatsHydrated, configHydrated]);
 
   useEffect(() => {
     console.log("[Config] got config from build time", getClientConfig());

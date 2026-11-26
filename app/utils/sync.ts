@@ -84,6 +84,15 @@ const MergeStates: StateMerger = {
         // if remote session is new, just merge it
         localState.sessions.push(remoteSession);
       } else {
+        // Parent links are immutable once created. Fill missing metadata when
+        // it is available from another device's copy of the session.
+        localSession.parentSessionId ??= remoteSession.parentSessionId;
+        localSession.parentMessageId ??= remoteSession.parentMessageId;
+        localSession.nextForkIndex = Math.max(
+          localSession.nextForkIndex ?? 1,
+          remoteSession.nextForkIndex ?? 1,
+        );
+
         // if both have the same session id, merge the messages
         const localMessageIds = new Set(localSession.messages.map((v) => v.id));
         remoteSession.messages.forEach((m) => {

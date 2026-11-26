@@ -4,10 +4,12 @@ import React, {
   Fragment,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
+import { CornerUpLeft } from "lucide-react";
 
 import SendWhiteIcon from "../icons/send-white.svg";
 import BrainIcon from "../icons/brain.svg";
@@ -83,7 +85,7 @@ import {
   showPrompt,
   showToast,
 } from "./ui-lib";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   CHAT_PAGE_SIZE,
   Path,
@@ -105,6 +107,12 @@ import { isEmpty } from "lodash-es";
 import { modelSelection, instanceSupportsImages } from "../client/providers";
 import clsx from "clsx";
 import { useChatScroll } from "./use-chat-scroll";
+import { TranslationLanguageBar } from "./translation";
+import {
+  getCurrentTranslationLanguage,
+  getTranslationLanguageLabel,
+  isTranslationSession,
+} from "../translation";
 
 const localStorage = safeLocalStorage();
 
@@ -187,11 +195,12 @@ function PromptToast(props: {
 }) {
   const chatStore = useChatStore();
   const session = chatStore.currentSession();
+  const isTranslation = isTranslationSession(session);
   const context = session.mask.context;
 
   return (
     <div className={styles["prompt-toast"]} key="prompt-toast">
-      {props.showToast && context.length > 0 && (
+      {props.showToast && !isTranslation && context.length > 0 && (
         <div
           className={clsx(styles["prompt-toast-inner"], "clickable")}
           role="button"
@@ -332,6 +341,11 @@ export function PromptHints(props: {
 function ClearContextDivider() {
   const chatStore = useChatStore();
   const session = chatStore.currentSession();
+  const clearText = isTranslationSession(session)
+    ? Locale.Translation.SwitchTo(
+        getTranslationLanguageLabel(getCurrentTranslationLanguage(session)),
+      )
+    : Locale.Context.Clear;
 
   return (
     <div
@@ -343,7 +357,7 @@ function ClearContextDivider() {
         )
       }
     >
-      <div className={styles["clear-context-tips"]}>{Locale.Context.Clear}</div>
+      <div className={styles["clear-context-tips"]}>{clearText}</div>
       <div className={styles["clear-context-revert-btn"]}>
         {Locale.Context.Revert}
       </div>
@@ -413,6 +427,7 @@ export function ChatActions(props: {
 }) {
   const chatStore = useChatStore();
   const session = chatStore.currentSession();
+  const isTranslation = isTranslationSession(session);
 
   // stop all responses
   const couldStop = ChatControllerPool.hasPending();
@@ -492,7 +507,7 @@ export function ChatActions(props: {
             icon={<BottomIcon />}
           />
         )}
-        {props.hitBottom && (
+        {props.hitBottom && !isTranslation && (
           <ChatAction
             onClick={props.showPromptModal}
             text={Locale.Chat.InputActions.Settings}
@@ -528,31 +543,33 @@ export function ChatActions(props: {
           }}
         />
 
-        <ModelPicker
-          current={modelSelection(
-            currentModel,
-            currentProviderName,
-            currentProviderId,
-          )}
-          currentLabel={`${currentModel} · ${currentProviderName}`}
-          models={models}
-          className={styles["model-service-action"]}
-          onSelect={(model) => {
-            if (!model) return;
-            chatStore.updateTargetSession(session, (session) => {
-              session.mask.modelConfig.model = model.name;
-              session.mask.modelConfig.providerName = model.provider
-                .providerName as ServiceProvider;
-              session.mask.modelConfig.providerId =
-                model.provider.providerType === "ai-sdk"
-                  ? model.provider.id
-                  : undefined;
-              session.mask.syncGlobalConfig = false;
-            });
-          }}
-        />
+        {!isTranslation && (
+          <ModelPicker
+            current={modelSelection(
+              currentModel,
+              currentProviderName,
+              currentProviderId,
+            )}
+            currentLabel={`${currentModel} · ${currentProviderName}`}
+            models={models}
+            className={styles["model-service-action"]}
+            onSelect={(model) => {
+              if (!model) return;
+              chatStore.updateTargetSession(session, (session) => {
+                session.mask.modelConfig.model = model.name;
+                session.mask.modelConfig.providerName = model.provider
+                  .providerName as ServiceProvider;
+                session.mask.modelConfig.providerId =
+                  model.provider.providerType === "ai-sdk"
+                    ? model.provider.id
+                    : undefined;
+                session.mask.syncGlobalConfig = false;
+              });
+            }}
+          />
+        )}
 
-        {supportsCustomSize(currentModel) && (
+        {!isTranslation && supportsCustomSize(currentModel) && (
           <ChatAction
             onClick={() => setShowSizeSelector(true)}
             text={currentSize}
@@ -560,7 +577,7 @@ export function ChatActions(props: {
           />
         )}
 
-        {showSizeSelector && (
+        {!isTranslation && showSizeSelector && (
           <Selector
             defaultSelectedValue={currentSize}
             items={modelSizes.map((m) => ({
@@ -579,7 +596,7 @@ export function ChatActions(props: {
           />
         )}
 
-        {isDalle3(currentModel) && (
+        {!isTranslation && isDalle3(currentModel) && (
           <ChatAction
             onClick={() => setShowQualitySelector(true)}
             text={currentQuality}
@@ -587,7 +604,7 @@ export function ChatActions(props: {
           />
         )}
 
-        {showQualitySelector && (
+        {!isTranslation && showQualitySelector && (
           <Selector
             defaultSelectedValue={currentQuality}
             items={dalle3Qualitys.map((m) => ({
@@ -606,7 +623,7 @@ export function ChatActions(props: {
           />
         )}
 
-        {isDalle3(currentModel) && (
+        {!isTranslation && isDalle3(currentModel) && (
           <ChatAction
             onClick={() => setShowStyleSelector(true)}
             text={currentStyle}
@@ -614,7 +631,7 @@ export function ChatActions(props: {
           />
         )}
 
-        {showStyleSelector && (
+        {!isTranslation && showStyleSelector && (
           <Selector
             defaultSelectedValue={currentStyle}
             items={dalle3Styles.map((m) => ({
@@ -714,6 +731,7 @@ function ChatContent() {
 
   const chatStore = useChatStore();
   const session = chatStore.currentSession();
+  const isTranslation = isTranslationSession(session);
   const config = useAppConfig();
   const fontSize = config.fontSize;
   const fontFamily = config.fontFamily;
@@ -732,6 +750,7 @@ function ChatContent() {
     hasContentBelow,
     beginReply,
     followLatest,
+    scrollToMessage,
     onScroll,
   } = useChatScroll(
     session.messages.findLast((message) => message.role === "assistant")?.id,
@@ -739,6 +758,22 @@ function ChatContent() {
   );
   const isMobileScreen = useMobileScreen();
   const navigate = useNavigate();
+  const location = useLocation();
+  const handledParentNavigation = useRef<string | undefined>(undefined);
+  const [highlightedMessageId, setHighlightedMessageId] = useState<
+    string | undefined
+  >();
+  const parentNavigation = (
+    location.state as
+      | {
+          parentNavigation?: {
+            sessionId?: string;
+            messageId?: string;
+          };
+        }
+      | null
+      | undefined
+  )?.parentNavigation;
   const [attachImages, setAttachImages] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
 
@@ -786,7 +821,6 @@ function ChatContent() {
         session,
         (session) => (session.clearContextIndex = session.messages.length),
       ),
-    fork: () => chatStore.forkSession(),
     del: () => chatStore.deleteSession(chatStore.currentSessionIndex),
   });
 
@@ -881,7 +915,7 @@ function ChatContent() {
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session]);
+  }, [config.modelConfig, session]);
 
   // check if should send message
   const onInputKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -1057,6 +1091,74 @@ function ChatContent() {
     return renderMessages.slice(msgRenderIndex, endRenderIndex);
   }, [msgRenderIndex, renderMessages]);
 
+  const parentMessageIndex =
+    parentNavigation?.sessionId === session.id && parentNavigation.messageId
+      ? session.messages.findIndex(
+          (message) => message.id === parentNavigation.messageId,
+        ) + context.length
+      : -1;
+  const parentNavigationKey = parentNavigation
+    ? `${location.key}:${parentNavigation.sessionId ?? ""}:${parentNavigation.messageId ?? ""}`
+    : undefined;
+
+  useLayoutEffect(() => {
+    if (
+      !parentNavigation ||
+      parentNavigation.sessionId !== session.id ||
+      !parentNavigationKey
+    ) {
+      return;
+    }
+    if (handledParentNavigation.current === parentNavigationKey) return;
+
+    const clearNavigationState = () => {
+      navigate(location.pathname, { replace: true, state: undefined });
+    };
+
+    if (!parentNavigation.messageId || parentMessageIndex < context.length) {
+      handledParentNavigation.current = parentNavigationKey;
+      clearNavigationState();
+      return;
+    }
+
+    const targetIsRendered = messages.some(
+      (message) =>
+        !message.preview && message.id === parentNavigation.messageId,
+    );
+    if (!targetIsRendered) {
+      setMsgRenderIndex(parentMessageIndex - CHAT_PAGE_SIZE);
+      return;
+    }
+
+    if (!scrollToMessage(parentNavigation.messageId)) return;
+
+    handledParentNavigation.current = parentNavigationKey;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setHighlightedMessageId(parentNavigation.messageId);
+    clearNavigationState();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    context.length,
+    location.key,
+    location.pathname,
+    messages,
+    navigate,
+    parentMessageIndex,
+    parentNavigation,
+    parentNavigationKey,
+    scrollToMessage,
+    session.id,
+  ]);
+
+  useEffect(() => {
+    if (!highlightedMessageId) return;
+    const timer = window.setTimeout(
+      () => setHighlightedMessageId(undefined),
+      1600,
+    );
+    return () => window.clearTimeout(timer);
+  }, [highlightedMessageId]);
+
   const onChatBodyScroll = (e: HTMLElement) => {
     if (!onScroll()) return;
     const bottomHeight = e.scrollTop + e.clientHeight;
@@ -1091,6 +1193,13 @@ function ChatContent() {
 
   const autoFocus = !isMobileScreen; // wont auto focus on mobile screen
   const showMaxIcon = !isMobileScreen && !clientConfig?.isApp;
+  const parentSession = session.parentSessionId
+    ? chatStore.sessions.find(
+        (candidate) =>
+          candidate.id === session.parentSessionId &&
+          candidate.id !== session.id,
+      )
+    : undefined;
 
   useCommand({
     fill: setUserInput,
@@ -1360,7 +1469,9 @@ function ChatContent() {
                 "window-header-main-title",
                 styles["chat-body-main-title"],
               )}
-              onClickCapture={() => setIsEditingMessage(true)}
+              onClickCapture={() => {
+                if (!isTranslation) setIsEditingMessage(true);
+              }}
             >
               {!session.topic ? DEFAULT_TOPIC : session.topic}
             </div>
@@ -1369,18 +1480,45 @@ function ChatContent() {
             </div>
           </div>
           <div className="window-actions">
-            <div className="window-action-button">
-              <IconButton
-                icon={<ReloadIcon />}
-                bordered
-                title={Locale.Chat.Actions.RefreshTitle}
-                onClick={() => {
-                  showToast(Locale.Chat.Actions.RefreshToast);
-                  chatStore.summarizeSession(true, session);
-                }}
-              />
-            </div>
-            {!isMobileScreen && (
+            {parentSession && (
+              <div className="window-action-button">
+                <IconButton
+                  icon={<CornerUpLeft size={16} strokeWidth={1.75} />}
+                  bordered
+                  title={Locale.Chat.Actions.Parent}
+                  aria={Locale.Chat.Actions.Parent}
+                  onClick={() => {
+                    const parentIndex = chatStore.sessions.findIndex(
+                      (candidate) => candidate.id === parentSession.id,
+                    );
+                    if (parentIndex < 0) return;
+                    chatStore.selectSession(parentIndex);
+                    navigate(Path.Chat, {
+                      state: {
+                        parentNavigation: {
+                          sessionId: parentSession.id,
+                          messageId: session.parentMessageId,
+                        },
+                      },
+                    });
+                  }}
+                />
+              </div>
+            )}
+            {!isTranslation && (
+              <div className="window-action-button">
+                <IconButton
+                  icon={<ReloadIcon />}
+                  bordered
+                  title={Locale.Chat.Actions.RefreshTitle}
+                  onClick={() => {
+                    showToast(Locale.Chat.Actions.RefreshToast);
+                    chatStore.summarizeSession(true, session);
+                  }}
+                />
+              </div>
+            )}
+            {!isMobileScreen && !isTranslation && (
               <div className="window-action-button">
                 <IconButton
                   icon={<RenameIcon />}
@@ -1438,12 +1576,14 @@ function ChatContent() {
                 }}
               >
                 <div ref={contentRef} className="relative flow-root">
+                  <TranslationLanguageBar session={session} />
                   {messages
                     // TODO
                     .map((message, i) => {
                       const isUser = message.role === "user";
                       const isContext = i < context.length;
                       const canFork =
+                        !isTranslation &&
                         message.role === "assistant" &&
                         !message.preview &&
                         !message.streaming &&
@@ -1466,11 +1606,13 @@ function ChatContent() {
                               message.preview ? undefined : message.id
                             }
                             data-message-role={message.role}
-                            className={
+                            className={clsx(
                               isUser
                                 ? styles["chat-message-user"]
-                                : styles["chat-message"]
-                            }
+                                : styles["chat-message"],
+                              highlightedMessageId === message.id &&
+                                styles["chat-message-parent-target"],
+                            )}
                             onPointerMove={
                               canFork
                                 ? (event) => {

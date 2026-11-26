@@ -32,6 +32,7 @@ function Chat({
     hasContentBelow,
     beginReply,
     followLatest,
+    scrollToMessage,
     onScroll,
   } = useChatScroll(
     replyId,
@@ -41,6 +42,7 @@ function Chat({
     <>
       <button onClick={beginReply}>Send</button>
       <button onClick={followLatest}>Latest</button>
+      <button onClick={() => scrollToMessage("old")}>Old</button>
       <output>{hitBottom ? "latest" : "reading"}</output>
       {hasContentBelow && <div data-testid="overflow-hint" />}
       <div
@@ -241,6 +243,16 @@ test("opens existing history at the latest real message and ignores input previe
   fireEvent.focus(view.getByLabelText("input"));
   fireEvent.click(view.getByLabelText("input"));
   expect(scroller.scrollTop).toBe(360);
+});
+
+test("centers a requested message and reserves enough scroll space", () => {
+  const view = render(<Chat rows={initial} replyId="old" />);
+  const scroller = view.getByTestId("scroll");
+
+  fireEvent.click(view.getByText("Old"));
+
+  expect(scroller.scrollTop).toBe(220);
+  expect(view.getByTestId("spacer")).toHaveStyle({ height: "0px" });
 });
 
 test("positions a new answer once and consumes the spacer without pushing existing lines up", () => {

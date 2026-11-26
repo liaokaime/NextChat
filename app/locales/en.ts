@@ -33,12 +33,19 @@ const en: LocaleType = {
     Empty: "No matching chats",
     Close: "Close Search",
   },
+  Translation: {
+    Name: "Translation",
+    Subtitle: "Two-way translation",
+    Pinned: "Pinned tool",
+    LanguageSelector: "Choose translation language",
+    SwitchTo: (language: string) => `Switch to ${language}`,
+  },
   Chat: {
     SubTitle: (count: number) => `${count} messages`,
     Fork: {
       Action: "Branch from here",
       Hint: "Includes this answer and all previous messages",
-      Topic: (topic: string) => `${topic} · Branch`,
+      Topic: (topic: string, index = 1) => `${topic}[${index}]`,
     },
     EditMessage: {
       Title: "Edit All Messages",
@@ -60,6 +67,7 @@ const en: LocaleType = {
       Delete: "Delete",
       Edit: "Edit",
       FullScreen: "FullScreen",
+      Parent: "Go to parent chat",
       RefreshTitle: "Refresh Title",
       RefreshToast: "Title refresh request sent",
     },
@@ -69,7 +77,6 @@ const en: LocaleType = {
       next: "Next Chat",
       prev: "Previous Chat",
       clear: "Clear Context",
-      fork: "Copy Chat",
       del: "Delete Chat",
     },
     InputActions: {

@@ -146,6 +146,25 @@ const styles: Record<string, string> = {
     "nc-chat-chat-body [flex:1] overflow-auto overflow-x-hidden p-[20px] pb-[40px] relative",
     "[overscroll-behavior:none] [overflow-anchor:none] [scroll-behavior:auto]",
   ].join(" "),
+  "translation-language-bar": [
+    "nc-chat-translation-language-bar sticky top-0 z-10 mb-[10px] flex items-center gap-[10px]",
+    "rounded-[14px] border border-solid [border-color:rgba(99,_102,_241,_0.25)]",
+    "[background:linear-gradient(135deg,_rgba(99,_102,_241,_0.12),_rgba(14,_165,_233,_0.08))]",
+    "px-[12px] py-[10px] [backdrop-filter:blur(8px)]",
+    "[@media_only_screen_and_(max-width:_600px)]:flex-col [@media_only_screen_and_(max-width:_600px)]:items-start",
+  ].join(" "),
+  "translation-language-title":
+    "nc-chat-translation-language-title whitespace-nowrap [font-size:12px] [font-weight:700] [color:#4f46e5]",
+  "translation-language-options":
+    "nc-chat-translation-language-options flex flex-wrap gap-[6px]",
+  "translation-language-option": [
+    "nc-chat-translation-language-option cursor-pointer rounded-full border border-solid",
+    "[border-color:rgba(99,_102,_241,_0.25)] [background:rgba(255,_255,_255,_0.65)]",
+    "px-[10px] py-[4px] [color:var(--black)] [font-size:12px] transition-all",
+    "hover:[border-color:#6366f1] hover:[background:rgba(99,_102,_241,_0.12)]",
+  ].join(" "),
+  "translation-language-option-active":
+    "nc-chat-translation-language-option-active [border-color:#6366f1] [background:#6366f1] [color:white]",
   "chat-body-main-title":
     "nc-chat-chat-body-main-title cursor-pointer [&:hover]:[text-decoration:underline]",
   "chat-body-title":
@@ -211,6 +230,11 @@ const styles: Record<string, string> = {
     "nc-chat-chat-message-item box-border max-w-full mt-[10px] rounded-[10px]",
     "[background-color:rgba(0,_0,_0,_0.05)] p-[10px] [font-size:14px] select-text [word-break:break-word]",
     "[border:var(--border-in-light)] relative [transition:all_ease_0.3s]",
+  ].join(" "),
+  "chat-message-parent-target": [
+    "nc-chat-chat-message-parent-target",
+    "[&_.nc-chat-message-item]:[outline:2px_solid_var(--primary)]",
+    "[&_.nc-chat-message-item]:[outline-offset:2px]",
   ].join(" "),
   "chat-message-item-image": [
     "nc-chat-chat-message-item-image w-full mt-[10px] box-border rounded-[10px]",

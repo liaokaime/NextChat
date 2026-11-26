@@ -95,6 +95,29 @@ const styles: Record<string, string> = {
   ].join(" "),
   "chat-item-selected":
     "nc-home-chat-item-selected [&.nc-home-chat-item-selected]:[border-color:var(--primary)]",
+  "translation-item": [
+    "nc-home-translation-item mb-[12px] cursor-pointer select-none rounded-[14px] border border-solid",
+    "[border-color:rgba(99,_102,_241,_0.35)] [background:linear-gradient(135deg,_rgba(99,_102,_241,_0.16),_rgba(14,_165,_233,_0.12))]",
+    "[box-shadow:0_8px_24px_rgba(79,_70,_229,_0.12)] [transition:all_ease_0.25s]",
+    "hover:[transform:translateY(-1px)] hover:[box-shadow:0_10px_28px_rgba(79,_70,_229,_0.18)]",
+  ].join(" "),
+  "translation-item-selected":
+    "nc-home-translation-item-selected [&.nc-home-translation-item-selected]:[border-color:#6366f1] [&.nc-home-translation-item-selected]:[box-shadow:0_0_0_2px_rgba(99,_102,_241,_0.16),_0_10px_28px_rgba(79,_70,_229,_0.2)]",
+  "translation-item-header":
+    "nc-home-translation-item-header flex items-center gap-[10px] px-[14px] pt-[12px]",
+  "translation-item-icon":
+    "nc-home-translation-item-icon flex h-[32px] w-[32px] items-center justify-center rounded-[10px] [background:#6366f1] [&_svg]:brightness-0 [&_svg]:invert",
+  "translation-item-main": "nc-home-translation-item-main min-w-0 flex-1",
+  "translation-item-title":
+    "nc-home-translation-item-title overflow-hidden text-ellipsis whitespace-nowrap [font-size:14px] [font-weight:800]",
+  "translation-item-subtitle":
+    "nc-home-translation-item-subtitle mt-[2px] [color:#4f46e5] [font-size:11px]",
+  "translation-item-pin":
+    "nc-home-translation-item-pin rounded-full [background:rgba(99,_102,_241,_0.12)] px-[8px] py-[3px] [color:#4f46e5] [font-size:10px] [font-weight:700]",
+  "translation-item-language":
+    "nc-home-translation-item-language mt-[10px] flex items-center justify-between border-t border-solid [border-color:rgba(99,_102,_241,_0.16)] px-[14px] py-[9px] [font-size:11px]",
+  "translation-item-language-label":
+    "nc-home-translation-item-language-label [color:var(--black)]",
   "chat-item-title": [
     "nc-home-chat-item-title [font-size:14px] [font-weight:bolder] block w-[calc(100%_-_15px)] overflow-hidden",
     "text-ellipsis whitespace-nowrap [animation:slide-in_ease_0.3s]",
