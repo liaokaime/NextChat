@@ -33,6 +33,7 @@ import PinIcon from "../icons/pin.svg";
 import ConfirmIcon from "../icons/confirm.svg";
 import CancelIcon from "../icons/cancel.svg";
 import ImageIcon from "../icons/image.svg";
+import MaskIcon from "../icons/mask.svg";
 
 import BottomIcon from "../icons/bottom.svg";
 import StopIcon from "../icons/pause.svg";
@@ -110,7 +111,6 @@ import { useChatScroll } from "./use-chat-scroll";
 import { TranslationLanguageBar } from "./translation";
 import {
   getCurrentTranslationLanguage,
-  getTranslationLanguageLabel,
   isTranslationSession,
 } from "../translation";
 
@@ -342,9 +342,7 @@ function ClearContextDivider() {
   const chatStore = useChatStore();
   const session = chatStore.currentSession();
   const clearText = isTranslationSession(session)
-    ? Locale.Translation.SwitchTo(
-        getTranslationLanguageLabel(getCurrentTranslationLanguage(session)),
-      )
+    ? Locale.Translation.SwitchTo(getCurrentTranslationLanguage(session).label)
     : Locale.Context.Clear;
 
   return (
@@ -370,8 +368,8 @@ export function ChatAction(props: {
   icon: React.JSX.Element;
   onClick: () => void;
 }) {
-  const iconRef = useRef<HTMLDivElement>(null);
-  const textRef = useRef<HTMLDivElement>(null);
+  const iconRef = useRef<HTMLSpanElement>(null);
+  const textRef = useRef<HTMLSpanElement>(null);
   const [width, setWidth] = useState({
     full: 16,
     icon: 16,
@@ -379,7 +377,8 @@ export function ChatAction(props: {
 
   function updateWidth() {
     if (!iconRef.current || !textRef.current) return;
-    const getWidth = (dom: HTMLDivElement) => dom.getBoundingClientRect().width;
+    const getWidth = (dom: HTMLSpanElement) =>
+      dom.getBoundingClientRect().width;
     const textWidth = getWidth(textRef.current);
     const iconWidth = getWidth(iconRef.current);
     setWidth({
@@ -389,7 +388,9 @@ export function ChatAction(props: {
   }
 
   return (
-    <div
+    <button
+      type="button"
+      aria-label={props.text}
       className={clsx(styles["chat-input-action"], "clickable")}
       onClick={() => {
         props.onClick();
@@ -404,13 +405,13 @@ export function ChatAction(props: {
         } as React.CSSProperties
       }
     >
-      <div ref={iconRef} className={styles["icon"]}>
+      <span ref={iconRef} className={styles["icon"]} aria-hidden="true">
         {props.icon}
-      </div>
-      <div className={styles["text"]} ref={textRef}>
+      </span>
+      <span className={styles["text"]} ref={textRef}>
         {props.text}
-      </div>
-    </div>
+      </span>
+    </button>
   );
 }
 
@@ -426,6 +427,7 @@ export function ChatActions(props: {
   setUserInput: (input: string) => void;
 }) {
   const chatStore = useChatStore();
+  const navigate = useNavigate();
   const session = chatStore.currentSession();
   const isTranslation = isTranslationSession(session);
 
@@ -529,6 +531,12 @@ export function ChatActions(props: {
         />
 
         <ChatAction
+          onClick={() => navigate(Path.Masks)}
+          text={Locale.Chat.InputActions.Masks}
+          icon={<MaskIcon />}
+        />
+
+        <ChatAction
           text={Locale.Chat.InputActions.Clear}
           icon={<BreakIcon />}
           onClick={() => {
@@ -543,31 +551,29 @@ export function ChatActions(props: {
           }}
         />
 
-        {!isTranslation && (
-          <ModelPicker
-            current={modelSelection(
-              currentModel,
-              currentProviderName,
-              currentProviderId,
-            )}
-            currentLabel={`${currentModel} · ${currentProviderName}`}
-            models={models}
-            className={styles["model-service-action"]}
-            onSelect={(model) => {
-              if (!model) return;
-              chatStore.updateTargetSession(session, (session) => {
-                session.mask.modelConfig.model = model.name;
-                session.mask.modelConfig.providerName = model.provider
-                  .providerName as ServiceProvider;
-                session.mask.modelConfig.providerId =
-                  model.provider.providerType === "ai-sdk"
-                    ? model.provider.id
-                    : undefined;
-                session.mask.syncGlobalConfig = false;
-              });
-            }}
-          />
-        )}
+        <ModelPicker
+          current={modelSelection(
+            currentModel,
+            currentProviderName,
+            currentProviderId,
+          )}
+          currentLabel={`${currentModel} · ${currentProviderName}`}
+          models={models}
+          className={styles["model-service-action"]}
+          onSelect={(model) => {
+            if (!model) return;
+            chatStore.updateTargetSession(session, (session) => {
+              session.mask.modelConfig.model = model.name;
+              session.mask.modelConfig.providerName = model.provider
+                .providerName as ServiceProvider;
+              session.mask.modelConfig.providerId =
+                model.provider.providerType === "ai-sdk"
+                  ? model.provider.id
+                  : undefined;
+              session.mask.syncGlobalConfig = false;
+            });
+          }}
+        />
 
         {!isTranslation && supportsCustomSize(currentModel) && (
           <ChatAction
@@ -1529,6 +1535,45 @@ function ChatContent() {
                 />
               </div>
             )}
+            {isTranslation && (
+              <div className="window-action-button">
+                <IconButton
+                  icon={<DeleteIcon />}
+                  bordered
+                  aria={Locale.Translation.Clear}
+                  title={Locale.Translation.Clear}
+                  onClick={async () => {
+                    if (!(await showConfirm(Locale.Translation.ClearConfirm))) {
+                      return;
+                    }
+
+                    session.messages.forEach((message) => {
+                      if (message.streaming) {
+                        ChatControllerPool.stop(session.id, message.id);
+                      }
+                    });
+                    setIsLoading(false);
+                    setUserInput("");
+                    setPromptHints([]);
+                    setAttachImages([]);
+                    setUploading(false);
+                    chatStore.setLastInput("");
+                    chatStore.updateTargetSession(session, (current) => {
+                      current.messages = [];
+                      current.memoryPrompt = "";
+                      current.stat = {
+                        tokenCount: 0,
+                        wordCount: 0,
+                        charCount: 0,
+                      };
+                      current.lastSummarizeIndex = 0;
+                      current.clearContextIndex = undefined;
+                      current.lastUpdate = Date.now();
+                    });
+                  }}
+                />
+              </div>
+            )}
             <div className="window-action-button">
               <IconButton
                 icon={<ExportIcon />}
@@ -1565,6 +1610,11 @@ function ChatContent() {
         <div className={styles["chat-main"]}>
           <div className={styles["chat-body-container"]}>
             <div className={styles["chat-viewport"]}>
+              {isTranslation && (
+                <div className={styles["translation-language-overlay"]}>
+                  <TranslationLanguageBar session={session} />
+                </div>
+              )}
               <div
                 className={styles["chat-body"]}
                 tabIndex={0}
@@ -1576,7 +1626,6 @@ function ChatContent() {
                 }}
               >
                 <div ref={contentRef} className="relative flow-root">
-                  <TranslationLanguageBar session={session} />
                   {messages
                     // TODO
                     .map((message, i) => {

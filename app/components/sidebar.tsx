@@ -7,7 +7,6 @@ import SettingsIcon from "../icons/settings.svg";
 import NextChatIcon from "../icons/logo.svg";
 import AddIcon from "../icons/add.svg";
 import DeleteIcon from "../icons/delete.svg";
-import MaskIcon from "../icons/mask.svg";
 import SearchIcon from "../icons/zoom.svg";
 import CloseIcon from "../icons/close.svg";
 import DragIcon from "../icons/drag.svg";
@@ -24,11 +23,16 @@ import {
   Path,
 } from "../constant";
 
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { isIOS, useMobileScreen } from "../utils";
 import dynamic from "next/dynamic";
 import { showConfirm } from "./ui-lib";
 import clsx from "clsx";
+import TranslateIcon from "../icons/translate.svg";
+import {
+  getCurrentTranslationLanguage,
+  isTranslationSession,
+} from "../translation";
 
 const ChatList = dynamic(async () => (await import("./chat-list")).ChatList, {
   loading: () => null,
@@ -219,8 +223,20 @@ export function SideBar(props: { className?: string }) {
   useHotKey();
   const { onDragStart, shouldNarrow } = useDragSideBar();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const config = useAppConfig();
   const chatStore = useChatStore();
+  const translationIndex = chatStore.sessions.findIndex(isTranslationSession);
+  const translationSession = chatStore.sessions[translationIndex];
+  const language = translationSession
+    ? getCurrentTranslationLanguage(translationSession).label
+    : undefined;
+  const translationSelected =
+    translationIndex === chatStore.currentSessionIndex &&
+    (pathname === Path.Chat || pathname === Path.Home);
+  const translationTitle = language
+    ? `${Locale.Translation.Name} · ${language}`
+    : Locale.Translation.Name;
   const [showSearch, setShowSearch] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -248,7 +264,45 @@ export function SideBar(props: { className?: string }) {
         logo={<NextChatIcon />}
         shouldNarrow={shouldNarrow}
       >
-        {showSearch && !shouldNarrow ? (
+        <div className={styles["sidebar-header-bar"]}>
+          <button
+            type="button"
+            className={clsx(
+              styles["sidebar-bar-button"],
+              styles["sidebar-translation-button"],
+            )}
+            aria-current={translationSelected ? "page" : undefined}
+            aria-label={translationTitle}
+            title={translationTitle}
+            disabled={!translationSession}
+            onClick={() => {
+              chatStore.selectSession(translationIndex);
+              navigate(Path.Chat);
+            }}
+          >
+            <TranslateIcon aria-hidden="true" />
+            {!shouldNarrow && (
+              <span className="shrink-0">{Locale.Translation.Name}</span>
+            )}
+          </button>
+          <IconButton
+            icon={<SearchIcon />}
+            text={shouldNarrow ? undefined : Locale.SessionSearch.Title}
+            aria={Locale.SessionSearch.Title}
+            title={Locale.SessionSearch.Title}
+            className={styles["sidebar-bar-button"]}
+            onClick={() => {
+              if (shouldNarrow) {
+                config.update((state) => {
+                  state.sidebarWidth = DEFAULT_SIDEBAR_WIDTH;
+                });
+              }
+              setShowSearch(true);
+            }}
+            shadow
+          />
+        </div>
+        {showSearch && !shouldNarrow && (
           <div className={styles["session-search"]}>
             <input
               type="search"
@@ -266,38 +320,6 @@ export function SideBar(props: { className?: string }) {
               aria={Locale.SessionSearch.Close}
               title={Locale.SessionSearch.Close}
               onClick={closeSearch}
-            />
-          </div>
-        ) : (
-          <div className={styles["sidebar-header-bar"]}>
-            <IconButton
-              icon={<MaskIcon />}
-              text={shouldNarrow ? undefined : Locale.Mask.Name}
-              className={styles["sidebar-bar-button"]}
-              onClick={() => {
-                if (config.dontShowMaskSplashScreen !== true) {
-                  navigate(Path.NewChat, { state: { fromHome: true } });
-                } else {
-                  navigate(Path.Masks, { state: { fromHome: true } });
-                }
-              }}
-              shadow
-            />
-            <IconButton
-              icon={<SearchIcon />}
-              text={shouldNarrow ? undefined : Locale.SessionSearch.Title}
-              aria={Locale.SessionSearch.Title}
-              title={Locale.SessionSearch.Title}
-              className={styles["sidebar-bar-button"]}
-              onClick={() => {
-                if (shouldNarrow) {
-                  config.update((state) => {
-                    state.sidebarWidth = DEFAULT_SIDEBAR_WIDTH;
-                  });
-                }
-                setShowSearch(true);
-              }}
-              shadow
             />
           </div>
         )}

@@ -457,11 +457,13 @@ export const useChatStore = createPersistStore(
 
       async onUserInput(content: string, attachImages?: string[]) {
         const session = get().currentSession();
-        const modelConfig = session.translation
+        const translationFollowsGlobal =
+          session.translation && session.mask.syncGlobalConfig;
+        const modelConfig = translationFollowsGlobal
           ? useAppConfig.getState().modelConfig
           : session.mask.modelConfig;
 
-        if (session.translation) {
+        if (translationFollowsGlobal) {
           get().updateTargetSession(session, (current) => {
             current.mask.modelConfig = { ...modelConfig };
           });

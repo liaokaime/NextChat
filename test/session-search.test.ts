@@ -49,3 +49,15 @@ test("retains actual session indices and restores the complete original order wh
   expect(searchSessions(sessions, "no result")).toEqual([]);
   expect(sessions.map((s) => s.id)).toEqual(["a", "b", "c"]);
 });
+
+test("excludes the pinned translation session while retaining ordinary chat indices", () => {
+  const pinned = {
+    ...sessions[0],
+    id: "translation",
+    translation: { kind: "translation", language: "english" },
+  } satisfies ChatSession;
+  expect(searchSessions([pinned, ...sessions], "travel")).toEqual([
+    { session: sessions[0], index: 1 },
+  ]);
+  expect(searchSessions([pinned], "")).toEqual([]);
+});

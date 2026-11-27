@@ -1,5 +1,4 @@
 import DeleteIcon from "../icons/delete.svg";
-import TranslateIcon from "../icons/translate.svg";
 
 import styles from "./home.styles";
 import {
@@ -21,12 +20,6 @@ import { showConfirm } from "./ui-lib";
 import { useMobileScreen } from "../utils";
 import clsx from "clsx";
 import { searchSessions } from "../utils/session-search";
-import {
-  getCurrentTranslationLanguage,
-  getTranslationLanguageLabel,
-  isTranslationSession,
-} from "../translation";
-import type { ChatSession } from "../store/chat";
 
 function selectSessionById(
   id: string,
@@ -127,62 +120,6 @@ export function ChatItem(props: {
   );
 }
 
-function TranslationChatItem(props: {
-  session: ChatSession;
-  selected: boolean;
-  narrow?: boolean;
-  onClick: () => void;
-}) {
-  const language = getTranslationLanguageLabel(
-    getCurrentTranslationLanguage(props.session),
-  );
-
-  return (
-    <div
-      className={clsx(styles["translation-item"], {
-        [styles["translation-item-selected"]]: props.selected,
-      })}
-      onClick={props.onClick}
-      role="button"
-      tabIndex={0}
-      title={`${Locale.Translation.Name} · ${language}`}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          props.onClick();
-        }
-      }}
-    >
-      <div className={styles["translation-item-header"]}>
-        <div className={styles["translation-item-icon"]}>
-          <TranslateIcon />
-        </div>
-        {!props.narrow && (
-          <div className={styles["translation-item-main"]}>
-            <div className={styles["translation-item-title"]}>
-              {Locale.Translation.Name}
-            </div>
-            <div className={styles["translation-item-subtitle"]}>
-              {Locale.Translation.Subtitle}
-            </div>
-          </div>
-        )}
-        {!props.narrow && (
-          <div className={styles["translation-item-pin"]}>
-            {Locale.Translation.Pinned}
-          </div>
-        )}
-      </div>
-      <div className={styles["translation-item-language"]}>
-        <span className={styles["translation-item-language-label"]}>
-          {props.narrow ? language : `${Locale.Translation.Name} · ${language}`}
-        </span>
-        {!props.narrow && <span>{Locale.Translation.Pinned}</span>}
-      </div>
-    </div>
-  );
-}
-
 export function ChatList(props: { narrow?: boolean; search?: string }) {
   const [sessions, selectedIndex, moveSession] = useChatStore((state) => [
     state.sessions,
@@ -194,12 +131,6 @@ export function ChatList(props: { narrow?: boolean; search?: string }) {
   const isMobileScreen = useMobileScreen();
   const searching = !!props.search?.trim();
   const entries = searchSessions(sessions, props.search || "");
-  const translationEntry = entries.find(({ session }) =>
-    isTranslationSession(session),
-  );
-  const regularEntries = entries.filter(
-    ({ session }) => !isTranslationSession(session),
-  );
 
   const onDragEnd: OnDragEndResponder = (result) => {
     if (searching) return;
@@ -215,8 +146,8 @@ export function ChatList(props: { narrow?: boolean; search?: string }) {
       return;
     }
 
-    const sourceEntry = regularEntries[source.index];
-    const destinationEntry = regularEntries[destination.index];
+    const sourceEntry = entries[source.index];
+    const destinationEntry = entries[destination.index];
     if (!sourceEntry || !destinationEntry) return;
     moveSession(sourceEntry.index, destinationEntry.index);
   };
@@ -230,17 +161,7 @@ export function ChatList(props: { narrow?: boolean; search?: string }) {
             ref={provided.innerRef}
             {...provided.droppableProps}
           >
-            {translationEntry && (
-              <TranslationChatItem
-                session={translationEntry.session}
-                selected={translationEntry.index === selectedIndex}
-                narrow={props.narrow}
-                onClick={() =>
-                  selectSessionById(translationEntry.session.id, navigate)
-                }
-              />
-            )}
-            {regularEntries.map(({ session: item, index: i }, visibleIndex) => (
+            {entries.map(({ session: item, index: i }, visibleIndex) => (
               <ChatItem
                 title={item.topic}
                 time={new Date(item.lastUpdate).toLocaleString()}

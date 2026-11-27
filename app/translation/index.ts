@@ -5,34 +5,26 @@ import { createEmptyMask } from "../store/mask";
 import { useAppConfig } from "../store/config";
 import { getLang } from "../locales";
 import {
-  getTranslationLanguageLabel,
   isTranslationSession,
   TRANSLATION_LANGUAGES,
   TRANSLATION_SESSION_KIND,
   type TranslationLanguage,
 } from "./types";
 
-export {
-  getTranslationLanguageLabel,
-  isTranslationSession,
-  TRANSLATION_LANGUAGES,
-  TRANSLATION_SESSION_KIND,
-};
-export type { TranslationLanguage } from "./types";
+export { isTranslationSession };
 
-export const TRANSLATION_SESSION_NAME = "翻译";
+const TRANSLATION_SESSION_NAME = "翻译";
 
-export function translationPrompt(language: TranslationLanguage) {
-  const label = getTranslationLanguageLabel(language);
+function translationPrompt(label: string) {
   return `你是一个专业的${label}翻译，我说任何话，你都原封不动地翻译为对应的语言，当我说中文时，你翻译为${label}，当我说${label}时，你翻译成中文，翻译尽量信达雅，你不要说翻译之外的任何事，明白请说“好的”`;
 }
 
-export function translationContext(language: TranslationLanguage) {
+function translationContext(language: TranslationLanguage) {
   return [
     createMessage({
       id: nanoid(),
       role: "user",
-      content: translationPrompt(language),
+      content: translationPrompt(language.label),
     }),
     createMessage({
       id: nanoid(),
@@ -56,18 +48,25 @@ function createTranslationMask(language: TranslationLanguage) {
   };
 }
 
-function findTranslationSession(sessions: ChatSession[]) {
-  return sessions.find(isTranslationSession);
+export function getTranslationLanguages(
+  session: ChatSession,
+): readonly TranslationLanguage[] {
+  const languages = session.translation?.languages;
+  return languages?.length ? languages : TRANSLATION_LANGUAGES;
 }
 
 export function getCurrentTranslationLanguage(session: ChatSession) {
-  return session.translation?.language ?? TRANSLATION_LANGUAGES[0].id;
+  const languages = getTranslationLanguages(session);
+  return (
+    languages.find(({ id }) => id === session.translation?.language) ??
+    languages[0]
+  );
 }
 
 export function ensureTranslationSession() {
   const store = useChatStore.getState();
   const selectedSessionId = store.currentSession()?.id;
-  const existing = findTranslationSession(store.sessions);
+  const existing = store.sessions.find(isTranslationSession);
 
   if (existing) {
     const index = store.sessions.findIndex(
@@ -85,18 +84,20 @@ export function ensureTranslationSession() {
       session.topic = TRANSLATION_SESSION_NAME;
       session.mask.name = TRANSLATION_SESSION_NAME;
       session.mask.hideContext = true;
-      session.mask.syncGlobalConfig = true;
-      session.mask.modelConfig = { ...useAppConfig.getState().modelConfig };
+      if (session.mask.syncGlobalConfig) {
+        session.mask.modelConfig = { ...useAppConfig.getState().modelConfig };
+      }
       session.mask.context = translationContext(language);
       session.translation = {
+        ...session.translation,
         kind: TRANSLATION_SESSION_KIND,
-        language,
+        language: language.id,
       };
     });
     return useChatStore.getState().currentSession();
   }
 
-  store.newSession(createTranslationMask(TRANSLATION_LANGUAGES[0].id));
+  store.newSession(createTranslationMask(TRANSLATION_LANGUAGES[0]));
   const created = useChatStore.getState().currentSession();
   store.updateTargetSession(created, (session) => {
     session.translation = {
@@ -116,24 +117,93 @@ export function ensureTranslationSession() {
 
 export function switchTranslationLanguage(
   session: ChatSession,
-  language: TranslationLanguage,
+  languageId: string,
 ) {
-  if (!isTranslationSession(session)) return;
-  if (getCurrentTranslationLanguage(session) === language) return;
+  const language = getTranslationLanguages(session).find(
+    ({ id }) => id === languageId,
+  );
+  if (!session.translation || !language) return;
+  if (session.translation.language === language.id) return;
 
   useChatStore.getState().updateTargetSession(session, (current) => {
-    current.translation = {
-      kind: TRANSLATION_SESSION_KIND,
-      language,
-    };
-    current.topic = TRANSLATION_SESSION_NAME;
-    current.mask.name = TRANSLATION_SESSION_NAME;
-    current.mask.hideContext = true;
-    current.mask.syncGlobalConfig = true;
-    current.mask.context = translationContext(language);
-    current.mask.modelConfig = { ...useAppConfig.getState().modelConfig };
-    current.clearContextIndex = current.messages.length;
-    current.memoryPrompt = "";
-    current.lastUpdate = Date.now();
+    applyTranslationLanguage(current, language);
+  });
+}
+
+function applyTranslationLanguage(
+  session: ChatSession,
+  language: TranslationLanguage,
+) {
+  if (!session.translation) return;
+  session.translation.language = language.id;
+  session.mask.context = translationContext(language);
+  session.clearContextIndex = session.messages.length;
+  session.memoryPrompt = "";
+  session.lastUpdate = Date.now();
+}
+
+export function addTranslationLanguage(session: ChatSession, name: string) {
+  const label = name.trim();
+  const languages = getTranslationLanguages(session);
+  const normalizedLabel = label.normalize("NFKC").toLowerCase();
+  if (!session.translation || !label) return false;
+  if (
+    languages.some(
+      (item) => item.label.normalize("NFKC").toLowerCase() === normalizedLabel,
+    )
+  ) {
+    return false;
+  }
+
+  useChatStore.getState().updateTargetSession(session, (current) => {
+    if (current.translation) {
+      current.translation.languages = [...languages, { id: nanoid(), label }];
+    }
+  });
+  return true;
+}
+
+export function removeTranslationLanguage(
+  session: ChatSession,
+  languageId: string,
+) {
+  const languages = getTranslationLanguages(session);
+  if (!session.translation || languages.length <= 1) return;
+  const remaining = languages.filter(({ id }) => id !== languageId);
+  if (remaining.length === languages.length) return;
+
+  useChatStore.getState().updateTargetSession(session, (current) => {
+    if (!current.translation) return;
+    current.translation.languages = remaining;
+    if (current.translation.language === languageId) {
+      applyTranslationLanguage(current, remaining[0]);
+    }
+  });
+}
+
+export function moveTranslationLanguage(
+  session: ChatSession,
+  languageId: string,
+  to: number,
+) {
+  const languages = getTranslationLanguages(session);
+  const from = languages.findIndex(({ id }) => id === languageId);
+  if (
+    !session.translation ||
+    from < 0 ||
+    from === to ||
+    to < 0 ||
+    to >= languages.length
+  ) {
+    return;
+  }
+
+  const reordered = [...languages];
+  const [language] = reordered.splice(from, 1);
+  reordered.splice(to, 0, language);
+  useChatStore.getState().updateTargetSession(session, (current) => {
+    if (current.translation) {
+      current.translation.languages = reordered;
+    }
   });
 }

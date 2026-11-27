@@ -53,7 +53,8 @@ const styles: Record<string, string> = {
     "[&_.nc-chat-chat-input-action_.nc-chat-icon]:justify-center",
   ].join(" "),
   "model-service-action": "nc-chat-model-service-action",
-  "chat-input-action": "nc-chat-chat-input-action",
+  "chat-input-action":
+    "nc-chat-chat-input-action box-content [font-family:inherit] [line-height:inherit] focus-visible:ring-2 focus-visible:ring-[var(--primary)] dark:[&_.nc-chat-icon>svg]:[filter:invert(0.5)]",
   text: "nc-chat-text",
   icon: "nc-chat-icon",
   "prompt-toast": [
@@ -146,25 +147,57 @@ const styles: Record<string, string> = {
     "nc-chat-chat-body [flex:1] overflow-auto overflow-x-hidden p-[20px] pb-[40px] relative",
     "[overscroll-behavior:none] [overflow-anchor:none] [scroll-behavior:auto]",
   ].join(" "),
+  "translation-language-overlay":
+    "pointer-events-none absolute inset-x-[12px] top-[12px] z-20 grid grid-cols-[minmax(0,1fr)] justify-items-center",
   "translation-language-bar": [
-    "nc-chat-translation-language-bar sticky top-0 z-10 mb-[10px] flex items-center gap-[10px]",
-    "rounded-[14px] border border-solid [border-color:rgba(99,_102,_241,_0.25)]",
-    "[background:linear-gradient(135deg,_rgba(99,_102,_241,_0.12),_rgba(14,_165,_233,_0.08))]",
-    "px-[12px] py-[10px] [backdrop-filter:blur(8px)]",
-    "[@media_only_screen_and_(max-width:_600px)]:flex-col [@media_only_screen_and_(max-width:_600px)]:items-start",
+    "nc-chat-translation-language-bar translation-colors pointer-events-auto w-max min-w-0 max-w-full",
+    "rounded-[14px] border p-[6px] [border-color:var(--translation-border)] [background:var(--white)]",
+    "shadow-[0_3px_14px_rgba(35,25,54,0.09)] dark:shadow-[0_3px_14px_rgba(0,0,0,0.28)]",
   ].join(" "),
-  "translation-language-title":
-    "nc-chat-translation-language-title whitespace-nowrap [font-size:12px] [font-weight:700] [color:#4f46e5]",
+  "translation-language-toolbar":
+    "flex h-[34px] min-w-0 items-center gap-[6px]",
   "translation-language-options":
-    "nc-chat-translation-language-options flex flex-wrap gap-[6px]",
+    "nc-chat-translation-language-options flex h-full min-w-0 flex-1 items-center gap-[4px] overflow-x-auto p-[2px] [scrollbar-width:none]",
   "translation-language-option": [
-    "nc-chat-translation-language-option cursor-pointer rounded-full border border-solid",
-    "[border-color:rgba(99,_102,_241,_0.25)] [background:rgba(255,_255,_255,_0.65)]",
-    "px-[10px] py-[4px] [color:var(--black)] [font-size:12px] transition-all",
-    "hover:[border-color:#6366f1] hover:[background:rgba(99,_102,_241,_0.12)]",
+    "nc-chat-translation-language-option h-[28px] max-w-[min(15rem,60vw)] shrink-0 cursor-pointer appearance-none truncate rounded-full border-0",
+    "bg-transparent px-[10px] [color:var(--black)] [font-size:12px] hover:[background:var(--translation-tint)]",
+    "focus-visible:ring-2 focus-visible:ring-[#917bb6]",
+    "[&[aria-pressed=true]]:[background:var(--translation-active)] [&[aria-pressed=true]]:text-white",
+    "[&[aria-pressed=true]:hover]:[background:var(--translation-active-hover)]",
   ].join(" "),
-  "translation-language-option-active":
-    "nc-chat-translation-language-option-active [border-color:#6366f1] [background:#6366f1] [color:white]",
+  "translation-language-gear": [
+    "grid h-8 w-8 shrink-0 cursor-pointer appearance-none place-items-center rounded-[8px] border-0",
+    "[color:var(--translation-ink)] [background:var(--translation-tint)] hover:[background:var(--translation-border)]",
+    "[&[aria-expanded=true]]:[background:var(--translation-border)] focus-visible:ring-2 focus-visible:ring-[#917bb6]",
+  ].join(" "),
+  "translation-language-manager":
+    "mt-[6px] border-t [border-color:var(--bar-color)] pt-[8px]",
+  "translation-language-form": "flex max-w-[30rem] items-center gap-[8px]",
+  "translation-language-input": [
+    "min-w-0 max-w-none flex-1 rounded-[8px] border px-[10px] py-[6px] text-start text-sm",
+    "[border-color:var(--bar-color)] [background:var(--white)] [color:var(--black)] focus-visible:ring-2 focus-visible:ring-[#917bb6]",
+  ].join(" "),
+  "translation-language-add": [
+    "shrink-0 cursor-pointer appearance-none rounded-[8px] border-0 px-[12px] py-[7px] text-xs font-semibold",
+    "[background:var(--translation-tint)] [color:var(--translation-ink)] hover:[background:var(--translation-border)]",
+    "focus-visible:ring-2 focus-visible:ring-[#917bb6] disabled:cursor-default disabled:opacity-50",
+  ].join(" "),
+  "translation-language-error":
+    "mt-[4px] text-xs [color:var(--color-danger-fg)]",
+  "translation-language-list": [
+    "m-0 mt-[6px] max-h-[min(13rem,25dvh)] list-none overflow-y-auto p-[2px] [overscroll-behavior-y:contain] [scrollbar-width:thin]",
+    "[&>li+li]:mt-[3px]",
+  ].join(" "),
+  "translation-language-row": [
+    "flex min-w-0 items-center gap-[8px] rounded-[8px] border border-transparent px-[5px] py-[3px] text-sm",
+    "[background:var(--gray)] [color:var(--black)]",
+  ].join(" "),
+  "translation-language-handle":
+    "grid h-7 w-7 shrink-0 place-items-center rounded-md [color:var(--color-fg-muted)] [&[role=button]]:cursor-grab [&[role=button]]:hover:[background:var(--translation-tint)] focus-visible:ring-2 focus-visible:ring-[#917bb6]",
+  "translation-language-remove": [
+    "grid h-7 w-7 shrink-0 cursor-pointer appearance-none place-items-center rounded-md border-0 bg-transparent hover:bg-red-500/10",
+    "[color:var(--color-fg-muted)] hover:[color:var(--color-danger-fg)] focus-visible:ring-2 focus-visible:ring-[#917bb6] disabled:cursor-default disabled:opacity-35",
+  ].join(" "),
   "chat-body-main-title":
     "nc-chat-chat-body-main-title cursor-pointer [&:hover]:[text-decoration:underline]",
   "chat-body-title":

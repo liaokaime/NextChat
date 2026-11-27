@@ -214,6 +214,22 @@
   }
 }
 
+@utility translation-colors {
+  --translation-ink: #644e89;
+  --translation-tint: #f7f4fb;
+  --translation-border: #ebe4f3;
+  --translation-active: #8068b8;
+  --translation-active-hover: #735aa5;
+
+  @variant dark {
+    --translation-ink: #d3c5ea;
+    --translation-tint: #30283b;
+    --translation-border: #483b56;
+    --translation-active: #8068b8;
+    --translation-active-hover: #735aa5;
+  }
+}
+
 @utility no-mobile {
   @media (max-width: 600px) {
     display: none;
