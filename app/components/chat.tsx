@@ -1542,11 +1542,7 @@ function ChatContent() {
                   bordered
                   aria={Locale.Translation.Clear}
                   title={Locale.Translation.Clear}
-                  onClick={async () => {
-                    if (!(await showConfirm(Locale.Translation.ClearConfirm))) {
-                      return;
-                    }
-
+                  onClick={() => {
                     session.messages.forEach((message) => {
                       if (message.streaming) {
                         ChatControllerPool.stop(session.id, message.id);

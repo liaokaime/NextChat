@@ -8,6 +8,10 @@ export function ShortcutKeyModal(props: { onClose: () => void }) {
   const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
   const shortcuts = [
     {
+      title: Locale.Chat.ShortcutKey.openTranslation,
+      keys: ["Ctrl", "Alt", "X"],
+    },
+    {
       title: Locale.Chat.ShortcutKey.newChat,
       keys: isMac ? ["⌘", "Shift", "O"] : ["Ctrl", "Shift", "O"],
     },

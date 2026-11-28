@@ -45,7 +45,6 @@ const en: LocaleType = {
     ReorderLanguage: (language: string) => `Reorder ${language}`,
     SwitchTo: (language: string) => `Switch to ${language}`,
     Clear: "Clear Translation",
-    ClearConfirm: "Clear all translation messages?",
   },
   Chat: {
     SubTitle: (count: number) => `${count} messages`,
@@ -123,6 +122,7 @@ const en: LocaleType = {
       copyLastCode: "Copy Last Code Block",
       showShortcutKey: "Show Shortcuts",
       clearContext: "Clear Context",
+      openTranslation: "Open Translation",
     },
   },
   Export: {

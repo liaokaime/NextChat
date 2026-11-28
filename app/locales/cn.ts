@@ -44,7 +44,6 @@ const cn = {
     ReorderLanguage: (language: string) => `调整${language}的位置`,
     SwitchTo: (language: string) => `切换为${language}`,
     Clear: "清空翻译内容",
-    ClearConfirm: "确认清空翻译内容？",
   },
   Chat: {
     SubTitle: (count: number) => `共 ${count} 条对话`,
@@ -115,6 +114,7 @@ const cn = {
     },
     IsContext: "预设提示词",
     ShortcutKey: {
+      openTranslation: "\u6253\u5f00\u7ffb\u8bd1\u754c\u9762",
       Title: "键盘快捷方式",
       newChat: "打开新聊天",
       focusInput: "聚焦输入框",

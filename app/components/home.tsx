@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import styles from "./home.styles";
 
 import BotIcon from "../icons/nextchat-bot.svg";
@@ -20,6 +20,7 @@ import {
   Navigate,
   Route,
   Routes,
+  useNavigate,
   useLocation,
 } from "react-router-dom";
 import { SideBar } from "./sidebar";
@@ -35,7 +36,12 @@ import { useMaskStore } from "../store/mask";
 import clsx from "clsx";
 import { initializeDesktopWindowSettings } from "../utils/desktop-window";
 import { installWindowsImeRecovery } from "../utils/windows-ime";
-import { ensureTranslationSession } from "../translation";
+import {
+  ensureTranslationSession,
+  openTranslationSession,
+} from "../translation";
+import { isTauri } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 
 export function Loading(props: { noLogo?: boolean }) {
   return (
@@ -185,6 +191,57 @@ function Screen() {
   );
 }
 
+function TranslationShortcutBridge(props: { ready: boolean }) {
+  const navigate = useNavigate();
+  const pendingOpen = useRef(false);
+
+  useEffect(() => {
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+
+    const open = () => {
+      if (!props.ready) {
+        pendingOpen.current = true;
+        return;
+      }
+      openTranslationSession();
+      navigate(Path.Chat);
+    };
+
+    const connect = async () => {
+      if (isTauri()) {
+        unlisten = await listen("open-translation", open);
+        if (disposed) unlisten();
+      }
+    };
+    void connect();
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.altKey && event.key.toLowerCase() === "x") {
+        event.preventDefault();
+        open();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      disposed = true;
+      unlisten?.();
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [navigate, props.ready]);
+
+  useEffect(() => {
+    if (props.ready && pendingOpen.current) {
+      pendingOpen.current = false;
+      openTranslationSession();
+      navigate(Path.Chat);
+    }
+  }, [navigate, props.ready]);
+
+  return null;
+}
+
 export function useLoadData() {
   const config = useAppConfig();
   const access = useAccessStore();
@@ -254,6 +311,7 @@ export function Home() {
   return (
     <ErrorBoundary>
       <Router>
+        <TranslationShortcutBridge ready={chatsHydrated && configHydrated} />
         <Screen />
       </Router>
     </ErrorBoundary>

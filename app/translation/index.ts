@@ -115,6 +115,16 @@ export function ensureTranslationSession() {
   return useChatStore.getState().currentSession();
 }
 
+export function openTranslationSession() {
+  ensureTranslationSession();
+  const store = useChatStore.getState();
+  const index = store.sessions.findIndex(isTranslationSession);
+  if (index >= 0) {
+    store.selectSession(index);
+  }
+  return store.sessions[index];
+}
+
 export function switchTranslationLanguage(
   session: ChatSession,
   languageId: string,
